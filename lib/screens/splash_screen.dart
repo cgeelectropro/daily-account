@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
+import 'onboarding_screen.dart';
 
 /// A sacred, illuminated-manuscript-style splash screen.
 /// Golden cross with radiating light, ornamental rings, and elegant typography
@@ -32,18 +34,20 @@ class _SplashScreenState extends State<SplashScreen>
     )..repeat();
 
     // Navigate after splash animation completes
-    Future.delayed(const Duration(milliseconds: 3200), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const HomeShell(),
-            transitionDuration: const Duration(milliseconds: 800),
-            transitionsBuilder: (_, anim, __, child) {
-              return FadeTransition(opacity: anim, child: child);
-            },
-          ),
-        );
-      }
+    Future.delayed(const Duration(milliseconds: 3200), () async {
+      if (!mounted) return;
+      final done = await StorageService.instance.getSetting('onboarding_complete');
+      if (!mounted) return;
+      final destination = done == 'true' ? const HomeShell() : const OnboardingScreen();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => destination,
+          transitionDuration: const Duration(milliseconds: 800),
+          transitionsBuilder: (_, anim, __, child) {
+            return FadeTransition(opacity: anim, child: child);
+          },
+        ),
+      );
     });
   }
 
