@@ -3,11 +3,32 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 /// A frosted card that groups a spiritual discipline section.
-class SectionCard extends StatelessWidget {
+/// Supports expand/collapse via tap on the header.
+class SectionCard extends StatefulWidget {
   final String icon;
   final String title;
   final List<Widget> children;
-  const SectionCard({super.key, required this.icon, required this.title, required this.children});
+  final bool initiallyExpanded;
+  const SectionCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.children,
+    this.initiallyExpanded = true,
+  });
+
+  @override
+  State<SectionCard> createState() => _SectionCardState();
+}
+
+class _SectionCardState extends State<SectionCard> {
+  late bool _expanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _expanded = widget.initiallyExpanded;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,15 +44,27 @@ class SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(icon, style: const TextStyle(fontSize: 20)),
-              const SizedBox(width: 10),
-              Text(title, style: AppTheme.display(18, color: AppTheme.gold)),
-            ],
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Text(widget.icon, style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(widget.title, style: AppTheme.display(18, color: AppTheme.gold)),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: AppTheme.clay,
+                  size: 22,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          ...children,
+          if (_expanded) ...[
+            const SizedBox(height: 16),
+            ...widget.children,
+          ],
         ],
       ),
     );
