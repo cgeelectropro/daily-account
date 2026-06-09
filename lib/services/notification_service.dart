@@ -47,13 +47,14 @@ class NotificationService {
   );
 
   /// Schedule a daily reminder at [hour]:[minute] (repeats every day).
-  Future<void> scheduleDailyReminder(int hour, int minute) async {
+  /// Pass [title] and [body] to use localized strings; defaults to English.
+  Future<void> scheduleDailyReminder(int hour, int minute, {String? title, String? body}) async {
     await init();
     await _plugin.cancel(1);
     await _plugin.zonedSchedule(
       1,
-      '📖 Daily Account',
-      'Have you recorded your walk with God today? Tap to log it.',
+      title ?? '📖 Daily Account',
+      body ?? 'Have you recorded your walk with God today? Tap to log it.',
       _nextInstanceOfTime(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -63,13 +64,14 @@ class NotificationService {
   }
 
   /// Schedule the weekly Sunday reminder to send the report.
-  Future<void> scheduleSundayReminder(int hour, int minute) async {
+  /// Pass [title] and [body] to use localized strings; defaults to English.
+  Future<void> scheduleSundayReminder(int hour, int minute, {String? title, String? body}) async {
     await init();
     await _plugin.cancel(2);
     await _plugin.zonedSchedule(
       2,
-      '🕊️ Sunday — Send Your Account',
-      'Send this week\'s account to your disciple maker. Tap to review & send.',
+      title ?? '🕊️ Sunday — Send Your Account',
+      body ?? 'Send this week\'s account to your disciple maker. Tap to review & send.',
       _nextInstanceOfSunday(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
