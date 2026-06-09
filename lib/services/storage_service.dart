@@ -22,19 +22,53 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 1,
-      onCreate: (db, v) async {
+      version: 2,
+      onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
             dateKey TEXT PRIMARY KEY,
-            bibleReference TEXT, bibleChapters TEXT, literature TEXT,
-            ddegScripture TEXT, ddegTime TEXT, ddegNotes TEXT,
-            prayerAloneDuration TEXT, prayerAloneNotes TEXT,
-            prayerOthersDuration TEXT, prayerOthersContext TEXT,
-            evangelismContacts TEXT, evangelismOutcome TEXT, evangelismNotes TEXT,
-            other TEXT, aiReflection TEXT, completed INTEGER
+            bibleReference TEXT,
+            bibleChapters TEXT,
+            literature TEXT,
+            ddegScripture TEXT,
+            ddegTime TEXT,
+            ddegNotes TEXT,
+            prayerAloneDuration TEXT,
+            prayerAloneNotes TEXT,
+            prayerOthersDuration TEXT,
+            prayerOthersContext TEXT,
+            evangelismContacts TEXT,
+            evangelismOutcome TEXT,
+            evangelismNotes TEXT,
+            other TEXT,
+            aiReflection TEXT,
+            completed INTEGER,
+            fastingType TEXT DEFAULT '',
+            fastingDuration TEXT DEFAULT '',
+            fastingPrayerFocus TEXT DEFAULT '',
+            givingType TEXT DEFAULT '',
+            givingAmount TEXT DEFAULT '',
+            givingPurpose TEXT DEFAULT '',
+            churchType TEXT DEFAULT '',
+            churchNotes TEXT DEFAULT '',
+            discipleshipWho TEXT DEFAULT '',
+            discipleshipTopic TEXT DEFAULT '',
+            discipleshipDuration TEXT DEFAULT ''
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          final newCols = [
+            'fastingType', 'fastingDuration', 'fastingPrayerFocus',
+            'givingType', 'givingAmount', 'givingPurpose',
+            'churchType', 'churchNotes',
+            'discipleshipWho', 'discipleshipTopic', 'discipleshipDuration',
+          ];
+          for (final col in newCols) {
+            await db.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+          }
+        }
       },
     );
   }
