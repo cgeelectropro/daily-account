@@ -47,6 +47,25 @@ class DailyLog {
   // Other
   String other;
 
+  // ── Fasting ──
+  String fastingType;
+  String fastingDuration;
+  String fastingPrayerFocus;
+
+  // ── Giving & Tithes ──
+  String givingType;
+  String givingAmount;
+  String givingPurpose;
+
+  // ── Church & Fellowship ──
+  String churchType;
+  String churchNotes;
+
+  // ── Discipleship ──
+  String discipleshipWho;
+  String discipleshipTopic;
+  String discipleshipDuration;
+
   // AI reflection (cached)
   String aiReflection;
 
@@ -68,6 +87,17 @@ class DailyLog {
     this.evangelismOutcome = '',
     this.evangelismNotes = '',
     this.other = '',
+    this.fastingType = '',
+    this.fastingDuration = '',
+    this.fastingPrayerFocus = '',
+    this.givingType = '',
+    this.givingAmount = '',
+    this.givingPurpose = '',
+    this.churchType = '',
+    this.churchNotes = '',
+    this.discipleshipWho = '',
+    this.discipleshipTopic = '',
+    this.discipleshipDuration = '',
     this.aiReflection = '',
     this.completed = false,
   }) : literature = literature ?? [LiteratureEntry()];
@@ -75,16 +105,20 @@ class DailyLog {
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
   double get completeness {
     final checks = <bool>[
-      bibleReference.isNotEmpty,
+      bibleReference.isNotEmpty || bibleChapters.isNotEmpty,
       literature.any((l) => l.title.isNotEmpty),
       ddegScripture.isNotEmpty || ddegNotes.isNotEmpty,
       prayerAloneDuration.isNotEmpty,
       prayerOthersDuration.isNotEmpty,
       evangelismContacts.isNotEmpty,
+      fastingType.isNotEmpty || fastingDuration.isNotEmpty,
+      givingType.isNotEmpty,
+      churchType.isNotEmpty,
+      discipleshipWho.isNotEmpty,
       other.isNotEmpty,
     ];
     final filled = checks.where((c) => c).length;
-    return filled / checks.length;
+    return filled / 11;
   }
 
   Map<String, dynamic> toMap() => {
@@ -103,6 +137,17 @@ class DailyLog {
         'evangelismOutcome': evangelismOutcome,
         'evangelismNotes': evangelismNotes,
         'other': other,
+        'fastingType': fastingType,
+        'fastingDuration': fastingDuration,
+        'fastingPrayerFocus': fastingPrayerFocus,
+        'givingType': givingType,
+        'givingAmount': givingAmount,
+        'givingPurpose': givingPurpose,
+        'churchType': churchType,
+        'churchNotes': churchNotes,
+        'discipleshipWho': discipleshipWho,
+        'discipleshipTopic': discipleshipTopic,
+        'discipleshipDuration': discipleshipDuration,
         'aiReflection': aiReflection,
         'completed': completed ? 1 : 0,
       };
@@ -134,6 +179,17 @@ class DailyLog {
       evangelismOutcome: m['evangelismOutcome'] ?? '',
       evangelismNotes: m['evangelismNotes'] ?? '',
       other: m['other'] ?? '',
+      fastingType: m['fastingType'] ?? '',
+      fastingDuration: m['fastingDuration'] ?? '',
+      fastingPrayerFocus: m['fastingPrayerFocus'] ?? '',
+      givingType: m['givingType'] ?? '',
+      givingAmount: m['givingAmount'] ?? '',
+      givingPurpose: m['givingPurpose'] ?? '',
+      churchType: m['churchType'] ?? '',
+      churchNotes: m['churchNotes'] ?? '',
+      discipleshipWho: m['discipleshipWho'] ?? '',
+      discipleshipTopic: m['discipleshipTopic'] ?? '',
+      discipleshipDuration: m['discipleshipDuration'] ?? '',
       aiReflection: m['aiReflection'] ?? '',
       completed: (m['completed'] ?? 0) == 1,
     );
