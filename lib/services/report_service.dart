@@ -1,0 +1,145 @@
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/daily_log.dart';
+import 'storage_service.dart';
+
+class WeekStats {
+  int daysLogged;
+  int totalBibleChapters;
+  int totalEvangelismContacts;
+  int litItems;
+  WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems);
+}
+
+/// Builds the weekly report and dispatches it via email or WhatsApp.
+class ReportService {
+  static final ReportService instance = ReportService._();
+  ReportService._();
+
+  /// Monday→Sunday dates for the week containing [ref] (default today).
+  List<DateTime> weekDates([DateTime? ref]) {
+    final today = ref ?? DateTime.now();
+    final monday = today.subtract(Duration(days: (today.weekday + 6) % 7));
+    return List.generate(7, (i) => DateTime(monday.year, monday.month, monday.day + i));
+  }
+
+  String keyFor(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+
+  Future<WeekStats> computeWeekStats() async {
+    final dates = weekDates();
+    final logs = await StorageService.instance
+        .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
+    int days = 0, chapters = 0, contacts = 0, lit = 0;
+    for (final l in logs) {
+      if (l.completed) days++;
+      chapters += int.tryParse(l.bibleChapters) ?? 0;
+      contacts += int.tryParse(l.evangelismContacts) ?? 0;
+      lit += l.literature.where((e) => e.title.isNotEmpty).length;
+    }
+    return WeekStats(days, chapters, contacts, lit);
+  }
+
+  /// Current consecutive-day streak ending today.
+  Future<int> computeStreak() async {
+    int streak = 0;
+    var day = DateTime.now();
+    for (int i = 0; i < 365; i++) {
+      final log = await StorageService.instance.getLog(keyFor(day));
+      if (log != null && log.completed) {
+        streak++;
+        day = day.subtract(const Duration(days: 1));
+      } else {
+        // allow today to be unlogged without breaking the streak
+        if (i == 0) {
+          day = day.subtract(const Duration(days: 1));
+          continue;
+        }
+        break;
+      }
+    }
+    return streak;
+  }
+
+  Future<String> buildWeeklyReport(String name) async {
+    final dates = weekDates();
+    final fmtLong = DateFormat('EEEE, MMM d');
+    final fmtRange = DateFormat('MMM d');
+    final buf = StringBuffer();
+
+    buf.writeln('✝️ DAILY ACCOUNT — ${name.isEmpty ? "Disciple" : name}');
+    buf.writeln('Week of ${fmtRange.format(dates.first)} – ${fmtRange.format(dates.last)}');
+    buf.writeln('');
+
+    for (final d in dates) {
+      final log = await StorageService.instance.getLog(keyFor(d));
+      buf.writeln('━━━━━━━━━━━━━━━━━━━━');
+      buf.writeln('📅 ${fmtLong.format(d).toUpperCase()}');
+      if (log == null || !log.completed) {
+        buf.writeln('   ⚠️  No entry recorded.');
+        buf.writeln('');
+        continue;
+      }
+      if (log.bibleReference.isNotEmpty) {
+        buf.writeln('📖 Bible: ${log.bibleReference}'
+            '${log.bibleChapters.isNotEmpty ? " (${log.bibleChapters} ch.)" : ""}');
+      }
+      for (final l in log.literature.where((e) => e.title.isNotEmpty)) {
+        buf.writeln('📚 Literature: "${l.title}" — ${l.amount} ${l.unit}');
+      }
+      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
+        buf.writeln('🔥 DDEG — Encounter with God:');
+        if (log.ddegScripture.isNotEmpty) buf.writeln('   Scripture: ${log.ddegScripture}');
+        if (log.ddegTime.isNotEmpty) buf.writeln('   Time: ${log.ddegTime}');
+        if (log.ddegNotes.isNotEmpty) buf.writeln('   Meditation: ${log.ddegNotes}');
+      }
+      if (log.prayerAloneDuration.isNotEmpty) {
+        buf.writeln('🙏 Prayer (Alone): ${log.prayerAloneDuration}'
+            '${log.prayerAloneNotes.isNotEmpty ? " — ${log.prayerAloneNotes}" : ""}');
+      }
+      if (log.prayerOthersDuration.isNotEmpty) {
+        buf.writeln('🤝 Prayer (with others): ${log.prayerOthersDuration}'
+            '${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}');
+      }
+      if (log.evangelismContacts.isNotEmpty) {
+        buf.writeln('📢 Evangelism: ${log.evangelismContacts} contact(s).'
+            '${log.evangelismOutcome.isNotEmpty ? " ${log.evangelismOutcome}." : ""}'
+            '${log.evangelismNotes.isNotEmpty ? " ${log.evangelismNotes}" : ""}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('➕ Other: ${log.other}');
+      buf.writeln('');
+    }
+    buf.writeln('━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('Sent with love · Daily Account 🕊️');
+    return buf.toString();
+  }
+
+  /// Open the device email client pre-filled with the report.
+  Future<bool> sendByEmail(String toEmail, String name, String body) async {
+    final subject = '📖 Weekly Spiritual Account — '
+        '${name.isEmpty ? "Disciple" : name} '
+        '(${DateFormat('MMM d, y').format(DateTime.now())})';
+    final uri = Uri(
+      scheme: 'mailto',
+      path: toEmail,
+      query: _encodeQuery({'subject': subject, 'body': body}),
+    );
+    if (await canLaunchUrl(uri)) {
+      return launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    return false;
+  }
+
+  /// Share the report via WhatsApp (reliable fallback).
+  Future<bool> sendByWhatsApp(String phone, String body) async {
+    // phone in international format without '+' e.g. 237xxxxxxxxx
+    final uri = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(body)}');
+    if (await canLaunchUrl(uri)) {
+      return launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    return false;
+  }
+
+  String _encodeQuery(Map<String, String> params) => params.entries
+      .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+      .join('&');
+}

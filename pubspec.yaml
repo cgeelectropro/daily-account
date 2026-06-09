@@ -1,0 +1,45 @@
+name: daily_account
+description: "Daily Account — A spiritual accountability app for your daily walk with God (CMFI discipline)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  # Local persistent database
+  sqflite: ^2.3.2
+  path: ^1.9.0
+  # Daily reminder notifications
+  flutter_local_notifications: ^17.1.2
+  timezone: ^0.9.3
+  # Send email / open WhatsApp
+  url_launcher: ^6.2.6
+  # Lightweight key-value (settings)
+  shared_preferences: ^2.2.3
+  # Google fonts for beautiful typography
+  google_fonts: ^6.2.1
+  # Subtle animations
+  flutter_animate: ^4.5.0
+  # Intl for date formatting
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+  image: ^4.5.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"
+  adaptive_icon_background: "#0D0A05"
+  adaptive_icon_foreground: "assets/app_icon.png"
+
+flutter:
+  uses-material-design: true

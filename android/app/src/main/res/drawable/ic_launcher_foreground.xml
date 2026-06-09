@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer radiant rays (subtle gold, 8 rays) -->
+    <path
+        android:fillColor="#33A07830"
+        android:pathData="M54,18L56,54L54,18z M54,90L52,54L54,90z M18,54L54,52L18,54z M90,54L54,56L90,54z" />
+    <path
+        android:fillColor="#22A07830"
+        android:pathData="M28.5,28.5L52.6,52.6L28.5,28.5z M79.5,79.5L55.4,55.4L79.5,79.5z M28.5,79.5L52.6,55.4L28.5,79.5z M79.5,28.5L55.4,52.6L79.5,28.5z" />
+
+    <!-- Subtle outer ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#40D4AF64"
+        android:strokeWidth="0.6"
+        android:pathData="M54,54m-28,0a28,28 0,1,1 56,0a28,28 0,1,1 -56,0" />
+
+    <!-- Inner decorative circle -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#30D4AF64"
+        android:strokeWidth="0.4"
+        android:pathData="M54,54m-22,0a22,22 0,1,1 44,0a22,22 0,1,1 -44,0" />
+
+    <!-- Main cross — vertical beam -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M51,30 L57,30 Q58,30 58,31 L58,77 Q58,78 57,78 L51,78 Q50,78 50,77 L50,31 Q50,30 51,30z" />
+
+    <!-- Main cross — horizontal beam -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M34,48 L74,48 Q75,48 75,49 L75,59 Q75,60 74,60 L34,60 Q33,60 33,59 L33,49 Q33,48 34,48z" />
+
+    <!-- Cross inner shadow (right side of vertical) -->
+    <path
+        android:fillColor="#A07830"
+        android:pathData="M55,30L57,30Q58,30 58,31L58,77Q58,78 57,78L55,78L55,30z" />
+
+    <!-- Cross inner shadow (bottom of horizontal) -->
+    <path
+        android:fillColor="#A07830"
+        android:pathData="M33,57L75,57L75,59Q75,60 74,60L34,60Q33,60 33,59L33,57z" />
+
+    <!-- Cross highlight (left edge of vertical) -->
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M50,31Q50,30 51,30L52,30L52,78L51,78Q50,78 50,77L50,31z" />
+
+    <!-- Cross highlight (top of horizontal) -->
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M34,48L74,48Q75,48 75,49L75,50L33,50L33,49Q33,48 34,48z" />
+
+    <!-- Small ornamental diamonds at cross ends -->
+    <!-- Top -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M54,26L56.5,28.5L54,31L51.5,28.5z" />
+    <!-- Bottom -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M54,77L56.5,79.5L54,82L51.5,79.5z" />
+    <!-- Left -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M30,54L32.5,51.5L35,54L32.5,56.5z" />
+    <!-- Right -->
+    <path
+        android:fillColor="#D4AF64"
+        android:pathData="M73,54L75.5,51.5L78,54L75.5,56.5z" />
+
+    <!-- Tiny dots in cross intersection corners -->
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M48,46m-1,0a1,1 0,1,1 2,0a1,1 0,1,1 -2,0" />
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M60,46m-1,0a1,1 0,1,1 2,0a1,1 0,1,1 -2,0" />
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M48,62m-1,0a1,1 0,1,1 2,0a1,1 0,1,1 -2,0" />
+    <path
+        android:fillColor="#E8D4A0"
+        android:pathData="M60,62m-1,0a1,1 0,1,1 2,0a1,1 0,1,1 -2,0" />
+
+</vector>

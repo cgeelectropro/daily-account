@@ -1,0 +1,42 @@
+<!--
+  IMPORTANT: This is a reference snippet showing the permissions and receivers
+  you must add to your generated AndroidManifest.xml after running
+  `flutter create .` in the project folder.
+
+  After `flutter create .`, open:
+      android/app/src/main/AndroidManifest.xml
+  and merge the <uses-permission> lines below INTO the top of the <manifest>
+  tag, and the two <receiver> entries INTO the <application> tag.
+-->
+
+<!-- ===== Add these INSIDE <manifest> (before <application>) ===== -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+<uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+<uses-permission android:name="android.permission.VIBRATE"/>
+<uses-permission android:name="android.permission.INTERNET"/>
+
+<!-- For url_launcher to open mail / WhatsApp on Android 11+ -->
+<queries>
+    <intent>
+        <action android:name="android.intent.action.SENDTO" />
+        <data android:scheme="mailto" />
+    </intent>
+    <intent>
+        <action android:name="android.intent.action.VIEW" />
+        <data android:scheme="https" />
+    </intent>
+</queries>
+
+<!-- ===== Add these INSIDE <application> ===== -->
+<receiver android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+<receiver android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+        <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+    </intent-filter>
+</receiver>
