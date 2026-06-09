@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/daily_log.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -60,14 +60,15 @@ class ReportService {
     return streak;
   }
 
-  Future<String> buildWeeklyReport(String name) async {
+  /// Build the weekly report using localized strings from [l].
+  Future<String> buildWeeklyReport(String name, S l) async {
     final dates = weekDates();
     final fmtLong = DateFormat('EEEE, MMM d');
     final fmtRange = DateFormat('MMM d');
     final buf = StringBuffer();
 
-    buf.writeln('✝️ DAILY ACCOUNT — ${name.isEmpty ? "Disciple" : name}');
-    buf.writeln('Week of ${fmtRange.format(dates.first)} – ${fmtRange.format(dates.last)}');
+    buf.writeln('✝️ ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
 
     for (final d in dates) {
@@ -75,49 +76,57 @@ class ReportService {
       buf.writeln('━━━━━━━━━━━━━━━━━━━━');
       buf.writeln('📅 ${fmtLong.format(d).toUpperCase()}');
       if (log == null || !log.completed) {
-        buf.writeln('   ⚠️  No entry recorded.');
+        buf.writeln('   ⚠️  ${l.reportNoEntry}');
         buf.writeln('');
         continue;
       }
       if (log.bibleReference.isNotEmpty) {
-        buf.writeln('📖 Bible: ${log.bibleReference}'
-            '${log.bibleChapters.isNotEmpty ? " (${log.bibleChapters} ch.)" : ""}');
+        buf.writeln('📖 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
       }
-      for (final l in log.literature.where((e) => e.title.isNotEmpty)) {
-        buf.writeln('📚 Literature: "${l.title}" — ${l.amount} ${l.unit}');
+      for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
+        buf.writeln('📚 ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
       }
       if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
-        buf.writeln('🔥 DDEG — Encounter with God:');
-        if (log.ddegScripture.isNotEmpty) buf.writeln('   Scripture: ${log.ddegScripture}');
-        if (log.ddegTime.isNotEmpty) buf.writeln('   Time: ${log.ddegTime}');
-        if (log.ddegNotes.isNotEmpty) buf.writeln('   Meditation: ${log.ddegNotes}');
+        buf.writeln('🔥 ${l.reportDDEG}');
+        if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
+        if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
+        if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
       }
       if (log.prayerAloneDuration.isNotEmpty) {
-        buf.writeln('🙏 Prayer (Alone): ${log.prayerAloneDuration}'
-            '${log.prayerAloneNotes.isNotEmpty ? " — ${log.prayerAloneNotes}" : ""}');
+        buf.writeln('🙏 ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
       }
       if (log.prayerOthersDuration.isNotEmpty) {
-        buf.writeln('🤝 Prayer (with others): ${log.prayerOthersDuration}'
-            '${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}');
+        buf.writeln('🤝 ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
       }
       if (log.evangelismContacts.isNotEmpty) {
-        buf.writeln('📢 Evangelism: ${log.evangelismContacts} contact(s).'
-            '${log.evangelismOutcome.isNotEmpty ? " ${log.evangelismOutcome}." : ""}'
-            '${log.evangelismNotes.isNotEmpty ? " ${log.evangelismNotes}" : ""}');
+        buf.writeln('📢 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
       }
-      if (log.other.isNotEmpty) buf.writeln('➕ Other: ${log.other}');
+      if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
+        buf.writeln('🍽️ ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
+      }
+      if (log.givingType.isNotEmpty) {
+        buf.writeln('💰 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+      }
+      if (log.churchType.isNotEmpty) {
+        buf.writeln('⛪ ${l.reportChurch(log.churchType, log.churchNotes)}');
+      }
+      if (log.discipleshipWho.isNotEmpty) {
+        buf.writeln('👥 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('➕ ${l.reportOther(log.other)}');
       buf.writeln('');
     }
     buf.writeln('━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('Sent with love · Daily Account 🕊️');
+    buf.writeln('${l.reportFooter} 🕊️');
     return buf.toString();
   }
 
   /// Open the device email client pre-filled with the report.
-  Future<bool> sendByEmail(String toEmail, String name, String body) async {
-    final subject = '📖 Weekly Spiritual Account — '
-        '${name.isEmpty ? "Disciple" : name} '
-        '(${DateFormat('MMM d, y').format(DateTime.now())})';
+  Future<bool> sendByEmail(String toEmail, String name, String body, S l) async {
+    final subject = '📖 ${l.reportEmailSubject(
+      name.isEmpty ? "Disciple" : name,
+      DateFormat('MMM d, y').format(DateTime.now()),
+    )}';
     final uri = Uri(
       scheme: 'mailto',
       path: toEmail,

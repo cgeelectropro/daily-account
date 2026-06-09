@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import 'log_screen.dart';
@@ -74,8 +75,8 @@ class _HomeShellState extends State<HomeShell> {
         children: [
           const Text('✝️', style: TextStyle(fontSize: 26)),
           const SizedBox(height: 4),
-          Text('Daily Account', style: AppTheme.display(22, color: AppTheme.gold)),
-          Text('WALK WITH GOD · CMFI DISCIPLINE',
+          Text(S.of(context).appTitle, style: AppTheme.display(22, color: AppTheme.gold)),
+          Text(S.of(context).tagline,
               style: AppTheme.label(9, color: AppTheme.clay)),
         ],
       ),
@@ -150,9 +151,9 @@ class _HomeShellState extends State<HomeShell> {
 
   Widget _bottomNav() {
     final items = [
-      ('📖', 'Log', 0),
-      ('📨', 'Report', 1),
-      ('⚙️', 'Settings', 2),
+      ('📖', S.of(context).tabLog, 0),
+      ('📨', S.of(context).tabReport, 1),
+      ('⚙️', S.of(context).tabSettings, 2),
     ];
     return Container(
       decoration: BoxDecoration(

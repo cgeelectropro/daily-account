@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -29,15 +29,31 @@ class _ReportScreenState extends State<ReportScreen> {
     _refresh();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Build the report once we have access to context (for i18n)
+    if (!_loading && _report.isEmpty) _buildReport();
+  }
+
   Future<void> _refresh() async {
     final s = StorageService.instance;
     _name = await s.getSetting('myName');
     _email = await s.getSetting('discipleEmail');
     _whatsapp = await s.getSetting('discipleWhatsApp');
-    _report = await ReportService.instance.buildWeeklyReport(_name);
     _stats = await ReportService.instance.computeWeekStats();
     _streak = await ReportService.instance.computeStreak();
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      _buildReport();
+    }
+  }
+
+  Future<void> _buildReport() async {
+    if (!mounted) return;
+    final l = S.of(context);
+    _report = await ReportService.instance.buildWeeklyReport(_name, l);
+    if (mounted) setState(() {});
   }
 
   void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -50,21 +66,44 @@ class _ReportScreenState extends State<ReportScreen> {
         ),
       ));
 
+  Future<bool> _confirmSend() async {
+    final l = S.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bg2,
+        title: Text(l.confirmSendTitle, style: AppTheme.display(18, color: AppTheme.gold)),
+        content: Text(l.confirmSendBody, style: AppTheme.serif(14, color: AppTheme.cream)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.cancel, style: const TextStyle(color: AppTheme.sand))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l.send, style: const TextStyle(color: AppTheme.gold))),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _sendEmail() async {
-    if (_email.isEmpty) { _toast('⚠️ Add your disciple maker\'s email in Settings.'); return; }
-    final ok = await ReportService.instance.sendByEmail(_email, _name, _report);
-    _toast(ok ? '📨 Opening email to send your account...' : '❌ Could not open email app.');
+    final l = S.of(context);
+    if (_email.isEmpty) { _toast(l.invalidEmail); return; }
+    if (!await _confirmSend()) return;
+    final ok = await ReportService.instance.sendByEmail(_email, _name, _report, l);
+    if (!mounted) return;
+    _toast(ok ? '📨 ${l.sendEmail}...' : '❌ ${l.emailError}');
   }
 
   Future<void> _sendWhatsApp() async {
-    if (_whatsapp.isEmpty) { _toast('⚠️ Add a WhatsApp number in Settings.'); return; }
+    final l = S.of(context);
+    if (_whatsapp.isEmpty) { _toast(l.invalidWhatsapp); return; }
+    if (!await _confirmSend()) return;
     final ok = await ReportService.instance.sendByWhatsApp(_whatsapp, _report);
-    _toast(ok ? '💬 Opening WhatsApp...' : '❌ Could not open WhatsApp.');
+    if (!mounted) return;
+    _toast(ok ? '💬 ${l.sendWhatsApp}...' : '❌ ${l.whatsappError}');
   }
 
   void _copy() {
     Clipboard.setData(ClipboardData(text: _report));
-    _toast('📋 Report copied to clipboard.');
+    _toast('📋 ${S.of(context).reportCopied}');
   }
 
   @override
@@ -74,11 +113,13 @@ class _ReportScreenState extends State<ReportScreen> {
     }
     final isSunday = DateTime.now().weekday == DateTime.sunday;
 
+    final l = S.of(context);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
       children: [
-        Text('Weekly Account', style: AppTheme.display(24, color: AppTheme.gold)),
-        Text('Your walk with God, this week', style: AppTheme.serif(13, color: AppTheme.sand)),
+        Text(l.reportTitle, style: AppTheme.display(24, color: AppTheme.gold)),
+        Text(l.reportSubtitle, style: AppTheme.serif(13, color: AppTheme.sand)),
         const SizedBox(height: 20),
 
         // Streak banner
@@ -99,9 +140,9 @@ class _ReportScreenState extends State<ReportScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$_streak day${_streak == 1 ? "" : "s"}',
+                  Text(l.streakDays(_streak),
                       style: AppTheme.display(28, color: AppTheme.goldSoft)),
-                  Text('Faithfulness streak', style: AppTheme.serif(13, color: AppTheme.sand)),
+                  Text(l.streakLabel, style: AppTheme.serif(13, color: AppTheme.sand)),
                 ],
               ),
             ],
@@ -112,17 +153,17 @@ class _ReportScreenState extends State<ReportScreen> {
         // Stats grid
         Row(
           children: [
-            Expanded(child: StatTile(value: '${_stats!.daysLogged}/7', label: 'Days Logged', icon: '✅')),
+            Expanded(child: StatTile(value: '${_stats!.daysLogged}/7', label: l.daysLogged, icon: '✅')),
             const SizedBox(width: 10),
-            Expanded(child: StatTile(value: '${_stats!.totalBibleChapters}', label: 'Bible Chapters', icon: '📖')),
+            Expanded(child: StatTile(value: '${_stats!.totalBibleChapters}', label: l.bibleChapters, icon: '📖')),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: StatTile(value: '${_stats!.litItems}', label: 'Books Read', icon: '📚')),
+            Expanded(child: StatTile(value: '${_stats!.litItems}', label: l.booksRead, icon: '📚')),
             const SizedBox(width: 10),
-            Expanded(child: StatTile(value: '${_stats!.totalEvangelismContacts}', label: 'Souls Reached', icon: '📢')),
+            Expanded(child: StatTile(value: '${_stats!.totalEvangelismContacts}', label: l.soulsReached, icon: '📢')),
           ],
         ),
         const SizedBox(height: 22),
@@ -141,43 +182,51 @@ class _ReportScreenState extends State<ReportScreen> {
                 const Text('🕊️', style: TextStyle(fontSize: 22)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text("It's Sunday — time to send your account to your disciple maker.",
+                  child: Text(l.sundayBanner,
                       style: AppTheme.serif(13, color: AppTheme.goldSoft)),
                 ),
               ],
             ),
           ).animate().fadeIn(),
 
-        // Report preview
-        Text('PREVIEW', style: AppTheme.label(11, color: AppTheme.gold.withOpacity(0.7))),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.gold.withOpacity(0.15)),
+        // Empty state or report preview + send buttons
+        if (_stats != null && _stats!.daysLogged == 0) ...[
+          const SizedBox(height: 40),
+          Center(
+            child: Text(l.noReportYet, textAlign: TextAlign.center, style: AppTheme.serif(15, color: AppTheme.sand)),
           ),
-          child: Text(_report,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 11.5,
-                height: 1.6,
-                color: AppTheme.sand,
-              )),
-        ),
-        const SizedBox(height: 20),
+        ] else ...[
+          // Report preview
+          Text(l.previewLabel, style: AppTheme.label(11, color: AppTheme.gold.withOpacity(0.7))),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.gold.withOpacity(0.15)),
+            ),
+            child: Text(_report,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 11.5,
+                  height: 1.6,
+                  color: AppTheme.sand,
+                )),
+          ),
+          const SizedBox(height: 20),
 
-        // Send buttons
-        _bigButton('📧  Send via Email', AppTheme.goldGradient, AppTheme.bg0, _sendEmail),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(child: _outlineButton('💬 WhatsApp', _sendWhatsApp)),
-            const SizedBox(width: 10),
-            Expanded(child: _outlineButton('📋 Copy', _copy)),
-          ],
-        ),
+          // Send buttons
+          _bigButton('📧  ${l.sendEmail}', AppTheme.goldGradient, AppTheme.bg0, _sendEmail),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _outlineButton('💬 ${l.sendWhatsApp}', _sendWhatsApp)),
+              const SizedBox(width: 10),
+              Expanded(child: _outlineButton('📋 ${l.copyReport}', _copy)),
+            ],
+          ),
+        ],
       ],
     );
   }

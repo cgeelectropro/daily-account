@@ -166,7 +166,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
           const SizedBox(height: 40),
           Text(
-            '"Give an account of thy stewardship."',
+            l.splashVerse,
             textAlign: TextAlign.center,
             style: AppTheme.serif(13,
                 color: AppTheme.clay, style: FontStyle.italic),
