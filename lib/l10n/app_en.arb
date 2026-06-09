@@ -1,0 +1,281 @@
+{
+  "@@locale": "en",
+  "appTitle": "Daily Account",
+  "tagline": "WALK WITH GOD · CMFI DISCIPLINE",
+  "walkWithGod": "WALK WITH GOD",
+  "cmfiDiscipline": "CMFI DISCIPLINE",
+  "splashVerse": "\"Give an account of thy stewardship.\"\n— Luke 16:2",
+
+  "tabLog": "Log",
+  "tabReport": "Report",
+  "tabSettings": "Settings",
+
+  "markComplete": "Mark Day Complete",
+  "markedComplete": "Completed",
+
+  "sectionBible": "Bible Reading",
+  "bibleRefLabel": "Passage / Reference",
+  "bibleRefHint": "e.g. John 3; Romans 8",
+  "bibleChaptersLabel": "Number of Chapters",
+  "bibleChaptersHint": "e.g. 3",
+
+  "sectionLiterature": "Christian Literature",
+  "bookTitleLabel": "Book Title",
+  "bookTitleHint": "e.g. The Normal Christian Life",
+  "amountLabel": "Amount",
+  "amountHint": "e.g. 15",
+  "unitLabel": "UNIT",
+  "unitPages": "Pages",
+  "unitChapters": "Chapters",
+  "unitBooks": "Books",
+  "addAnotherBook": "Add another book",
+  "remove": "Remove",
+
+  "sectionDDEG": "Daily Dynamic Encounter with God",
+  "ddegScriptureLabel": "Scripture Meditated On",
+  "ddegScriptureHint": "e.g. Psalm 23:1",
+  "ddegTimeLabel": "Time Spent",
+  "ddegTimeHint": "e.g. 30 minutes",
+  "ddegNotesLabel": "What God Spoke to You",
+  "ddegNotesHint": "Write what the Lord revealed or impressed...",
+
+  "sectionPrayerAlone": "Prayer — Alone with God",
+  "durationLabel": "Duration",
+  "durationHint": "e.g. 45 minutes",
+  "prayerAloneNotesLabel": "How was your prayer time?",
+  "prayerAloneNotesHint": "Burdens, intercessions, breakthroughs...",
+
+  "sectionPrayerOthers": "Prayer with Others",
+  "prayerOthersContextLabel": "Context (Who / Where)",
+  "prayerOthersContextHint": "e.g. Cell group, prayer meeting",
+
+  "sectionEvangelism": "Evangelism",
+  "evangelismContactsLabel": "Number of Contacts",
+  "evangelismContactsHint": "e.g. 2",
+  "evangelismOutcomeLabel": "Outcome / Response",
+  "evangelismOutcomeHint": "e.g. One received the gospel",
+  "evangelismNotesLabel": "Notes / Follow-up",
+  "evangelismNotesHint": "Names, conversations, next steps...",
+
+  "sectionFasting": "Fasting",
+  "fastingTypeLabel": "Type of Fast",
+  "fastingTypeHint": "e.g. Full fast, partial, Daniel fast",
+  "fastingDurationLabel": "Duration",
+  "fastingDurationHint": "e.g. 6am – 6pm",
+  "fastingPrayerFocusLabel": "Prayer Focus During Fast",
+  "fastingPrayerFocusHint": "What you are seeking God for...",
+
+  "sectionGiving": "Giving & Tithes",
+  "givingTypeLabel": "Type",
+  "givingTypeHint": "e.g. Tithe, offering, seed, missions",
+  "givingAmountLabel": "Amount (optional)",
+  "givingAmountHint": "e.g. 5000 FCFA",
+  "givingPurposeLabel": "Purpose / Occasion",
+  "givingPurposeHint": "e.g. Sunday offering, missions fund",
+
+  "sectionChurch": "Church & Fellowship",
+  "churchTypeLabel": "Service / Meeting",
+  "churchTypeHint": "e.g. Sunday service, midweek, cell group",
+  "churchNotesLabel": "Notes",
+  "churchNotesHint": "Key lessons, word received...",
+
+  "sectionDiscipleship": "Discipleship",
+  "discipleshipWhoLabel": "Who Are You Discipling?",
+  "discipleshipWhoHint": "Name(s) of disciples",
+  "discipleshipTopicLabel": "What Did You Cover?",
+  "discipleshipTopicHint": "e.g. Prayer life, consecration",
+  "discipleshipDurationLabel": "Duration",
+  "discipleshipDurationHint": "e.g. 1 hour",
+
+  "sectionOther": "Other Activities",
+  "otherLabel": "Other Spiritual Activities",
+  "otherHint": "Fellowship, service, outreach, conferences...",
+
+  "reportTitle": "Weekly Account",
+  "reportSubtitle": "Your walk with God, this week",
+  "streakDays": "{count, plural, =1{1 day} other{{count} days}}",
+  "@streakDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "streakLabel": "Faithfulness streak",
+  "daysLogged": "Days Logged",
+  "bibleChapters": "Bible Chapters",
+  "booksRead": "Books Read",
+  "soulsReached": "Souls Reached",
+  "sundayBanner": "It's Sunday — time to send your account to your disciple maker.",
+  "previewLabel": "PREVIEW",
+  "sendEmail": "Send via Email",
+  "sendWhatsApp": "WhatsApp",
+  "copyReport": "Copy",
+  "reportCopied": "Report copied to clipboard.",
+  "noReportYet": "No entries this week yet.\nStart logging your walk with God!",
+  "confirmSendTitle": "Send Report?",
+  "confirmSendBody": "Send your weekly account to your disciple maker?",
+  "cancel": "Cancel",
+  "send": "Send",
+
+  "settingsTitle": "Settings",
+  "profileSection": "Your Profile",
+  "yourNameLabel": "Your Name",
+  "yourNameHint": "e.g. Emmanuel",
+  "discipleMakerSection": "Disciple Maker",
+  "emailLabel": "Email Address",
+  "emailHint": "disciplemaker@example.com",
+  "whatsappLabel": "WhatsApp Number (intl, no +)",
+  "whatsappHint": "e.g. 237670000000",
+  "remindersSection": "Reminders",
+  "dailyReminder": "Daily log reminder",
+  "sundayReminder": "Sunday send reminder",
+  "saveReminders": "Save & Schedule Reminders",
+  "remindersSaved": "Reminders scheduled!",
+  "languageSection": "Language",
+  "languageEnglish": "English",
+  "languageFrench": "Français",
+  "howItWorksTitle": "How it works",
+  "howItWorks": "1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one each Sunday\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device",
+
+  "backupSection": "Backup & Restore",
+  "exportData": "Export Data",
+  "importData": "Import Data",
+  "exportSuccess": "Backup saved successfully!",
+  "importSuccess": "Data imported successfully!",
+  "importFailed": "Import failed. Invalid file format.",
+  "importMerge": "Merge with existing data",
+  "importReplace": "Replace all data",
+  "importPreview": "{count, plural, =1{1 day of logs found} other{{count} days of logs found}}",
+  "@importPreview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "onboardingWelcome": "Welcome to\nDaily Account",
+  "onboardingWelcomeSub": "Track your daily walk with God.\nStay accountable. Grow in faith.",
+  "onboardingHow": "How It Works",
+  "onboardingHowStep1": "Log your spiritual disciplines each day",
+  "onboardingHowStep2": "Track Bible reading, prayer, fasting, evangelism, and more",
+  "onboardingHowStep3": "Send your weekly account to your disciple maker every Sunday",
+  "onboardingProfile": "Your Profile",
+  "onboardingProfileSub": "Tell us a little about you",
+  "onboardingLanguage": "Choose Your Language",
+  "onboardingStart": "Begin Your Journey",
+  "next": "Next",
+  "skip": "Skip",
+  "back": "Back",
+
+  "notifDailyTitle": "Daily Account",
+  "notifDailyBody": "Have you recorded your walk with God today? Tap to log it.",
+  "notifSundayTitle": "Sunday — Send Your Account",
+  "notifSundayBody": "Send this week's account to your disciple maker. Tap to review & send.",
+
+  "reportHeader": "DAILY ACCOUNT — {name}",
+  "@reportHeader": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "reportWeekOf": "Week of {start} – {end}",
+  "@reportWeekOf": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "reportNoEntry": "No entry recorded.",
+  "reportBible": "Bible: {ref} ({chapters} ch.)",
+  "@reportBible": {
+    "placeholders": {
+      "ref": { "type": "String" },
+      "chapters": { "type": "String" }
+    }
+  },
+  "reportLiterature": "Literature: \"{title}\" — {amount} {unit}",
+  "@reportLiterature": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "amount": { "type": "String" },
+      "unit": { "type": "String" }
+    }
+  },
+  "reportDDEG": "DDEG — Encounter with God:",
+  "reportDDEGScripture": "   Scripture: {scripture}",
+  "@reportDDEGScripture": {
+    "placeholders": { "scripture": { "type": "String" } }
+  },
+  "reportDDEGTime": "   Time: {time}",
+  "@reportDDEGTime": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "reportDDEGMeditation": "   Meditation: {notes}",
+  "@reportDDEGMeditation": {
+    "placeholders": { "notes": { "type": "String" } }
+  },
+  "reportPrayerAlone": "Prayer (Alone): {duration} — {notes}",
+  "@reportPrayerAlone": {
+    "placeholders": {
+      "duration": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportPrayerOthers": "Prayer (with others): {duration} — {context}",
+  "@reportPrayerOthers": {
+    "placeholders": {
+      "duration": { "type": "String" },
+      "context": { "type": "String" }
+    }
+  },
+  "reportEvangelism": "Evangelism: {contacts} contact(s). {outcome}. {notes}",
+  "@reportEvangelism": {
+    "placeholders": {
+      "contacts": { "type": "String" },
+      "outcome": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportFasting": "Fasting: {type} ({duration}) — {focus}",
+  "@reportFasting": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "duration": { "type": "String" },
+      "focus": { "type": "String" }
+    }
+  },
+  "reportGiving": "Giving: {type} — {purpose}",
+  "@reportGiving": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "purpose": { "type": "String" }
+    }
+  },
+  "reportChurch": "Church: {type} — {notes}",
+  "@reportChurch": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportDiscipleship": "Discipleship: {who} — {topic} ({duration})",
+  "@reportDiscipleship": {
+    "placeholders": {
+      "who": { "type": "String" },
+      "topic": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+  "reportOther": "Other: {other}",
+  "@reportOther": {
+    "placeholders": { "other": { "type": "String" } }
+  },
+  "reportFooter": "Sent with love · Daily Account",
+  "reportEmailSubject": "Weekly Spiritual Account — {name} ({date})",
+  "@reportEmailSubject": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "date": { "type": "String" }
+    }
+  },
+  "emailError": "Could not open email app.",
+  "whatsappError": "Could not open WhatsApp.",
+  "invalidEmail": "Please enter a valid email address.",
+  "invalidWhatsapp": "Please enter a valid phone number (digits only, 10-15 chars)."
+}
