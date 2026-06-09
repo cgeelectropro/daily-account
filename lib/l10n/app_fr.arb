@@ -1,0 +1,282 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Compte Journalier",
+  "tagline": "MARCHER AVEC DIEU \u00b7 DISCIPLINE CMFI",
+  "walkWithGod": "MARCHER AVEC DIEU",
+  "cmfiDiscipline": "DISCIPLINE CMFI",
+  "splashVerse": "\"Rends compte de ton administration.\"\n\u2014 Luc 16:2",
+
+  "tabLog": "Journal",
+  "tabReport": "Rapport",
+  "tabSettings": "Param\u00e8tres",
+
+  "completedLabel": "Compl\u00e9t\u00e9",
+  "markComplete": "Marquer le Jour Complet",
+  "markedComplete": "Compl\u00e9t\u00e9",
+
+  "sectionBible": "Lecture de la Bible",
+  "bibleRefLabel": "Passage / R\u00e9f\u00e9rence",
+  "bibleRefHint": "ex. Jean 3 ; Romains 8",
+  "bibleChaptersLabel": "Nombre de Chapitres",
+  "bibleChaptersHint": "ex. 3",
+
+  "sectionLiterature": "Litt\u00e9rature Chr\u00e9tienne",
+  "bookTitleLabel": "Titre du Livre",
+  "bookTitleHint": "ex. La Vie Chr\u00e9tienne Normale",
+  "amountLabel": "Quantit\u00e9",
+  "amountHint": "ex. 15",
+  "unitLabel": "UNIT\u00c9",
+  "unitPages": "Pages",
+  "unitChapters": "Chapitres",
+  "unitBooks": "Livres",
+  "addAnotherBook": "Ajouter un autre livre",
+  "remove": "Supprimer",
+
+  "sectionDDEG": "Rencontre Dynamique Quotidienne avec Dieu",
+  "ddegScriptureLabel": "Passage M\u00e9dit\u00e9",
+  "ddegScriptureHint": "ex. Psaume 23:1",
+  "ddegTimeLabel": "Temps Pass\u00e9",
+  "ddegTimeHint": "ex. 30 minutes",
+  "ddegNotesLabel": "Ce que Dieu t\u2019a dit",
+  "ddegNotesHint": "\u00c9cris ce que le Seigneur t\u2019a r\u00e9v\u00e9l\u00e9 ou inspir\u00e9...",
+
+  "sectionPrayerAlone": "Pri\u00e8re \u2014 Seul avec Dieu",
+  "durationLabel": "Dur\u00e9e",
+  "durationHint": "ex. 45 minutes",
+  "prayerAloneNotesLabel": "Comment s\u2019est pass\u00e9 ton temps de pri\u00e8re ?",
+  "prayerAloneNotesHint": "Fardeaux, intercessions, perc\u00e9es...",
+
+  "sectionPrayerOthers": "Pri\u00e8re avec les Autres",
+  "prayerOthersContextLabel": "Contexte (Qui / O\u00f9)",
+  "prayerOthersContextHint": "ex. Groupe de cellule, r\u00e9union de pri\u00e8re",
+
+  "sectionEvangelism": "\u00c9vang\u00e9lisation",
+  "evangelismContactsLabel": "Nombre de Contacts",
+  "evangelismContactsHint": "ex. 2",
+  "evangelismOutcomeLabel": "R\u00e9sultat / R\u00e9ponse",
+  "evangelismOutcomeHint": "ex. Un a re\u00e7u l\u2019\u00c9vangile",
+  "evangelismNotesLabel": "Notes / Suivi",
+  "evangelismNotesHint": "Noms, conversations, prochaines \u00e9tapes...",
+
+  "sectionFasting": "Je\u00fbne",
+  "fastingTypeLabel": "Type de Je\u00fbne",
+  "fastingTypeHint": "ex. Je\u00fbne total, partiel, je\u00fbne de Daniel",
+  "fastingDurationLabel": "Dur\u00e9e",
+  "fastingDurationHint": "ex. 6h \u2013 18h",
+  "fastingPrayerFocusLabel": "Sujet de Pri\u00e8re pendant le Je\u00fbne",
+  "fastingPrayerFocusHint": "Ce que tu recherches aupr\u00e8s de Dieu...",
+
+  "sectionGiving": "Dons et D\u00eemes",
+  "givingTypeLabel": "Type",
+  "givingTypeHint": "ex. D\u00eeme, offrande, semence, missions",
+  "givingAmountLabel": "Montant (optionnel)",
+  "givingAmountHint": "ex. 5000 FCFA",
+  "givingPurposeLabel": "But / Occasion",
+  "givingPurposeHint": "ex. Offrande du dimanche, fonds de missions",
+
+  "sectionChurch": "\u00c9glise et Communion",
+  "churchTypeLabel": "Culte / R\u00e9union",
+  "churchTypeHint": "ex. Culte du dimanche, mi-semaine, groupe de cellule",
+  "churchNotesLabel": "Notes",
+  "churchNotesHint": "Le\u00e7ons cl\u00e9s, parole re\u00e7ue...",
+
+  "sectionDiscipleship": "Discipulat",
+  "discipleshipWhoLabel": "Qui disciples-tu ?",
+  "discipleshipWhoHint": "Nom(s) des disciples",
+  "discipleshipTopicLabel": "Qu\u2019as-tu couvert ?",
+  "discipleshipTopicHint": "ex. Vie de pri\u00e8re, cons\u00e9cration",
+  "discipleshipDurationLabel": "Dur\u00e9e",
+  "discipleshipDurationHint": "ex. 1 heure",
+
+  "sectionOther": "Autres Activit\u00e9s",
+  "otherLabel": "Autres Activit\u00e9s Spirituelles",
+  "otherHint": "Communion fraternelle, service, rayonnement, conf\u00e9rences...",
+
+  "reportTitle": "Compte Hebdomadaire",
+  "reportSubtitle": "Ta marche avec Dieu, cette semaine",
+  "streakDays": "{count} jour{count, plural, =1{} other{s}}",
+  "@streakDays": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "streakLabel": "S\u00e9rie de fid\u00e9lit\u00e9",
+  "daysLogged": "Jours Enregistr\u00e9s",
+  "bibleChapters": "Chapitres Bibliques",
+  "booksRead": "Livres Lus",
+  "soulsReached": "\u00c2mes Atteintes",
+  "sundayBanner": "C\u2019est dimanche \u2014 il est temps d\u2019envoyer ton compte \u00e0 ton faiseur de disciples.",
+  "previewLabel": "APER\u00c7U",
+  "sendEmail": "Envoyer par Email",
+  "sendWhatsApp": "WhatsApp",
+  "copyReport": "Copier",
+  "reportCopied": "Rapport copi\u00e9 dans le presse-papiers.",
+  "noReportYet": "Aucune entr\u00e9e cette semaine.\nCommence \u00e0 enregistrer ta marche avec Dieu !",
+  "confirmSendTitle": "Envoyer le Rapport ?",
+  "confirmSendBody": "Envoyer ton compte hebdomadaire \u00e0 ton faiseur de disciples ?",
+  "cancel": "Annuler",
+  "send": "Envoyer",
+
+  "settingsTitle": "Param\u00e8tres",
+  "profileSection": "Ton Profil",
+  "yourNameLabel": "Ton Nom",
+  "yourNameHint": "ex. Emmanuel",
+  "discipleMakerSection": "Faiseur de Disciples",
+  "emailLabel": "Adresse Email",
+  "emailHint": "faiseur@example.com",
+  "whatsappLabel": "Num\u00e9ro WhatsApp (intl, sans +)",
+  "whatsappHint": "ex. 237670000000",
+  "remindersSection": "Rappels",
+  "dailyReminder": "Rappel quotidien",
+  "sundayReminder": "Rappel du dimanche",
+  "saveReminders": "Sauvegarder et Programmer les Rappels",
+  "remindersSaved": "Rappels programm\u00e9s !",
+  "languageSection": "Langue",
+  "languageEnglish": "English",
+  "languageFrench": "Fran\u00e7ais",
+  "howItWorksTitle": "Comment \u00e7a marche",
+  "howItWorks": "1. Enregistre ta marche avec Dieu chaque jour\n2. Marque chaque jour comme complet \u2705\n3. Re\u00e7ois un rappel quotidien, et un sp\u00e9cial chaque dimanche\n4. Appuie sur Envoyer pour transmettre la semaine compl\u00e8te \u00e0 ton faiseur de disciples par email ou WhatsApp\n5. Tout est stock\u00e9 en priv\u00e9 sur ton appareil",
+
+  "backupSection": "Sauvegarde et Restauration",
+  "exportData": "Exporter les Donn\u00e9es",
+  "importData": "Importer les Donn\u00e9es",
+  "exportSuccess": "Sauvegarde r\u00e9ussie !",
+  "importSuccess": "Donn\u00e9es import\u00e9es avec succ\u00e8s !",
+  "importFailed": "\u00c9chec de l\u2019importation. Format de fichier invalide.",
+  "importMerge": "Fusionner avec les donn\u00e9es existantes",
+  "importReplace": "Remplacer toutes les donn\u00e9es",
+  "importPreview": "{count} jours de donn\u00e9es trouv\u00e9s",
+  "@importPreview": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "onboardingWelcome": "Bienvenue sur\nCompte Journalier",
+  "onboardingWelcomeSub": "Suis ta marche quotidienne avec Dieu.\nReste redevable. Grandis dans la foi.",
+  "onboardingHow": "Comment \u00c7a Marche",
+  "onboardingHowStep1": "Enregistre tes disciplines spirituelles chaque jour",
+  "onboardingHowStep2": "Suis la lecture biblique, la pri\u00e8re, le je\u00fbne, l\u2019\u00e9vang\u00e9lisation et plus encore",
+  "onboardingHowStep3": "Envoie ton compte hebdomadaire \u00e0 ton faiseur de disciples chaque dimanche",
+  "onboardingProfile": "Ton Profil",
+  "onboardingProfileSub": "Parle-nous un peu de toi",
+  "onboardingLanguage": "Choisis Ta Langue",
+  "onboardingStart": "Commence Ton Parcours",
+  "next": "Suivant",
+  "skip": "Passer",
+  "back": "Retour",
+
+  "notifDailyTitle": "Compte Journalier",
+  "notifDailyBody": "As-tu enregistr\u00e9 ta marche avec Dieu aujourd\u2019hui ? Appuie pour le faire.",
+  "notifSundayTitle": "Dimanche \u2014 Envoie Ton Compte",
+  "notifSundayBody": "Envoie le compte de cette semaine \u00e0 ton faiseur de disciples. Appuie pour revoir et envoyer.",
+
+  "reportHeader": "COMPTE JOURNALIER \u2014 {name}",
+  "@reportHeader": {
+    "placeholders": { "name": { "type": "String" } }
+  },
+  "reportWeekOf": "Semaine du {start} \u2013 {end}",
+  "@reportWeekOf": {
+    "placeholders": {
+      "start": { "type": "String" },
+      "end": { "type": "String" }
+    }
+  },
+  "reportNoEntry": "Aucune entr\u00e9e enregistr\u00e9e.",
+  "reportBible": "Bible : {ref} ({chapters} ch.)",
+  "@reportBible": {
+    "placeholders": {
+      "ref": { "type": "String" },
+      "chapters": { "type": "String" }
+    }
+  },
+  "reportLiterature": "Litt\u00e9rature : \u00ab {title} \u00bb \u2014 {amount} {unit}",
+  "@reportLiterature": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "amount": { "type": "String" },
+      "unit": { "type": "String" }
+    }
+  },
+  "reportDDEG": "RDQ \u2014 Rencontre avec Dieu :",
+  "reportDDEGScripture": "   Passage : {scripture}",
+  "@reportDDEGScripture": {
+    "placeholders": { "scripture": { "type": "String" } }
+  },
+  "reportDDEGTime": "   Temps : {time}",
+  "@reportDDEGTime": {
+    "placeholders": { "time": { "type": "String" } }
+  },
+  "reportDDEGMeditation": "   M\u00e9ditation : {notes}",
+  "@reportDDEGMeditation": {
+    "placeholders": { "notes": { "type": "String" } }
+  },
+  "reportPrayerAlone": "Pri\u00e8re (Seul) : {duration} \u2014 {notes}",
+  "@reportPrayerAlone": {
+    "placeholders": {
+      "duration": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportPrayerOthers": "Pri\u00e8re (avec d\u2019autres) : {duration} \u2014 {context}",
+  "@reportPrayerOthers": {
+    "placeholders": {
+      "duration": { "type": "String" },
+      "context": { "type": "String" }
+    }
+  },
+  "reportEvangelism": "\u00c9vang\u00e9lisation : {contacts} contact(s). {outcome}. {notes}",
+  "@reportEvangelism": {
+    "placeholders": {
+      "contacts": { "type": "String" },
+      "outcome": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportFasting": "Je\u00fbne : {type} ({duration}) \u2014 {focus}",
+  "@reportFasting": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "duration": { "type": "String" },
+      "focus": { "type": "String" }
+    }
+  },
+  "reportGiving": "Dons : {type} \u2014 {purpose}",
+  "@reportGiving": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "purpose": { "type": "String" }
+    }
+  },
+  "reportChurch": "\u00c9glise : {type} \u2014 {notes}",
+  "@reportChurch": {
+    "placeholders": {
+      "type": { "type": "String" },
+      "notes": { "type": "String" }
+    }
+  },
+  "reportDiscipleship": "Discipulat : {who} \u2014 {topic} ({duration})",
+  "@reportDiscipleship": {
+    "placeholders": {
+      "who": { "type": "String" },
+      "topic": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+  "reportOther": "Autres : {other}",
+  "@reportOther": {
+    "placeholders": { "other": { "type": "String" } }
+  },
+  "reportFooter": "Envoy\u00e9 avec amour \u00b7 Compte Journalier",
+  "reportEmailSubject": "Compte Spirituel Hebdomadaire \u2014 {name} ({date})",
+  "@reportEmailSubject": {
+    "placeholders": {
+      "name": { "type": "String" },
+      "date": { "type": "String" }
+    }
+  },
+  "emailError": "Impossible d\u2019ouvrir l\u2019application email.",
+  "whatsappError": "Impossible d\u2019ouvrir WhatsApp.",
+  "invalidEmail": "Veuillez entrer une adresse email valide.",
+  "invalidWhatsapp": "Veuillez entrer un num\u00e9ro de t\u00e9l\u00e9phone valide (chiffres uniquement, 10-15 caract\u00e8res)."
+}
