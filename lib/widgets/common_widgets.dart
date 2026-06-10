@@ -37,9 +37,11 @@ class _SectionCardState extends State<SectionCard> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 8),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.isDark(context)
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.15)),
+        border: Border.all(color: AppTheme.accentGold(context).withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,11 +53,11 @@ class _SectionCardState extends State<SectionCard> {
                 Text(widget.icon, style: const TextStyle(fontSize: 20)),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(widget.title, style: AppTheme.display(18, color: AppTheme.gold)),
+                  child: Text(widget.title, style: AppTheme.display(18, color: AppTheme.accentGold(context))),
                 ),
                 Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: AppTheme.clay,
+                  color: AppTheme.faintColor(context),
                   size: 22,
                 ),
               ],
@@ -92,33 +94,37 @@ class GoldField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label.toUpperCase(),
-              style: AppTheme.label(11, color: AppTheme.gold.withOpacity(0.7))),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
           const SizedBox(height: 6),
           TextFormField(
             initialValue: value,
             onChanged: onChanged,
             keyboardType: keyboardType,
             maxLines: maxLines,
-            style: AppTheme.serif(15, color: AppTheme.cream),
+            style: AppTheme.serif(15, color: AppTheme.textColor(context)),
             decoration: InputDecoration(
               hintText: hint,
-              hintStyle: AppTheme.serif(14, color: AppTheme.clay),
+              hintStyle: AppTheme.serif(14, color: AppTheme.faintColor(context)),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: dark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04),
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppTheme.gold.withOpacity(0.25)),
+                borderSide: BorderSide(color: accent.withValues(alpha: 0.25)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: AppTheme.gold, width: 1.4),
+                borderSide: BorderSide(color: accent, width: 1.4),
               ),
             ),
           ),

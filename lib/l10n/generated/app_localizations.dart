@@ -1122,6 +1122,132 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Please enter a valid phone number (digits only, 10-15 chars).'**
   String get invalidWhatsapp;
+
+  /// No description provided for @themeSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get themeSection;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDark;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLight;
+
+  /// No description provided for @notificationsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsSection;
+
+  /// No description provided for @notificationsEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Notifications'**
+  String get notificationsEnabled;
+
+  /// No description provided for @notificationsDisabledMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications disabled'**
+  String get notificationsDisabledMsg;
+
+  /// No description provided for @notificationsEnabledMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications enabled'**
+  String get notificationsEnabledMsg;
+
+  /// No description provided for @autoSendSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Send Report'**
+  String get autoSendSection;
+
+  /// No description provided for @autoSendEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-open report on Sunday'**
+  String get autoSendEnabled;
+
+  /// No description provided for @autoSendTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reminder time'**
+  String get autoSendTime;
+
+  /// No description provided for @autoSendDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'On Sunday at the scheduled time, the app will remind you to send your weekly report to your disciple maker.'**
+  String get autoSendDescription;
+
+  /// No description provided for @aboutSection.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutSection;
+
+  /// No description provided for @appVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String appVersion(String version);
+
+  /// No description provided for @aboutDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Account is a spiritual accountability tool for CMFI believers. Track your daily walk with God, and send weekly reports to your disciple maker.'**
+  String get aboutDescription;
+
+  /// No description provided for @madeWithLove.
+  ///
+  /// In en, this message translates to:
+  /// **'Made with love for CMFI Cameroon'**
+  String get madeWithLove;
+
+  /// No description provided for @dangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get dangerZone;
+
+  /// No description provided for @resetAllData.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset All Data'**
+  String get resetAllData;
+
+  /// No description provided for @resetConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Everything?'**
+  String get resetConfirmTitle;
+
+  /// No description provided for @resetConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will permanently delete all your logs, settings, and preferences. This action cannot be undone.'**
+  String get resetConfirmBody;
+
+  /// No description provided for @resetConfirmButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Everything'**
+  String get resetConfirmButton;
+
+  /// No description provided for @resetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'All data has been reset.'**
+  String get resetSuccess;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

@@ -296,5 +296,34 @@
   "emailError": "Could not open email app.",
   "whatsappError": "Could not open WhatsApp.",
   "invalidEmail": "Please enter a valid email address.",
-  "invalidWhatsapp": "Please enter a valid phone number (digits only, 10-15 chars)."
+  "invalidWhatsapp": "Please enter a valid phone number (digits only, 10-15 chars).",
+
+  "themeSection": "Appearance",
+  "themeDark": "Dark",
+  "themeLight": "Light",
+
+  "notificationsSection": "Notifications",
+  "notificationsEnabled": "Enable Notifications",
+  "notificationsDisabledMsg": "Notifications disabled",
+  "notificationsEnabledMsg": "Notifications enabled",
+
+  "autoSendSection": "Auto-Send Report",
+  "autoSendEnabled": "Auto-open report on Sunday",
+  "autoSendTime": "Send reminder time",
+  "autoSendDescription": "On Sunday at the scheduled time, the app will remind you to send your weekly report to your disciple maker.",
+
+  "aboutSection": "About",
+  "appVersion": "Version {version}",
+  "@appVersion": {
+    "placeholders": { "version": { "type": "String" } }
+  },
+  "aboutDescription": "Daily Account is a spiritual accountability tool for CMFI believers. Track your daily walk with God, and send weekly reports to your disciple maker.",
+  "madeWithLove": "Made with love for CMFI Cameroon",
+
+  "dangerZone": "Danger Zone",
+  "resetAllData": "Reset All Data",
+  "resetConfirmTitle": "Reset Everything?",
+  "resetConfirmBody": "This will permanently delete all your logs, settings, and preferences. This action cannot be undone.",
+  "resetConfirmButton": "Delete Everything",
+  "resetSuccess": "All data has been reset."
 }

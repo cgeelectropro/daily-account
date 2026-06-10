@@ -589,4 +589,72 @@ class SEn extends S {
   @override
   String get invalidWhatsapp =>
       'Please enter a valid phone number (digits only, 10-15 chars).';
+
+  @override
+  String get themeSection => 'Appearance';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get notificationsSection => 'Notifications';
+
+  @override
+  String get notificationsEnabled => 'Enable Notifications';
+
+  @override
+  String get notificationsDisabledMsg => 'Notifications disabled';
+
+  @override
+  String get notificationsEnabledMsg => 'Notifications enabled';
+
+  @override
+  String get autoSendSection => 'Auto-Send Report';
+
+  @override
+  String get autoSendEnabled => 'Auto-open report on Sunday';
+
+  @override
+  String get autoSendTime => 'Send reminder time';
+
+  @override
+  String get autoSendDescription =>
+      'On Sunday at the scheduled time, the app will remind you to send your weekly report to your disciple maker.';
+
+  @override
+  String get aboutSection => 'About';
+
+  @override
+  String appVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutDescription =>
+      'Daily Account is a spiritual accountability tool for CMFI believers. Track your daily walk with God, and send weekly reports to your disciple maker.';
+
+  @override
+  String get madeWithLove => 'Made with love for CMFI Cameroon';
+
+  @override
+  String get dangerZone => 'Danger Zone';
+
+  @override
+  String get resetAllData => 'Reset All Data';
+
+  @override
+  String get resetConfirmTitle => 'Reset Everything?';
+
+  @override
+  String get resetConfirmBody =>
+      'This will permanently delete all your logs, settings, and preferences. This action cannot be undone.';
+
+  @override
+  String get resetConfirmButton => 'Delete Everything';
+
+  @override
+  String get resetSuccess => 'All data has been reset.';
 }

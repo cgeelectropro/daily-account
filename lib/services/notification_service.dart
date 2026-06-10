@@ -1,9 +1,15 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
+import 'storage_service.dart';
 
 /// Schedules the daily "log your account" reminder and the special
 /// Sunday "send to your disciple maker" reminder.
+///
+/// Notification IDs:
+///   1 = Daily log reminder
+///   2 = Sunday send reminder
+///   3 = Sunday auto-send reminder (sends report)
 class NotificationService {
   static final NotificationService instance = NotificationService._();
   NotificationService._();
@@ -33,6 +39,20 @@ class NotificationService {
         ?.requestNotificationsPermission();
 
     _ready = true;
+
+    // Schedule default notifications on first launch
+    await _scheduleDefaultsIfNeeded();
+  }
+
+  /// Schedule default daily (20:00) and Sunday (18:00) reminders on first launch.
+  Future<void> _scheduleDefaultsIfNeeded() async {
+    final hasScheduled = await StorageService.instance.getSetting('notifs_initialized', fallback: '');
+    if (hasScheduled.isNotEmpty) return;
+
+    await scheduleDailyReminder(20, 0);
+    await scheduleSundayReminder(18, 0);
+    await StorageService.instance.setSetting('notifs_initialized', 'true');
+    await StorageService.instance.setSetting('notificationsEnabled', 'true');
   }
 
   static const _details = NotificationDetails(
@@ -53,13 +73,13 @@ class NotificationService {
     await _plugin.cancel(1);
     await _plugin.zonedSchedule(
       1,
-      title ?? '📖 Daily Account',
+      title ?? 'Daily Account',
       body ?? 'Have you recorded your walk with God today? Tap to log it.',
       _nextInstanceOfTime(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime, // daily repeat
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -70,16 +90,36 @@ class NotificationService {
     await _plugin.cancel(2);
     await _plugin.zonedSchedule(
       2,
-      title ?? '🕊️ Sunday — Send Your Account',
+      title ?? 'Sunday — Send Your Account',
       body ?? 'Send this week\'s account to your disciple maker. Tap to review & send.',
       _nextInstanceOfSunday(hour, minute),
       _details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, 
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime, // weekly
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
+  /// Schedule a Sunday auto-send reminder (separate from the regular Sunday reminder).
+  Future<void> scheduleAutoSendReminder(int hour, int minute, {String? title, String? body}) async {
+    await init();
+    await _plugin.cancel(3);
+    await _plugin.zonedSchedule(
+      3,
+      title ?? 'Time to Send Your Account',
+      body ?? 'Your weekly report is ready. Tap to review and send it now.',
+      _nextInstanceOfSunday(hour, minute),
+      _details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  /// Cancel a specific notification by ID.
+  Future<void> cancel(int id) async => _plugin.cancel(id);
+
+  /// Cancel all notifications.
   Future<void> cancelAll() async => _plugin.cancelAll();
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
@@ -93,7 +133,6 @@ class NotificationService {
 
   tz.TZDateTime _nextInstanceOfSunday(int hour, int minute) {
     var scheduled = _nextInstanceOfTime(hour, minute);
-    // DateTime.sunday == 7
     while (scheduled.weekday != DateTime.sunday) {
       scheduled = scheduled.add(const Duration(days: 1));
     }

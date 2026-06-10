@@ -297,5 +297,34 @@
   "emailError": "Impossible d\u2019ouvrir l\u2019application email.",
   "whatsappError": "Impossible d\u2019ouvrir WhatsApp.",
   "invalidEmail": "Veuillez entrer une adresse email valide.",
-  "invalidWhatsapp": "Veuillez entrer un num\u00e9ro de t\u00e9l\u00e9phone valide (chiffres uniquement, 10-15 caract\u00e8res)."
+  "invalidWhatsapp": "Veuillez entrer un num\u00e9ro de t\u00e9l\u00e9phone valide (chiffres uniquement, 10-15 caract\u00e8res).",
+
+  "themeSection": "Apparence",
+  "themeDark": "Sombre",
+  "themeLight": "Clair",
+
+  "notificationsSection": "Notifications",
+  "notificationsEnabled": "Activer les notifications",
+  "notificationsDisabledMsg": "Notifications d\u00e9sactiv\u00e9es",
+  "notificationsEnabledMsg": "Notifications activ\u00e9es",
+
+  "autoSendSection": "Envoi automatique",
+  "autoSendEnabled": "Rappel d\u2019envoi le dimanche",
+  "autoSendTime": "Heure du rappel",
+  "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application vous rappellera d\u2019envoyer votre compte \u00e0 votre faiseur de disciples.",
+
+  "aboutSection": "\u00c0 propos",
+  "appVersion": "Version {version}",
+  "@appVersion": {
+    "placeholders": { "version": { "type": "String" } }
+  },
+  "aboutDescription": "Compte Journalier est un outil de responsabilit\u00e9 spirituelle pour les croyants CMFI. Suivez votre marche quotidienne avec Dieu et envoyez des rapports hebdomadaires \u00e0 votre faiseur de disciples.",
+  "madeWithLove": "Fait avec amour pour CMFI Cameroun",
+
+  "dangerZone": "Zone de danger",
+  "resetAllData": "R\u00e9initialiser toutes les donn\u00e9es",
+  "resetConfirmTitle": "Tout r\u00e9initialiser ?",
+  "resetConfirmBody": "Cela supprimera d\u00e9finitivement tous vos journaux, param\u00e8tres et pr\u00e9f\u00e9rences. Cette action est irr\u00e9versible.",
+  "resetConfirmButton": "Tout supprimer",
+  "resetSuccess": "Toutes les donn\u00e9es ont \u00e9t\u00e9 r\u00e9initialis\u00e9es."
 }

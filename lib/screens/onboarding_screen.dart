@@ -391,7 +391,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.gold.withOpacity(0.15)
-              : AppTheme.surface,
+              : Colors.white.withOpacity(0.04),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected

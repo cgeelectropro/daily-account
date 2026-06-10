@@ -113,4 +113,12 @@ class StorageService {
     final p = await SharedPreferences.getInstance();
     return p.getString(key) ?? fallback;
   }
+
+  /// Delete all logs and clear all settings. Used for factory reset.
+  Future<void> resetAll() async {
+    final db = await database;
+    await db.delete('logs');
+    final p = await SharedPreferences.getInstance();
+    await p.clear();
+  }
 }

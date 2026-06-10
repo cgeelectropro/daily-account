@@ -590,4 +590,72 @@ class SFr extends S {
   @override
   String get invalidWhatsapp =>
       'Veuillez entrer un numéro de téléphone valide (chiffres uniquement, 10-15 caractères).';
+
+  @override
+  String get themeSection => 'Apparence';
+
+  @override
+  String get themeDark => 'Sombre';
+
+  @override
+  String get themeLight => 'Clair';
+
+  @override
+  String get notificationsSection => 'Notifications';
+
+  @override
+  String get notificationsEnabled => 'Activer les notifications';
+
+  @override
+  String get notificationsDisabledMsg => 'Notifications désactivées';
+
+  @override
+  String get notificationsEnabledMsg => 'Notifications activées';
+
+  @override
+  String get autoSendSection => 'Envoi automatique';
+
+  @override
+  String get autoSendEnabled => 'Rappel d’envoi le dimanche';
+
+  @override
+  String get autoSendTime => 'Heure du rappel';
+
+  @override
+  String get autoSendDescription =>
+      'Le dimanche à l’heure programmée, l’application vous rappellera d’envoyer votre compte à votre faiseur de disciples.';
+
+  @override
+  String get aboutSection => 'À propos';
+
+  @override
+  String appVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String get aboutDescription =>
+      'Compte Journalier est un outil de responsabilité spirituelle pour les croyants CMFI. Suivez votre marche quotidienne avec Dieu et envoyez des rapports hebdomadaires à votre faiseur de disciples.';
+
+  @override
+  String get madeWithLove => 'Fait avec amour pour CMFI Cameroun';
+
+  @override
+  String get dangerZone => 'Zone de danger';
+
+  @override
+  String get resetAllData => 'Réinitialiser toutes les données';
+
+  @override
+  String get resetConfirmTitle => 'Tout réinitialiser ?';
+
+  @override
+  String get resetConfirmBody =>
+      'Cela supprimera définitivement tous vos journaux, paramètres et préférences. Cette action est irréversible.';
+
+  @override
+  String get resetConfirmButton => 'Tout supprimer';
+
+  @override
+  String get resetSuccess => 'Toutes les données ont été réinitialisées.';
 }

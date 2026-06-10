@@ -51,7 +51,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(gradient: AppTheme.bgGradient),
+      decoration: BoxDecoration(gradient: AppTheme.backgroundGradient(context)),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: SafeArea(
