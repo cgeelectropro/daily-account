@@ -40,8 +40,8 @@ class NotificationService {
 
     _ready = true;
 
-    // Schedule default notifications on first launch
-    await _scheduleDefaultsIfNeeded();
+    // Schedule default notifications on first launch (non-blocking)
+    _scheduleDefaultsIfNeeded();
   }
 
   /// Schedule default daily (20:00) and Sunday (18:00) reminders on first launch.

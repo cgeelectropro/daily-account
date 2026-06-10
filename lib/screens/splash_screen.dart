@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../l10n/generated/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
@@ -150,52 +149,43 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
               const SizedBox(height: 36),
-              // ── App title ──
-              Builder(builder: (context) {
-                final l = S.of(context);
-                return Column(
-                  children: [
-                    Text(
-                      l.appTitle,
-                      style: AppTheme.display(32, color: AppTheme.gold),
-                    )
-                        .animate()
-                        .fadeIn(duration: 800.ms, delay: 900.ms)
-                        .slideY(begin: 0.3, end: 0, duration: 800.ms, delay: 900.ms,
-                            curve: Curves.easeOut),
-                    const SizedBox(height: 8),
-                    // ── Tagline ──
-                    Text(
-                      l.walkWithGod,
-                      style: AppTheme.label(12, color: AppTheme.clay),
-                    )
-                        .animate()
-                        .fadeIn(duration: 600.ms, delay: 1300.ms)
-                        .slideY(begin: 0.4, end: 0, duration: 600.ms, delay: 1300.ms,
-                            curve: Curves.easeOut),
-                    const SizedBox(height: 6),
-                    Text(
-                      l.cmfiDiscipline,
-                      style: AppTheme.label(10, color: AppTheme.clay.withOpacity(0.6)),
-                    )
-                        .animate()
-                        .fadeIn(duration: 600.ms, delay: 1500.ms),
-                    const SizedBox(height: 48),
-                    // ── Scripture verse ──
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 48),
-                      child: Text(
-                        l.splashVerse,
-                        textAlign: TextAlign.center,
-                        style: AppTheme.serif(13,
-                            color: AppTheme.sand, style: FontStyle.italic),
-                      ),
-                    )
-                        .animate()
-                        .fadeIn(duration: 800.ms, delay: 1800.ms),
-                  ],
-                );
-              }),
+              // ── App title (hardcoded — splash shows before locale resolves) ──
+              Text(
+                'Daily Account',
+                style: AppTheme.display(32, color: AppTheme.gold),
+              )
+                  .animate()
+                  .fadeIn(duration: 800.ms, delay: 900.ms)
+                  .slideY(begin: 0.3, end: 0, duration: 800.ms, delay: 900.ms,
+                      curve: Curves.easeOut),
+              const SizedBox(height: 8),
+              Text(
+                'WALK WITH GOD',
+                style: AppTheme.label(12, color: AppTheme.clay),
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms, delay: 1300.ms)
+                  .slideY(begin: 0.4, end: 0, duration: 600.ms, delay: 1300.ms,
+                      curve: Curves.easeOut),
+              const SizedBox(height: 6),
+              Text(
+                'CMFI DISCIPLINE',
+                style: AppTheme.label(10, color: AppTheme.clay.withOpacity(0.6)),
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms, delay: 1500.ms),
+              const SizedBox(height: 48),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48),
+                child: Text(
+                  '"Give an account of thy stewardship."\n— Luke 16:2',
+                  textAlign: TextAlign.center,
+                  style: AppTheme.serif(13,
+                      color: AppTheme.sand, style: FontStyle.italic),
+                ),
+              )
+                  .animate()
+                  .fadeIn(duration: 800.ms, delay: 1800.ms),
             ],
           ),
         ),
