@@ -103,6 +103,7 @@ class DailyLog {
   }) : literature = literature ?? [LiteratureEntry()];
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
+  /// Based on 10 core CMFI disciplines ("Other" is optional, not counted).
   double get completeness {
     final checks = <bool>[
       bibleReference.isNotEmpty || bibleChapters.isNotEmpty,
@@ -115,10 +116,9 @@ class DailyLog {
       givingType.isNotEmpty,
       churchType.isNotEmpty,
       discipleshipWho.isNotEmpty,
-      other.isNotEmpty,
     ];
     final filled = checks.where((c) => c).length;
-    return filled / 11;
+    return filled / 10;
   }
 
   Map<String, dynamic> toMap() => {

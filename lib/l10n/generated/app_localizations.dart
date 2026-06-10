@@ -1057,6 +1057,48 @@ abstract class S {
   /// **'Weekly Spiritual Account — {name} ({date})'**
   String reportEmailSubject(String name, String date);
 
+  /// No description provided for @reportSummaryHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'WEEKLY SUMMARY'**
+  String get reportSummaryHeader;
+
+  /// No description provided for @reportSummaryActiveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active days: {count}/7'**
+  String reportSummaryActiveDays(int count);
+
+  /// No description provided for @reportSummaryBibleChapters.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible chapters: {count}'**
+  String reportSummaryBibleChapters(int count);
+
+  /// No description provided for @reportSummaryEvangelism.
+  ///
+  /// In en, this message translates to:
+  /// **'Evangelism contacts: {count}'**
+  String reportSummaryEvangelism(int count);
+
+  /// No description provided for @reportSummaryCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg. completion: {pct}%'**
+  String reportSummaryCompletion(int pct);
+
+  /// No description provided for @addEmailInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your disciple maker\'s email in Settings first.'**
+  String get addEmailInSettings;
+
+  /// No description provided for @addWhatsAppInSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your disciple maker\'s WhatsApp number in Settings first.'**
+  String get addWhatsAppInSettings;
+
   /// No description provided for @emailError.
   ///
   /// In en, this message translates to:

@@ -547,6 +547,37 @@ class SEn extends S {
   }
 
   @override
+  String get reportSummaryHeader => 'WEEKLY SUMMARY';
+
+  @override
+  String reportSummaryActiveDays(int count) {
+    return 'Active days: $count/7';
+  }
+
+  @override
+  String reportSummaryBibleChapters(int count) {
+    return 'Bible chapters: $count';
+  }
+
+  @override
+  String reportSummaryEvangelism(int count) {
+    return 'Evangelism contacts: $count';
+  }
+
+  @override
+  String reportSummaryCompletion(int pct) {
+    return 'Avg. completion: $pct%';
+  }
+
+  @override
+  String get addEmailInSettings =>
+      'Add your disciple maker\'s email in Settings first.';
+
+  @override
+  String get addWhatsAppInSettings =>
+      'Add your disciple maker\'s WhatsApp number in Settings first.';
+
+  @override
   String get emailError => 'Could not open email app.';
 
   @override

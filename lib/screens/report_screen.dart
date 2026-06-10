@@ -85,7 +85,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _sendEmail() async {
     final l = S.of(context);
-    if (_email.isEmpty) { _toast(l.invalidEmail); return; }
+    if (_email.isEmpty) { _toast('⚠️ ${l.addEmailInSettings}'); return; }
     if (!await _confirmSend()) return;
     final ok = await ReportService.instance.sendByEmail(_email, _name, _report, l);
     if (!mounted) return;
@@ -94,7 +94,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _sendWhatsApp() async {
     final l = S.of(context);
-    if (_whatsapp.isEmpty) { _toast(l.invalidWhatsapp); return; }
+    if (_whatsapp.isEmpty) { _toast('⚠️ ${l.addWhatsAppInSettings}'); return; }
     if (!await _confirmSend()) return;
     final ok = await ReportService.instance.sendByWhatsApp(_whatsapp, _report);
     if (!mounted) return;

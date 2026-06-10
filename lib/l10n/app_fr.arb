@@ -275,6 +275,25 @@
       "date": { "type": "String" }
     }
   },
+  "reportSummaryHeader": "R\u00c9SUM\u00c9 HEBDOMADAIRE",
+  "reportSummaryActiveDays": "Jours actifs : {count}/7",
+  "@reportSummaryActiveDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryBibleChapters": "Chapitres de la Bible : {count}",
+  "@reportSummaryBibleChapters": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryEvangelism": "Contacts d'\u00e9vang\u00e9lisation : {count}",
+  "@reportSummaryEvangelism": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryCompletion": "Compl\u00e9tion moyenne : {pct}%",
+  "@reportSummaryCompletion": {
+    "placeholders": { "pct": { "type": "int" } }
+  },
+  "addEmailInSettings": "Ajoutez l'email de votre faiseur de disciples dans les Param\u00e8tres.",
+  "addWhatsAppInSettings": "Ajoutez le num\u00e9ro WhatsApp de votre faiseur de disciples dans les Param\u00e8tres.",
   "emailError": "Impossible d\u2019ouvrir l\u2019application email.",
   "whatsappError": "Impossible d\u2019ouvrir WhatsApp.",
   "invalidEmail": "Veuillez entrer une adresse email valide.",

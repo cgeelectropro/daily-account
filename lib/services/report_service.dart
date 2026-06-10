@@ -71,15 +71,27 @@ class ReportService {
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
 
+    int activeDays = 0;
+    int totalChapters = 0;
+    int totalContacts = 0;
+    double totalCompletion = 0;
+
     for (final d in dates) {
       final log = await StorageService.instance.getLog(keyFor(d));
       buf.writeln('━━━━━━━━━━━━━━━━━━━━');
       buf.writeln('📅 ${fmtLong.format(d).toUpperCase()}');
-      if (log == null || !log.completed) {
+      // Show data if the log has any content, even if not explicitly marked complete
+      final hasContent = log != null && log.completeness > 0;
+      if (log == null || !hasContent) {
         buf.writeln('   ⚠️  ${l.reportNoEntry}');
         buf.writeln('');
         continue;
       }
+      activeDays++;
+      totalChapters += int.tryParse(log.bibleChapters) ?? 0;
+      totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
+      totalCompletion += log.completeness;
+
       if (log.bibleReference.isNotEmpty) {
         buf.writeln('📖 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
       }
@@ -116,7 +128,16 @@ class ReportService {
       if (log.other.isNotEmpty) buf.writeln('➕ ${l.reportOther(log.other)}');
       buf.writeln('');
     }
+
+    // Weekly summary for the disciple maker
     buf.writeln('━━━━━━━━━━━━━━━━━━━━');
+    buf.writeln('📊 ${l.reportSummaryHeader}');
+    buf.writeln(l.reportSummaryActiveDays(activeDays));
+    buf.writeln(l.reportSummaryBibleChapters(totalChapters));
+    buf.writeln(l.reportSummaryEvangelism(totalContacts));
+    final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
+    buf.writeln(l.reportSummaryCompletion(avgPct));
+    buf.writeln('');
     buf.writeln('${l.reportFooter} 🕊️');
     return buf.toString();
   }

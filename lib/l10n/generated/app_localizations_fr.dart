@@ -548,6 +548,37 @@ class SFr extends S {
   }
 
   @override
+  String get reportSummaryHeader => 'RÉSUMÉ HEBDOMADAIRE';
+
+  @override
+  String reportSummaryActiveDays(int count) {
+    return 'Jours actifs : $count/7';
+  }
+
+  @override
+  String reportSummaryBibleChapters(int count) {
+    return 'Chapitres de la Bible : $count';
+  }
+
+  @override
+  String reportSummaryEvangelism(int count) {
+    return 'Contacts d\'évangélisation : $count';
+  }
+
+  @override
+  String reportSummaryCompletion(int pct) {
+    return 'Complétion moyenne : $pct%';
+  }
+
+  @override
+  String get addEmailInSettings =>
+      'Ajoutez l\'email de votre faiseur de disciples dans les Paramètres.';
+
+  @override
+  String get addWhatsAppInSettings =>
+      'Ajoutez le numéro WhatsApp de votre faiseur de disciples dans les Paramètres.';
+
+  @override
   String get emailError => 'Impossible d’ouvrir l’application email.';
 
   @override

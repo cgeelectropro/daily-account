@@ -274,6 +274,25 @@
       "date": { "type": "String" }
     }
   },
+  "reportSummaryHeader": "WEEKLY SUMMARY",
+  "reportSummaryActiveDays": "Active days: {count}/7",
+  "@reportSummaryActiveDays": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryBibleChapters": "Bible chapters: {count}",
+  "@reportSummaryBibleChapters": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryEvangelism": "Evangelism contacts: {count}",
+  "@reportSummaryEvangelism": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "reportSummaryCompletion": "Avg. completion: {pct}%",
+  "@reportSummaryCompletion": {
+    "placeholders": { "pct": { "type": "int" } }
+  },
+  "addEmailInSettings": "Add your disciple maker's email in Settings first.",
+  "addWhatsAppInSettings": "Add your disciple maker's WhatsApp number in Settings first.",
   "emailError": "Could not open email app.",
   "whatsappError": "Could not open WhatsApp.",
   "invalidEmail": "Please enter a valid email address.",
