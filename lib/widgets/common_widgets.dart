@@ -143,14 +143,15 @@ class ProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppTheme.accentGold(context);
     return SizedBox(
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _RingPainter(progress),
+        painter: _RingPainter(progress, accent),
         child: Center(
           child: Text(centerText,
-              style: AppTheme.display(size * 0.28, color: AppTheme.gold)),
+              style: AppTheme.display(size * 0.28, color: accent)),
         ),
       ),
     );
@@ -159,18 +160,19 @@ class ProgressRing extends StatelessWidget {
 
 class _RingPainter extends CustomPainter {
   final double progress;
-  _RingPainter(this.progress);
+  final Color accent;
+  _RingPainter(this.progress, this.accent);
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
     final radius = size.width / 2 - 4;
     final bgPaint = Paint()
-      ..color = AppTheme.gold.withOpacity(0.12)
+      ..color = accent.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5;
     final fgPaint = Paint()
-      ..shader = const LinearGradient(colors: [AppTheme.goldSoft, AppTheme.goldDeep])
+      ..shader = LinearGradient(colors: [accent.withValues(alpha: 0.7), accent])
           .createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
@@ -186,7 +188,7 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => old.progress != progress;
+  bool shouldRepaint(_RingPainter old) => old.progress != progress || old.accent != accent;
 }
 
 /// A small stat tile for the dashboard.
@@ -198,22 +200,23 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppTheme.accentGold(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: AppTheme.gold.withOpacity(0.06),
+        color: accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.18)),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
       ),
       child: Column(
         children: [
           Text(icon, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 6),
-          Text(value, style: AppTheme.display(22, color: AppTheme.goldSoft)),
+          Text(value, style: AppTheme.display(22, color: accent)),
           const SizedBox(height: 2),
           Text(label.toUpperCase(),
               textAlign: TextAlign.center,
-              style: AppTheme.label(9, color: AppTheme.sand)),
+              style: AppTheme.label(9, color: AppTheme.mutedColor(context))),
         ],
       ),
     );

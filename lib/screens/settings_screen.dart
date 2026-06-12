@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
+import 'package:local_auth/local_auth.dart';
 import '../services/backup_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
+import 'report_history_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -22,7 +25,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _autoSendEnabled = false;
   bool _isDark = true;
+  bool _appLockEnabled = false;
+  bool _useBiometrics = false;
+  bool _biometricsAvailable = false;
+  int _dailyFollowUps = 3; // default aggressive: 3 follow-ups
+  int _sundayFollowUps = 2; // default aggressive: 2 follow-ups
   bool _loading = true;
+  String _version = '';
 
   @override
   void initState() {
@@ -47,6 +56,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _notificationsEnabled = (await s.getSetting('notificationsEnabled', fallback: 'true')) == 'true';
     _autoSendEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
     _isDark = (await s.getSetting('themeMode', fallback: 'dark')) == 'dark';
+    _appLockEnabled = (await s.getSetting('appLockEnabled', fallback: 'false')) == 'true';
+    _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
+    _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
+    _sundayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    try {
+      final auth = LocalAuthentication();
+      _biometricsAvailable = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+    } catch (_) {
+      _biometricsAvailable = false;
+    }
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _version = '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      _version = '1.2.0';
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -81,11 +106,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _dailyTime.hour, _dailyTime.minute,
       title: l.notifDailyTitle,
       body: l.notifDailyBody,
+      followUpCount: _dailyFollowUps,
     );
     await NotificationService.instance.scheduleSundayReminder(
       _sundayTime.hour, _sundayTime.minute,
       title: l.notifSundayTitle,
       body: l.notifSundayBody,
+      followUpCount: _sundayFollowUps,
     );
     if (_autoSendEnabled) {
       await NotificationService.instance.scheduleAutoSendReminder(
@@ -159,6 +186,182 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
+  }
+
+  // ── App Lock ───────────────────────────────────────────────
+
+  Future<void> _toggleAppLock(bool enabled) async {
+    if (enabled) {
+      // Ask user to set a PIN
+      final pin = await _showSetPinDialog();
+      if (pin == null) return; // cancelled
+      await StorageService.instance.setSetting('appPin', pin);
+      await StorageService.instance.setSetting('appLockEnabled', 'true');
+      setState(() => _appLockEnabled = true);
+      if (mounted) _toast(S.of(context).pinSet);
+    } else {
+      await StorageService.instance.setSetting('appLockEnabled', 'false');
+      await StorageService.instance.setSetting('appPin', '');
+      await StorageService.instance.setSetting('useBiometrics', 'false');
+      setState(() {
+        _appLockEnabled = false;
+        _useBiometrics = false;
+      });
+      if (mounted) _toast(S.of(context).pinRemoved);
+    }
+  }
+
+  Future<void> _toggleBiometrics(bool enabled) async {
+    setState(() => _useBiometrics = enabled);
+    await StorageService.instance.setSetting('useBiometrics', enabled ? 'true' : 'false');
+  }
+
+  Future<String?> _showSetPinDialog() async {
+    String pin = '';
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+
+    // Step 1: Enter PIN
+    final firstPin = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        String entered = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            backgroundColor: AppTheme.surfaceColor(context),
+            title: Text(l.setPinTitle, style: AppTheme.display(18, color: accent)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.setPinBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(4, (i) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < entered.length ? accent : Colors.transparent,
+                      border: Border.all(color: accent, width: 1.5),
+                    ),
+                  )),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.display(24, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    entered = v;
+                    setDialogState(() {});
+                    if (v.length == 4) Navigator.pop(ctx, v);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (firstPin == null || firstPin.length != 4) return null;
+    pin = firstPin;
+
+    if (!mounted) return null;
+
+    // Step 2: Confirm PIN
+    final confirmed = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        String entered = '';
+        String error = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            backgroundColor: AppTheme.surfaceColor(context),
+            title: Text(l.confirmPinTitle, style: AppTheme.display(18, color: accent)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.confirmPinBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(4, (i) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < entered.length ? accent : Colors.transparent,
+                      border: Border.all(color: accent, width: 1.5),
+                    ),
+                  )),
+                ),
+                if (error.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(error, style: AppTheme.serif(12, color: AppTheme.rust)),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.display(24, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    entered = v;
+                    setDialogState(() { error = ''; });
+                    if (v.length == 4) {
+                      if (v == pin) {
+                        Navigator.pop(ctx, v);
+                      } else {
+                        setDialogState(() { error = l.pinMismatch; entered = ''; });
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return confirmed;
   }
 
   // ── Theme ──────────────────────────────────────────────────
@@ -404,14 +607,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ]),
 
+        // ── Security ──
+        SectionCard(icon: '🔒', title: l.securitySection, initiallyExpanded: false, children: [
+          _switchRow(l.appLockEnabled, _appLockEnabled, _toggleAppLock),
+          if (_appLockEnabled) ...[
+            if (_biometricsAvailable)
+              _switchRow(l.useBiometrics, _useBiometrics, _toggleBiometrics),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final pin = await _showSetPinDialog();
+                  if (pin != null && mounted) {
+                    await StorageService.instance.setSetting('appPin', pin);
+                    _toast(l.pinSet);
+                  }
+                },
+                icon: Icon(Icons.lock_reset, color: accent),
+                label: Text(l.changePin, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+          ],
+        ]),
+
         // ── Notifications ──
         SectionCard(icon: '🔔', title: l.notificationsSection, children: [
           _switchRow(l.notificationsEnabled, _notificationsEnabled, _toggleNotifications),
           if (_notificationsEnabled) ...[
-            const SizedBox(height: 8),
+            // Intensity badge
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🚨', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.intensityAggressive, style: AppTheme.serif(13, color: textCol)),
+                        Text(l.intensityAggressiveDesc, style: AppTheme.label(10, color: mutedCol)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
             _timeRow(l.dailyReminder, _dailyTime, () => _pickTime(true)),
             const SizedBox(height: 8),
+            // Daily follow-ups slider
+            _followUpSlider(
+              label: l.followUpReminders,
+              value: _dailyFollowUps,
+              max: 3,
+              displayText: l.followUpCount(_dailyFollowUps),
+              onChanged: (v) async {
+                setState(() => _dailyFollowUps = v);
+                await StorageService.instance.setSetting('dailyFollowUps', '$v');
+              },
+            ),
+            const SizedBox(height: 12),
             _timeRow(l.sundayReminder, _sundayTime, () => _pickTime(false)),
+            const SizedBox(height: 8),
+            // Sunday follow-ups slider
+            _followUpSlider(
+              label: l.sundayFollowUps,
+              value: _sundayFollowUps,
+              max: 2,
+              displayText: l.sundayFollowUpCount(_sundayFollowUps),
+              onChanged: (v) async {
+                setState(() => _sundayFollowUps = v);
+                await StorageService.instance.setSetting('sundayFollowUps', '$v');
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(l.followUpDescription, style: AppTheme.serif(11, color: mutedCol)),
             const SizedBox(height: 14),
             GestureDetector(
               onTap: _saveReminders,
@@ -474,6 +754,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ]),
 
+        // ── Report Archive ──
+        SectionCard(icon: '📜', title: l.reportHistorySection, initiallyExpanded: false, children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReportHistoryScreen()),
+              ),
+              icon: Icon(Icons.history, color: accent),
+              label: Text(l.reportHistory, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+        ]),
+
         // ── How It Works ──
         Container(
           padding: const EdgeInsets.all(16),
@@ -508,7 +803,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 8),
               Text(l.appTitle, style: AppTheme.display(18, color: accent)),
               const SizedBox(height: 4),
-              Text(l.appVersion('1.1.0'), style: AppTheme.serif(12, color: mutedCol)),
+              Text(l.appVersion(_version), style: AppTheme.serif(12, color: mutedCol)),
               const SizedBox(height: 12),
               Text(l.aboutDescription, textAlign: TextAlign.center, style: AppTheme.serif(13, color: textCol)),
               const SizedBox(height: 8),
@@ -544,6 +839,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _followUpSlider({
+    required String label,
+    required int value,
+    required int max,
+    required String displayText,
+    required ValueChanged<int> onChanged,
+  }) {
+    final accent = AppTheme.accentGold(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(displayText, style: AppTheme.label(10, color: accent)),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: accent,
+            inactiveTrackColor: accent.withValues(alpha: 0.15),
+            thumbColor: accent,
+            overlayColor: accent.withValues(alpha: 0.1),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: value.toDouble(),
+            min: 0,
+            max: max.toDouble(),
+            divisions: max,
+            onChanged: (v) => onChanged(v.round()),
           ),
         ),
       ],

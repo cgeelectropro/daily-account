@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/daily_log.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common_widgets.dart';
@@ -50,25 +51,59 @@ class _LogScreenState extends State<LogScreen> {
     final t = S.of(context);
     setState(() => _log.completed = true);
     _persist();
+    // Cancel follow-up reminders — user has logged their account
+    NotificationService.instance.cancelDailyFollowUps();
     ScaffoldMessenger.of(context).showSnackBar(
       _snack('\u2705 ${t.markedComplete}'),
     );
   }
 
+  Future<void> _copyFromYesterday() async {
+    final t = S.of(context);
+    final yesterday = widget.date.subtract(const Duration(days: 1));
+    final yKey = DateFormat('yyyy-MM-dd').format(yesterday);
+    final prev = await StorageService.instance.getLog(yKey);
+    if (prev == null || prev.completeness == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(_snack(t.nothingToCopy));
+      return;
+    }
+    setState(() {
+      _log.bibleReference = prev.bibleReference;
+      _log.bibleChapters = prev.bibleChapters;
+      _log.literature = prev.literature.map((e) => LiteratureEntry(title: e.title, amount: e.amount, unit: e.unit)).toList();
+      _log.ddegScripture = prev.ddegScripture;
+      _log.ddegTime = prev.ddegTime;
+      _log.prayerAloneDuration = prev.prayerAloneDuration;
+      _log.prayerOthersDuration = prev.prayerOthersDuration;
+      _log.prayerOthersContext = prev.prayerOthersContext;
+      _log.fastingType = prev.fastingType;
+      _log.fastingDuration = prev.fastingDuration;
+      _log.givingType = prev.givingType;
+      _log.churchType = prev.churchType;
+      _log.discipleshipWho = prev.discipleshipWho;
+      _log.discipleshipTopic = prev.discipleshipTopic;
+      _log.discipleshipDuration = prev.discipleshipDuration;
+      // Don't copy: ddegNotes, prayerAloneNotes, evangelism*, fastingPrayerFocus,
+      // givingAmount, givingPurpose, churchNotes, other — those are day-specific
+    });
+    _persist();
+    ScaffoldMessenger.of(context).showSnackBar(_snack('\u2705 ${t.copiedFromYesterday}'));
+  }
+
   SnackBar _snack(String msg) => SnackBar(
-        content: Text(msg, style: AppTheme.serif(14, color: AppTheme.cream)),
-        backgroundColor: AppTheme.bg2,
+        content: Text(msg, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+        backgroundColor: AppTheme.surfaceColor(context),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppTheme.gold),
+          side: BorderSide(color: AppTheme.accentGold(context)),
         ),
       );
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.gold));
+      return Center(child: CircularProgressIndicator(color: AppTheme.accentGold(context)));
     }
 
     final t = S.of(context);
@@ -85,9 +120,9 @@ class _LogScreenState extends State<LogScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(DateFormat('EEEE').format(widget.date),
-                      style: AppTheme.display(24, color: AppTheme.gold)),
+                      style: AppTheme.display(24, color: AppTheme.accentGold(context))),
                   Text(DateFormat('MMMM d, y').format(widget.date),
-                      style: AppTheme.serif(13, color: AppTheme.sand)),
+                      style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
                 ],
               ),
             ),
@@ -97,7 +132,33 @@ class _LogScreenState extends State<LogScreen> {
             ),
           ],
         ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.1),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
+
+        // Copy from yesterday button (only if today's log is mostly empty)
+        if (_log.completeness < 0.1)
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: _copyFromYesterday,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentGold(context).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.accentGold(context).withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.content_copy, size: 14, color: AppTheme.accentGold(context)),
+                    const SizedBox(width: 6),
+                    Text(t.copyFromYesterday, style: AppTheme.serif(12, color: AppTheme.accentGold(context))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 10),
 
         // Bible
         SectionCard(
@@ -134,9 +195,11 @@ class _LogScreenState extends State<LogScreen> {
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
+                  color: AppTheme.isDark(context)
+                      ? Colors.white.withValues(alpha: 0.03)
+                      : Colors.black.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.gold.withOpacity(0.1)),
+                  border: Border.all(color: AppTheme.accentGold(context).withValues(alpha: 0.1)),
                 ),
                 child: Column(
                   children: [
@@ -184,8 +247,8 @@ class _LogScreenState extends State<LogScreen> {
                 onPressed: () {
                   setState(() => _log.literature.add(LiteratureEntry()));
                 },
-                icon: const Icon(Icons.add_circle_outline, size: 18, color: AppTheme.gold),
-                label: Text(t.addAnotherBook, style: AppTheme.serif(13, color: AppTheme.gold)),
+                icon: Icon(Icons.add_circle_outline, size: 18, color: AppTheme.accentGold(context)),
+                label: Text(t.addAnotherBook, style: AppTheme.serif(13, color: AppTheme.accentGold(context))),
               ),
             ),
           ],
@@ -395,6 +458,28 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ).animate().fadeIn(delay: 440.ms),
 
+        // Proclamation
+        SectionCard(
+          icon: '\u{1F4E3}',
+          title: t.sectionProclamation,
+          initiallyExpanded: _log.proclamationCount.isNotEmpty || _log.proclamationDuration.isNotEmpty,
+          children: [
+            GoldField(
+              label: t.proclamationCountLabel,
+              hint: t.proclamationCountHint,
+              value: _log.proclamationCount,
+              keyboardType: TextInputType.number,
+              onChanged: (v) { _log.proclamationCount = v; _persist(); },
+            ),
+            GoldField(
+              label: t.proclamationDurationLabel,
+              hint: t.proclamationDurationHint,
+              value: _log.proclamationDuration,
+              onChanged: (v) { _log.proclamationDuration = v; _persist(); },
+            ),
+          ],
+        ).animate().fadeIn(delay: 480.ms),
+
         // Other
         SectionCard(
           icon: '\u2795',
@@ -409,11 +494,11 @@ class _LogScreenState extends State<LogScreen> {
               onChanged: (v) { _log.other = v; _persist(); },
             ),
           ],
-        ).animate().fadeIn(delay: 480.ms),
+        ).animate().fadeIn(delay: 520.ms),
 
         const SizedBox(height: 8),
 
-        // Complete button
+        // Complete button (delay after Other = 520 + 40)
         GestureDetector(
           onTap: _markComplete,
           child: Container(
@@ -433,7 +518,7 @@ class _LogScreenState extends State<LogScreen> {
                   color: _log.completed ? AppTheme.green : AppTheme.bg0),
             ),
           ),
-        ).animate().fadeIn(delay: 520.ms),
+        ).animate().fadeIn(delay: 560.ms),
       ],
     );
   }
@@ -443,21 +528,23 @@ class _LogScreenState extends State<LogScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(t.unitLabel, style: AppTheme.label(11, color: AppTheme.gold.withOpacity(0.7))),
+        Text(t.unitLabel, style: AppTheme.label(11, color: AppTheme.accentGold(context).withValues(alpha: 0.7))),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: AppTheme.isDark(context)
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.black.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.gold.withOpacity(0.25)),
+            border: Border.all(color: AppTheme.accentGold(context).withValues(alpha: 0.25)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
               value: lit.unit,
               isExpanded: true,
-              dropdownColor: AppTheme.bg2,
-              style: AppTheme.serif(15, color: AppTheme.cream),
+              dropdownColor: AppTheme.surfaceColor(context),
+              style: AppTheme.serif(15, color: AppTheme.textColor(context)),
               items: [
                 DropdownMenuItem(value: 'pages', child: Text(t.unitPages)),
                 DropdownMenuItem(value: 'chapters', child: Text(t.unitChapters)),

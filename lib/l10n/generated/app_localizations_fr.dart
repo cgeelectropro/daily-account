@@ -623,7 +623,7 @@ class SFr extends S {
 
   @override
   String get autoSendDescription =>
-      'Le dimanche à l’heure programmée, l’application vous rappellera d’envoyer votre compte à votre faiseur de disciples.';
+      'Le dimanche à l’heure programmée, l’application ouvrira automatiquement WhatsApp pour envoyer ton compte à ton faiseur de disciples.';
 
   @override
   String get aboutSection => 'À propos';
@@ -658,4 +658,300 @@ class SFr extends S {
 
   @override
   String get resetSuccess => 'Toutes les données ont été réinitialisées.';
+
+  @override
+  String get thisWeek => 'Cette Semaine';
+
+  @override
+  String get today => 'Aujourd\'hui';
+
+  @override
+  String weekOf(String date) {
+    return 'Semaine du $date';
+  }
+
+  @override
+  String get monthlyReport => 'Mensuel';
+
+  @override
+  String get weeklyReport => 'Hebdomadaire';
+
+  @override
+  String monthOf(String month) {
+    return 'Mois de $month';
+  }
+
+  @override
+  String get monthlySummaryHeader => 'RÉSUMÉ MENSUEL';
+
+  @override
+  String monthlySummaryActiveDays(int count, int total) {
+    return 'Jours actifs : $count/$total';
+  }
+
+  @override
+  String monthlySummaryWeeks(int count) {
+    return 'Semaines rapportées : $count';
+  }
+
+  @override
+  String get noReportForWeek =>
+      'Aucune entrée pour cette semaine.\nVa dans l\'onglet Journal et sélectionne une date passée pour saisir des données.';
+
+  @override
+  String get reportHistory => 'Historique des Rapports';
+
+  @override
+  String get reportHistoryEmpty =>
+      'Aucun rapport généré pour le moment.\nTes rapports apparaîtront ici après les avoir consultés.';
+
+  @override
+  String get reportHistorySection => 'Archive des Rapports';
+
+  @override
+  String sentVia(String channel) {
+    return 'Envoyé via $channel';
+  }
+
+  @override
+  String get notSentYet => 'Pas encore envoyé';
+
+  @override
+  String get resend => 'Renvoyer';
+
+  @override
+  String get viewReport => 'Voir le Rapport';
+
+  @override
+  String get deleteReport => 'Supprimer';
+
+  @override
+  String get reportSaved => 'Rapport sauvegardé dans l\'archive.';
+
+  @override
+  String get reportDeleted => 'Rapport supprimé.';
+
+  @override
+  String get copyFromYesterday => 'Copier d\'hier';
+
+  @override
+  String get copiedFromYesterday => 'Entrées d\'hier copiées !';
+
+  @override
+  String get nothingToCopy => 'Aucune entrée d\'hier à copier.';
+
+  @override
+  String get securitySection => 'Sécurité';
+
+  @override
+  String get appLockEnabled => 'Verrouillage de l\'app';
+
+  @override
+  String get useBiometrics => 'Empreinte digitale / Face ID';
+
+  @override
+  String get changePin => 'Changer le PIN';
+
+  @override
+  String get setPinTitle => 'Définir un PIN';
+
+  @override
+  String get setPinBody =>
+      'Choisissez un code PIN à 4 chiffres pour verrouiller l\'application.';
+
+  @override
+  String get confirmPinTitle => 'Confirmer le PIN';
+
+  @override
+  String get confirmPinBody => 'Ressaisissez votre PIN pour confirmer.';
+
+  @override
+  String get pinMismatch => 'Les PINs ne correspondent pas. Réessayez.';
+
+  @override
+  String get pinSet => 'PIN de l\'application défini avec succès !';
+
+  @override
+  String get pinRemoved => 'Verrouillage désactivé.';
+
+  @override
+  String get enterPin => 'Entrez votre PIN';
+
+  @override
+  String get wrongPin => 'PIN incorrect';
+
+  @override
+  String get useBiometricsPrompt => 'Déverrouiller Compte Journalier';
+
+  @override
+  String get saveAsPdf => 'Enregistrer en PDF';
+
+  @override
+  String get sharePdf => 'Partager le PDF';
+
+  @override
+  String get shareReport => 'Partager';
+
+  @override
+  String get tabStopwatch => 'Chrono';
+
+  @override
+  String get stopwatchTitle => 'Chronomètre';
+
+  @override
+  String get stopwatchSubtitle =>
+      'Mesure tes disciplines spirituelles en temps réel';
+
+  @override
+  String get todayTotal => 'Total aujourd\'hui';
+
+  @override
+  String get timerStopped => 'Chrono arrêté — durée enregistrée !';
+
+  @override
+  String get timerAlreadyRunning =>
+      'Un autre chrono est en cours. Il sera mis en pause.';
+
+  @override
+  String get stopwatchFillFields =>
+      'Remplis les détails avant de démarrer (optionnel)';
+
+  @override
+  String get startTimer => 'Démarrer le chrono';
+
+  @override
+  String get addActivity => 'Ajouter une activité';
+
+  @override
+  String get activityName => 'Nom de l\'activité';
+
+  @override
+  String get activityNameHint => 'ex. Louange, Méditation';
+
+  @override
+  String get activityIcon => 'Icône emoji';
+
+  @override
+  String get activityCreated => 'Activité ajoutée !';
+
+  @override
+  String get activityDeleted => 'Activité supprimée.';
+
+  @override
+  String get deleteActivityConfirm => 'Supprimer cette activité ?';
+
+  @override
+  String get customFieldLabel => 'Libellé du champ notes (optionnel)';
+
+  @override
+  String get customFieldHint => 'ex. Qu\'as-tu appris ?';
+
+  @override
+  String get ddegShort => 'RDQD';
+
+  @override
+  String get bibleStartRef => 'Référence de début';
+
+  @override
+  String get bibleStartHint => 'ex. Jean 1';
+
+  @override
+  String get bibleEndRef => 'Référence de fin (après lecture)';
+
+  @override
+  String get bibleEndHint => 'ex. Jean 3';
+
+  @override
+  String bibleChaptersRead(int count) {
+    return '$count chapitre(s) lu(s)';
+  }
+
+  @override
+  String get enterEndReference => 'Où as-tu terminé ta lecture ?';
+
+  @override
+  String timerStoppedDuration(String duration) {
+    return 'Durée : $duration';
+  }
+
+  @override
+  String get done => 'Terminé';
+
+  @override
+  String get sectionProclamation => 'Proclamation';
+
+  @override
+  String get proclamationCountLabel => 'Nombre de proclamations';
+
+  @override
+  String get proclamationCountHint => 'ex. 50';
+
+  @override
+  String get proclamationDurationLabel => 'Durée (optionnel)';
+
+  @override
+  String get proclamationDurationHint => 'ex. 10 minutes';
+
+  @override
+  String get proclamationCounter => 'Compteur de Proclamation';
+
+  @override
+  String get proclamationSubtitle => 'Proclame : Jésus-Christ est Seigneur !';
+
+  @override
+  String get proclamationTap => 'Appuie pour proclamer';
+
+  @override
+  String get proclamationSave => 'Enregistrer et Fermer';
+
+  @override
+  String reportProclamation(String count, String duration) {
+    return 'Proclamation : $count fois ($duration)';
+  }
+
+  @override
+  String get followUpReminders => 'Rappels de suivi';
+
+  @override
+  String get followUpDescription =>
+      'Après le rappel principal, des alertes de suivi sonnent toutes les 30 minutes pour ne rien oublier.';
+
+  @override
+  String followUpCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '3 suivis (+30, +60, +90 min)',
+      two: '2 suivis (+30, +60 min)',
+      one: '1 suivi (+30 min)',
+      zero: 'Aucun suivi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationIntensity => 'Intensité des notifications';
+
+  @override
+  String get intensityAggressive => 'Agressive (style alarme)';
+
+  @override
+  String get intensityAggressiveDesc =>
+      'Alertes plein écran, son, vibration, LED — comme un réveil';
+
+  @override
+  String get sundayFollowUps => 'Suivis du dimanche';
+
+  @override
+  String sundayFollowUpCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suivis',
+      two: '2 suivis (+30, +60 min)',
+      one: '1 suivi (+30 min)',
+      zero: 'Aucun suivi',
+    );
+    return '$_temp0';
+  }
 }

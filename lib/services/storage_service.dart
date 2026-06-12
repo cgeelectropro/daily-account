@@ -1,7 +1,10 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
+import '../models/saved_report.dart';
 
 /// Handles all persistence: a SQLite table for daily logs, and
 /// SharedPreferences for lightweight user settings.
@@ -22,7 +25,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 2,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -53,9 +56,12 @@ class StorageService {
             churchNotes TEXT DEFAULT '',
             discipleshipWho TEXT DEFAULT '',
             discipleshipTopic TEXT DEFAULT '',
-            discipleshipDuration TEXT DEFAULT ''
+            discipleshipDuration TEXT DEFAULT '',
+            proclamationCount TEXT DEFAULT '',
+            proclamationDuration TEXT DEFAULT ''
           )
         ''');
+        await _createSavedReportsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -69,8 +75,30 @@ class StorageService {
             await db.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
           }
         }
+        if (oldVersion < 3) {
+          await _createSavedReportsTable(db);
+        }
+        if (oldVersion < 4) {
+          await db.execute("ALTER TABLE logs ADD COLUMN proclamationCount TEXT DEFAULT ''");
+          await db.execute("ALTER TABLE logs ADD COLUMN proclamationDuration TEXT DEFAULT ''");
+        }
       },
     );
+  }
+
+  static Future<void> _createSavedReportsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE saved_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        weekStart TEXT,
+        weekEnd TEXT,
+        fullReport TEXT,
+        compactReport TEXT,
+        generatedAt TEXT,
+        sentVia TEXT DEFAULT '',
+        sentAt TEXT DEFAULT ''
+      )
+    ''');
   }
 
   // ── Log CRUD ──────────────────────────────────────────────
@@ -114,10 +142,138 @@ class StorageService {
     return p.getString(key) ?? fallback;
   }
 
+  // ── Saved Reports (Archive) ────────────────────────────────
+
+  Future<void> saveReport({
+    required String weekStart,
+    required String weekEnd,
+    required String fullReport,
+    required String compactReport,
+    String sentVia = '',
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    // Upsert: if a report for this week already exists, update it
+    final existing = await db.query(
+      'saved_reports',
+      where: 'weekStart = ?',
+      whereArgs: [weekStart],
+    );
+    if (existing.isNotEmpty) {
+      await db.update(
+        'saved_reports',
+        {
+          'fullReport': fullReport,
+          'compactReport': compactReport,
+          'generatedAt': now,
+          if (sentVia.isNotEmpty) 'sentVia': sentVia,
+          if (sentVia.isNotEmpty) 'sentAt': now,
+        },
+        where: 'weekStart = ?',
+        whereArgs: [weekStart],
+      );
+    } else {
+      await db.insert('saved_reports', {
+        'weekStart': weekStart,
+        'weekEnd': weekEnd,
+        'fullReport': fullReport,
+        'compactReport': compactReport,
+        'generatedAt': now,
+        'sentVia': sentVia,
+        'sentAt': sentVia.isNotEmpty ? now : '',
+      });
+    }
+  }
+
+  Future<List<SavedReport>> getAllReports() async {
+    final db = await database;
+    final rows = await db.query('saved_reports', orderBy: 'weekStart DESC');
+    return rows.map((r) => SavedReport.fromMap(r)).toList();
+  }
+
+  Future<SavedReport?> getReport(String weekStart) async {
+    final db = await database;
+    final rows = await db.query(
+      'saved_reports',
+      where: 'weekStart = ?',
+      whereArgs: [weekStart],
+    );
+    if (rows.isEmpty) return null;
+    return SavedReport.fromMap(rows.first);
+  }
+
+  Future<void> deleteReport(int id) async {
+    final db = await database;
+    await db.delete('saved_reports', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ── Custom Activities ──────────────────────────────────────
+
+  static const _customActivitiesKey = 'custom_activities';
+
+  Future<List<CustomActivity>> getCustomActivities() async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_customActivitiesKey);
+    if (raw == null || raw.isEmpty) return [];
+    final list = jsonDecode(raw) as List;
+    return list
+        .map((e) => CustomActivity.fromMap(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> saveCustomActivities(List<CustomActivity> activities) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(
+      _customActivitiesKey,
+      jsonEncode(activities.map((a) => a.toMap()).toList()),
+    );
+  }
+
+  Future<void> addCustomActivity(CustomActivity activity) async {
+    final list = await getCustomActivities();
+    list.add(activity);
+    await saveCustomActivities(list);
+  }
+
+  Future<void> removeCustomActivity(String id) async {
+    final list = await getCustomActivities();
+    list.removeWhere((a) => a.id == id);
+    await saveCustomActivities(list);
+  }
+
+  // ── Pending Report Queue (offline-aware) ──────────────────
+
+  static const _pendingReportKey = 'pending_report';
+
+  /// Queue a report to be sent when connectivity is available.
+  Future<void> queuePendingReport(String compactReport, String whatsapp) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_pendingReportKey, jsonEncode({
+      'report': compactReport,
+      'whatsapp': whatsapp,
+      'queuedAt': DateTime.now().toIso8601String(),
+    }));
+  }
+
+  /// Get a pending report (null if none queued).
+  Future<Map<String, dynamic>?> getPendingReport() async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_pendingReportKey);
+    if (raw == null || raw.isEmpty) return null;
+    return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  }
+
+  /// Clear the pending report after successful send.
+  Future<void> clearPendingReport() async {
+    final p = await SharedPreferences.getInstance();
+    await p.remove(_pendingReportKey);
+  }
+
   /// Delete all logs and clear all settings. Used for factory reset.
   Future<void> resetAll() async {
     final db = await database;
     await db.delete('logs');
+    await db.delete('saved_reports');
     final p = await SharedPreferences.getInstance();
     await p.clear();
   }

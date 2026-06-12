@@ -1186,7 +1186,7 @@ abstract class S {
   /// No description provided for @autoSendDescription.
   ///
   /// In en, this message translates to:
-  /// **'On Sunday at the scheduled time, the app will remind you to send your weekly report to your disciple maker.'**
+  /// **'On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.'**
   String get autoSendDescription;
 
   /// No description provided for @aboutSection.
@@ -1248,6 +1248,510 @@ abstract class S {
   /// In en, this message translates to:
   /// **'All data has been reset.'**
   String get resetSuccess;
+
+  /// No description provided for @thisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This Week'**
+  String get thisWeek;
+
+  /// No description provided for @today.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get today;
+
+  /// No description provided for @weekOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Week of {date}'**
+  String weekOf(String date);
+
+  /// No description provided for @monthlyReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get monthlyReport;
+
+  /// No description provided for @weeklyReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weeklyReport;
+
+  /// No description provided for @monthOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Month of {month}'**
+  String monthOf(String month);
+
+  /// No description provided for @monthlySummaryHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'MONTHLY SUMMARY'**
+  String get monthlySummaryHeader;
+
+  /// No description provided for @monthlySummaryActiveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active days: {count}/{total}'**
+  String monthlySummaryActiveDays(int count, int total);
+
+  /// No description provided for @monthlySummaryWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks reported: {count}'**
+  String monthlySummaryWeeks(int count);
+
+  /// No description provided for @noReportForWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'No entries for this week.\nNavigate to the Log tab and select a past date to enter data.'**
+  String get noReportForWeek;
+
+  /// No description provided for @reportHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Report History'**
+  String get reportHistory;
+
+  /// No description provided for @reportHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports generated yet.\nYour reports will appear here after you view them.'**
+  String get reportHistoryEmpty;
+
+  /// No description provided for @reportHistorySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Archive'**
+  String get reportHistorySection;
+
+  /// No description provided for @sentVia.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent via {channel}'**
+  String sentVia(String channel);
+
+  /// No description provided for @notSentYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent yet'**
+  String get notSentYet;
+
+  /// No description provided for @resend.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend'**
+  String get resend;
+
+  /// No description provided for @viewReport.
+  ///
+  /// In en, this message translates to:
+  /// **'View Report'**
+  String get viewReport;
+
+  /// No description provided for @deleteReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteReport;
+
+  /// No description provided for @reportSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Report saved to archive.'**
+  String get reportSaved;
+
+  /// No description provided for @reportDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Report deleted.'**
+  String get reportDeleted;
+
+  /// No description provided for @copyFromYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy from yesterday'**
+  String get copyFromYesterday;
+
+  /// No description provided for @copiedFromYesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied yesterday\'s entries!'**
+  String get copiedFromYesterday;
+
+  /// No description provided for @nothingToCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'No entries from yesterday to copy.'**
+  String get nothingToCopy;
+
+  /// No description provided for @securitySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get securitySection;
+
+  /// No description provided for @appLockEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'App Lock'**
+  String get appLockEnabled;
+
+  /// No description provided for @useBiometrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Fingerprint / Face ID'**
+  String get useBiometrics;
+
+  /// No description provided for @changePin.
+  ///
+  /// In en, this message translates to:
+  /// **'Change PIN'**
+  String get changePin;
+
+  /// No description provided for @setPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set App PIN'**
+  String get setPinTitle;
+
+  /// No description provided for @setPinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a 4-digit PIN to lock your app.'**
+  String get setPinBody;
+
+  /// No description provided for @confirmPinTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get confirmPinTitle;
+
+  /// No description provided for @confirmPinBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter your PIN to confirm.'**
+  String get confirmPinBody;
+
+  /// No description provided for @pinMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'PINs don\'t match. Try again.'**
+  String get pinMismatch;
+
+  /// No description provided for @pinSet.
+  ///
+  /// In en, this message translates to:
+  /// **'App PIN set successfully!'**
+  String get pinSet;
+
+  /// No description provided for @pinRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'App lock disabled.'**
+  String get pinRemoved;
+
+  /// No description provided for @enterPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your PIN'**
+  String get enterPin;
+
+  /// No description provided for @wrongPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong PIN'**
+  String get wrongPin;
+
+  /// No description provided for @useBiometricsPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock Daily Account'**
+  String get useBiometricsPrompt;
+
+  /// No description provided for @saveAsPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as PDF'**
+  String get saveAsPdf;
+
+  /// No description provided for @sharePdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Share PDF'**
+  String get sharePdf;
+
+  /// No description provided for @shareReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareReport;
+
+  /// No description provided for @tabStopwatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Timer'**
+  String get tabStopwatch;
+
+  /// No description provided for @stopwatchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity Timer'**
+  String get stopwatchTitle;
+
+  /// No description provided for @stopwatchSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your spiritual disciplines in real time'**
+  String get stopwatchSubtitle;
+
+  /// No description provided for @todayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s total'**
+  String get todayTotal;
+
+  /// No description provided for @timerStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Timer stopped — duration saved!'**
+  String get timerStopped;
+
+  /// No description provided for @timerAlreadyRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Another timer is running. It will be paused.'**
+  String get timerAlreadyRunning;
+
+  /// No description provided for @stopwatchFillFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill in details before starting (optional)'**
+  String get stopwatchFillFields;
+
+  /// No description provided for @startTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Timer'**
+  String get startTimer;
+
+  /// No description provided for @addActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Activity'**
+  String get addActivity;
+
+  /// No description provided for @activityName.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity name'**
+  String get activityName;
+
+  /// No description provided for @activityNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Worship, Meditation'**
+  String get activityNameHint;
+
+  /// No description provided for @activityIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji icon'**
+  String get activityIcon;
+
+  /// No description provided for @activityCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity added!'**
+  String get activityCreated;
+
+  /// No description provided for @activityDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity removed.'**
+  String get activityDeleted;
+
+  /// No description provided for @deleteActivityConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this activity?'**
+  String get deleteActivityConfirm;
+
+  /// No description provided for @customFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes field label (optional)'**
+  String get customFieldLabel;
+
+  /// No description provided for @customFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. What did you learn?'**
+  String get customFieldHint;
+
+  /// No description provided for @ddegShort.
+  ///
+  /// In en, this message translates to:
+  /// **'DDEG'**
+  String get ddegShort;
+
+  /// No description provided for @bibleStartRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting reference'**
+  String get bibleStartRef;
+
+  /// No description provided for @bibleStartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. John 1'**
+  String get bibleStartHint;
+
+  /// No description provided for @bibleEndRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending reference (after reading)'**
+  String get bibleEndRef;
+
+  /// No description provided for @bibleEndHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. John 3'**
+  String get bibleEndHint;
+
+  /// No description provided for @bibleChaptersRead.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} chapter(s) read'**
+  String bibleChaptersRead(int count);
+
+  /// No description provided for @enterEndReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Where did you finish reading?'**
+  String get enterEndReference;
+
+  /// No description provided for @timerStoppedDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration: {duration}'**
+  String timerStoppedDuration(String duration);
+
+  /// No description provided for @done.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get done;
+
+  /// No description provided for @sectionProclamation.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclamation'**
+  String get sectionProclamation;
+
+  /// No description provided for @proclamationCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of Proclamations'**
+  String get proclamationCountLabel;
+
+  /// No description provided for @proclamationCountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 50'**
+  String get proclamationCountHint;
+
+  /// No description provided for @proclamationDurationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (optional)'**
+  String get proclamationDurationLabel;
+
+  /// No description provided for @proclamationDurationHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 10 minutes'**
+  String get proclamationDurationHint;
+
+  /// No description provided for @proclamationCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclamation Counter'**
+  String get proclamationCounter;
+
+  /// No description provided for @proclamationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclaim: Jesus Christ is the Lord!'**
+  String get proclamationSubtitle;
+
+  /// No description provided for @proclamationTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to proclaim'**
+  String get proclamationTap;
+
+  /// No description provided for @proclamationSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & Close'**
+  String get proclamationSave;
+
+  /// No description provided for @reportProclamation.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclamation: {count} times ({duration})'**
+  String reportProclamation(String count, String duration);
+
+  /// No description provided for @followUpReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up reminders'**
+  String get followUpReminders;
+
+  /// No description provided for @followUpDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'After the main reminder, follow-up alerts fire every 30 minutes to make sure you don\'t forget.'**
+  String get followUpDescription;
+
+  /// No description provided for @followUpCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{3 follow-ups (+30, +60, +90 min)}}'**
+  String followUpCount(int count);
+
+  /// No description provided for @notificationIntensity.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification Intensity'**
+  String get notificationIntensity;
+
+  /// No description provided for @intensityAggressive.
+  ///
+  /// In en, this message translates to:
+  /// **'Aggressive (alarm-style)'**
+  String get intensityAggressive;
+
+  /// No description provided for @intensityAggressiveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Full-screen alerts, sound, vibration, LED — like an alarm clock'**
+  String get intensityAggressiveDesc;
+
+  /// No description provided for @sundayFollowUps.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday follow-ups'**
+  String get sundayFollowUps;
+
+  /// No description provided for @sundayFollowUpCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{{count} follow-ups}}'**
+  String sundayFollowUpCount(int count);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

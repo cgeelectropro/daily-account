@@ -310,7 +310,7 @@
   "autoSendSection": "Auto-Send Report",
   "autoSendEnabled": "Auto-open report on Sunday",
   "autoSendTime": "Send reminder time",
-  "autoSendDescription": "On Sunday at the scheduled time, the app will remind you to send your weekly report to your disciple maker.",
+  "autoSendDescription": "On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.",
 
   "aboutSection": "About",
   "appVersion": "Version {version}",
@@ -325,5 +325,134 @@
   "resetConfirmTitle": "Reset Everything?",
   "resetConfirmBody": "This will permanently delete all your logs, settings, and preferences. This action cannot be undone.",
   "resetConfirmButton": "Delete Everything",
-  "resetSuccess": "All data has been reset."
+  "resetSuccess": "All data has been reset.",
+
+  "thisWeek": "This Week",
+  "today": "Today",
+  "weekOf": "Week of {date}",
+  "@weekOf": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "monthlyReport": "Monthly",
+  "weeklyReport": "Weekly",
+  "monthOf": "Month of {month}",
+  "@monthOf": {
+    "placeholders": { "month": { "type": "String" } }
+  },
+  "monthlySummaryHeader": "MONTHLY SUMMARY",
+  "monthlySummaryActiveDays": "Active days: {count}/{total}",
+  "@monthlySummaryActiveDays": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "monthlySummaryWeeks": "Weeks reported: {count}",
+  "@monthlySummaryWeeks": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noReportForWeek": "No entries for this week.\nNavigate to the Log tab and select a past date to enter data.",
+
+  "reportHistory": "Report History",
+  "reportHistoryEmpty": "No reports generated yet.\nYour reports will appear here after you view them.",
+  "reportHistorySection": "Report Archive",
+  "sentVia": "Sent via {channel}",
+  "@sentVia": {
+    "placeholders": { "channel": { "type": "String" } }
+  },
+  "notSentYet": "Not sent yet",
+  "resend": "Resend",
+  "viewReport": "View Report",
+  "deleteReport": "Delete",
+  "reportSaved": "Report saved to archive.",
+  "reportDeleted": "Report deleted.",
+  "copyFromYesterday": "Copy from yesterday",
+  "copiedFromYesterday": "Copied yesterday's entries!",
+  "nothingToCopy": "No entries from yesterday to copy.",
+
+  "securitySection": "Security",
+  "appLockEnabled": "App Lock",
+  "useBiometrics": "Use Fingerprint / Face ID",
+  "changePin": "Change PIN",
+  "setPinTitle": "Set App PIN",
+  "setPinBody": "Choose a 4-digit PIN to lock your app.",
+  "confirmPinTitle": "Confirm PIN",
+  "confirmPinBody": "Re-enter your PIN to confirm.",
+  "pinMismatch": "PINs don't match. Try again.",
+  "pinSet": "App PIN set successfully!",
+  "pinRemoved": "App lock disabled.",
+  "enterPin": "Enter your PIN",
+  "wrongPin": "Wrong PIN",
+  "useBiometricsPrompt": "Unlock Daily Account",
+
+  "saveAsPdf": "Save as PDF",
+  "sharePdf": "Share PDF",
+  "shareReport": "Share",
+
+  "tabStopwatch": "Timer",
+  "stopwatchTitle": "Activity Timer",
+  "stopwatchSubtitle": "Track your spiritual disciplines in real time",
+  "todayTotal": "Today's total",
+  "timerStopped": "Timer stopped — duration saved!",
+  "timerAlreadyRunning": "Another timer is running. It will be paused.",
+  "stopwatchFillFields": "Fill in details before starting (optional)",
+  "startTimer": "Start Timer",
+  "addActivity": "Add Activity",
+  "activityName": "Activity name",
+  "activityNameHint": "e.g. Worship, Meditation",
+  "activityIcon": "Emoji icon",
+  "activityCreated": "Activity added!",
+  "activityDeleted": "Activity removed.",
+  "deleteActivityConfirm": "Remove this activity?",
+  "customFieldLabel": "Notes field label (optional)",
+  "customFieldHint": "e.g. What did you learn?",
+
+  "ddegShort": "DDEG",
+  "bibleStartRef": "Starting reference",
+  "bibleStartHint": "e.g. John 1",
+  "bibleEndRef": "Ending reference (after reading)",
+  "bibleEndHint": "e.g. John 3",
+  "bibleChaptersRead": "{count} chapter(s) read",
+  "@bibleChaptersRead": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "enterEndReference": "Where did you finish reading?",
+  "timerStoppedDuration": "Duration: {duration}",
+  "@timerStoppedDuration": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "done": "Done",
+
+  "sectionProclamation": "Proclamation",
+  "proclamationCountLabel": "Number of Proclamations",
+  "proclamationCountHint": "e.g. 50",
+  "proclamationDurationLabel": "Duration (optional)",
+  "proclamationDurationHint": "e.g. 10 minutes",
+  "proclamationCounter": "Proclamation Counter",
+  "proclamationSubtitle": "Proclaim: Jesus Christ is the Lord!",
+  "proclamationTap": "Tap to proclaim",
+  "proclamationSave": "Save & Close",
+  "reportProclamation": "Proclamation: {count} times ({duration})",
+  "@reportProclamation": {
+    "placeholders": {
+      "count": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+
+  "followUpReminders": "Follow-up reminders",
+  "followUpDescription": "After the main reminder, follow-up alerts fire every 30 minutes to make sure you don't forget.",
+  "followUpCount": "{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{3 follow-ups (+30, +60, +90 min)}}",
+  "@followUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationIntensity": "Notification Intensity",
+  "intensityAggressive": "Aggressive (alarm-style)",
+  "intensityAggressiveDesc": "Full-screen alerts, sound, vibration, LED — like an alarm clock",
+  "sundayFollowUps": "Sunday follow-ups",
+  "sundayFollowUpCount": "{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{{count} follow-ups}}",
+  "@sundayFollowUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

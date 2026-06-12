@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import '../models/daily_log.dart';
+import '../models/saved_report.dart';
 import 'storage_service.dart';
 
 class BackupService {
@@ -21,11 +22,13 @@ class BackupService {
     ]) {
       settings[key] = await StorageService.instance.getSetting(key);
     }
+    final reports = await StorageService.instance.getAllReports();
     final data = {
-      'version': 2,
+      'version': 3,
       'exportDate': DateTime.now().toIso8601String(),
       'settings': settings,
       'logs': logs.map((l) => l.toMap()).toList(),
+      'saved_reports': reports.map((r) => r.toMap()).toList(),
     };
     final json = const JsonEncoder.withIndent('  ').convert(data);
     final dir = await getTemporaryDirectory();
@@ -64,10 +67,25 @@ class BackupService {
       if (!merge) {
         final db = await storage.database;
         await db.delete('logs');
+        await db.delete('saved_reports');
       }
       for (final logMap in logs) {
         final log = DailyLog.fromMap(logMap);
         await storage.saveLog(log);
+      }
+      // Restore saved reports if present
+      if (data['saved_reports'] != null) {
+        final reports = (data['saved_reports'] as List).cast<Map<String, dynamic>>();
+        for (final rMap in reports) {
+          final report = SavedReport.fromMap(rMap);
+          await storage.saveReport(
+            weekStart: report.weekStart,
+            weekEnd: report.weekEnd,
+            fullReport: report.fullReport,
+            compactReport: report.compactReport,
+            sentVia: report.sentVia,
+          );
+        }
       }
       if (data['settings'] != null) {
         final settings = Map<String, String>.from(

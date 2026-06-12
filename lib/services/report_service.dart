@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'storage_service.dart';
@@ -11,12 +12,35 @@ class WeekStats {
   WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems);
 }
 
-/// Builds the weekly report and dispatches it via email or WhatsApp.
+class MonthStats {
+  int daysLogged;
+  int totalDays;
+  int totalBibleChapters;
+  int totalEvangelismContacts;
+  int litItems;
+  int weeksReported;
+  double avgCompletion;
+  MonthStats({
+    required this.daysLogged,
+    required this.totalDays,
+    required this.totalBibleChapters,
+    required this.totalEvangelismContacts,
+    required this.litItems,
+    required this.weeksReported,
+    required this.avgCompletion,
+  });
+}
+
+/// Builds the weekly report and dispatches it via email, WhatsApp, or share.
+///
+/// Two report formats:
+///   - **Full**: Detailed day-by-day, used for email and clipboard
+///   - **Compact**: Summary-first, condensed daily notes, used for WhatsApp
 class ReportService {
   static final ReportService instance = ReportService._();
   ReportService._();
 
-  /// Monday→Sunday dates for the week containing [ref] (default today).
+  /// Monday->Sunday dates for the week containing [ref] (default today).
   List<DateTime> weekDates([DateTime? ref]) {
     final today = ref ?? DateTime.now();
     final monday = today.subtract(Duration(days: (today.weekday + 6) % 7));
@@ -25,8 +49,8 @@ class ReportService {
 
   String keyFor(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
-  Future<WeekStats> computeWeekStats() async {
-    final dates = weekDates();
+  Future<WeekStats> computeWeekStats([DateTime? ref]) async {
+    final dates = weekDates(ref);
     final logs = await StorageService.instance
         .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
     int days = 0, chapters = 0, contacts = 0, lit = 0;
@@ -49,7 +73,6 @@ class ReportService {
         streak++;
         day = day.subtract(const Duration(days: 1));
       } else {
-        // allow today to be unlogged without breaking the streak
         if (i == 0) {
           day = day.subtract(const Duration(days: 1));
           continue;
@@ -60,14 +83,105 @@ class ReportService {
     return streak;
   }
 
-  /// Build the weekly report using localized strings from [l].
-  Future<String> buildWeeklyReport(String name, S l) async {
-    final dates = weekDates();
+  // ═══════════════════════════════════════════════════════════
+  //  MONTHLY STATS & REPORT
+  // ═══════════════════════════════════════════════════════════
+
+  /// Returns a list of Monday dates for all weeks in the given month.
+  List<DateTime> _weeksInMonth(int year, int month) {
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0); // last day of month
+    final firstMonday = firstDay.subtract(Duration(days: (firstDay.weekday - 1) % 7));
+    final weeks = <DateTime>[];
+    var monday = firstMonday;
+    while (monday.isBefore(lastDay) || monday.isAtSameMomentAs(lastDay)) {
+      weeks.add(monday);
+      monday = monday.add(const Duration(days: 7));
+    }
+    return weeks;
+  }
+
+  Future<MonthStats> computeMonthStats(int year, int month) async {
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+    final totalDays = lastDay.day;
+    final logs = await StorageService.instance
+        .getLogsBetween(keyFor(firstDay), keyFor(lastDay));
+    int days = 0, chapters = 0, contacts = 0, lit = 0;
+    double totalCompletion = 0;
+    for (final l in logs) {
+      if (l.completed) days++;
+      chapters += int.tryParse(l.bibleChapters) ?? 0;
+      contacts += int.tryParse(l.evangelismContacts) ?? 0;
+      lit += l.literature.where((e) => e.title.isNotEmpty).length;
+      totalCompletion += l.completeness;
+    }
+    final weeks = _weeksInMonth(year, month);
+    int weeksReported = 0;
+    for (final mon in weeks) {
+      final sun = mon.add(const Duration(days: 6));
+      final weekLogs = await StorageService.instance
+          .getLogsBetween(keyFor(mon), keyFor(sun));
+      if (weekLogs.any((l) => l.completeness > 0)) weeksReported++;
+    }
+    return MonthStats(
+      daysLogged: days,
+      totalDays: totalDays,
+      totalBibleChapters: chapters,
+      totalEvangelismContacts: contacts,
+      litItems: lit,
+      weeksReported: weeksReported,
+      avgCompletion: days > 0 ? totalCompletion / days : 0,
+    );
+  }
+
+  Future<String> buildMonthlyReport(String name, S l, int year, int month) async {
+    final fmtMonth = DateFormat('MMMM yyyy');
+    final monthDate = DateTime(year, month, 1);
+    final buf = StringBuffer();
+
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln(l.monthOf(fmtMonth.format(monthDate)));
+    buf.writeln('');
+
+    final stats = await computeMonthStats(year, month);
+    buf.writeln('\uD83D\uDCCA ${l.monthlySummaryHeader}');
+    buf.writeln(l.monthlySummaryActiveDays(stats.daysLogged, stats.totalDays));
+    buf.writeln(l.monthlySummaryWeeks(stats.weeksReported));
+    buf.writeln(l.reportSummaryBibleChapters(stats.totalBibleChapters));
+    buf.writeln(l.reportSummaryEvangelism(stats.totalEvangelismContacts));
+    final avgPct = (stats.avgCompletion * 100).round();
+    buf.writeln(l.reportSummaryCompletion(avgPct));
+    buf.writeln('');
+
+    // Week-by-week breakdown
+    final weeks = _weeksInMonth(year, month);
+    final fmtRange = DateFormat('MMM d');
+    for (final mon in weeks) {
+      final sun = mon.add(const Duration(days: 6));
+      final weekStats = await computeWeekStats(mon);
+      buf.writeln('\u2500\u2500\u2500 ${fmtRange.format(mon)} \u2013 ${fmtRange.format(sun)} \u2500\u2500\u2500');
+      buf.writeln(l.reportSummaryActiveDays(weekStats.daysLogged));
+      buf.writeln(l.reportSummaryBibleChapters(weekStats.totalBibleChapters));
+      buf.writeln(l.reportSummaryEvangelism(weekStats.totalEvangelismContacts));
+      buf.writeln('');
+    }
+
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
+    return buf.toString();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  FULL REPORT — detailed day-by-day (email, clipboard)
+  // ═══════════════════════════════════════════════════════════
+
+  Future<String> buildFullReport(String name, S l, [DateTime? ref]) async {
+    final dates = weekDates(ref);
     final fmtLong = DateFormat('EEEE, MMM d');
     final fmtRange = DateFormat('MMM d');
     final buf = StringBuffer();
 
-    buf.writeln('✝️ ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
 
@@ -78,12 +192,11 @@ class ReportService {
 
     for (final d in dates) {
       final log = await StorageService.instance.getLog(keyFor(d));
-      buf.writeln('━━━━━━━━━━━━━━━━━━━━');
-      buf.writeln('📅 ${fmtLong.format(d).toUpperCase()}');
-      // Show data if the log has any content, even if not explicitly marked complete
+      buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+      buf.writeln('\uD83D\uDCC5 ${fmtLong.format(d).toUpperCase()}');
       final hasContent = log != null && log.completeness > 0;
       if (log == null || !hasContent) {
-        buf.writeln('   ⚠️  ${l.reportNoEntry}');
+        buf.writeln('   \u26A0\uFE0F  ${l.reportNoEntry}');
         buf.writeln('');
         continue;
       }
@@ -93,58 +206,134 @@ class ReportService {
       totalCompletion += log.completeness;
 
       if (log.bibleReference.isNotEmpty) {
-        buf.writeln('📖 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
-        buf.writeln('📚 ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
+        buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
       }
       if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
-        buf.writeln('🔥 ${l.reportDDEG}');
+        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
         if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
         if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
         if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
       }
       if (log.prayerAloneDuration.isNotEmpty) {
-        buf.writeln('🙏 ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
+        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
       }
       if (log.prayerOthersDuration.isNotEmpty) {
-        buf.writeln('🤝 ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
+        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
       }
       if (log.evangelismContacts.isNotEmpty) {
-        buf.writeln('📢 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
       }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
-        buf.writeln('🍽️ ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
+        buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
       if (log.givingType.isNotEmpty) {
-        buf.writeln('💰 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
       }
       if (log.churchType.isNotEmpty) {
-        buf.writeln('⛪ ${l.reportChurch(log.churchType, log.churchNotes)}');
+        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
       }
       if (log.discipleshipWho.isNotEmpty) {
-        buf.writeln('👥 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
+        buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
       }
-      if (log.other.isNotEmpty) buf.writeln('➕ ${l.reportOther(log.other)}');
+      if (log.proclamationCount.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
       buf.writeln('');
     }
 
-    // Weekly summary for the disciple maker
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('📊 ${l.reportSummaryHeader}');
+    buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+    buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
     buf.writeln(l.reportSummaryActiveDays(activeDays));
     buf.writeln(l.reportSummaryBibleChapters(totalChapters));
     buf.writeln(l.reportSummaryEvangelism(totalContacts));
     final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
     buf.writeln(l.reportSummaryCompletion(avgPct));
     buf.writeln('');
-    buf.writeln('${l.reportFooter} 🕊️');
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
     return buf.toString();
   }
 
-  /// Open the device email client pre-filled with the report.
+  // ═══════════════════════════════════════════════════════════
+  //  COMPACT REPORT — summary-first (WhatsApp-optimized)
+  // ═══════════════════════════════════════════════════════════
+
+  Future<String> buildCompactReport(String name, S l, [DateTime? ref]) async {
+    final dates = weekDates(ref);
+    final fmtRange = DateFormat('MMM d');
+    final fmtShort = DateFormat('E d');
+    final buf = StringBuffer();
+
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
+    buf.writeln('');
+
+    // Summary first — the disciple maker sees this immediately
+    int activeDays = 0;
+    int totalChapters = 0;
+    int totalContacts = 0;
+    double totalCompletion = 0;
+
+    // Pre-compute stats
+    final dayEntries = <String>[];
+    for (final d in dates) {
+      final log = await StorageService.instance.getLog(keyFor(d));
+      final hasContent = log != null && log.completeness > 0;
+      if (log == null || !hasContent) {
+        dayEntries.add('\u274C ${fmtShort.format(d)}');
+        continue;
+      }
+      activeDays++;
+      totalChapters += int.tryParse(log.bibleChapters) ?? 0;
+      totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
+      totalCompletion += log.completeness;
+
+      // Build a compact one-line summary per day
+      final parts = <String>[];
+      if (log.bibleReference.isNotEmpty) {
+        parts.add('\uD83D\uDCD6${log.bibleChapters.isNotEmpty ? log.bibleChapters : ""}ch');
+      }
+      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) parts.add('\uD83D\uDD25${l.ddegShort}');
+      if (log.prayerAloneDuration.isNotEmpty) parts.add('\uD83D\uDE4F${log.prayerAloneDuration}');
+      if (log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
+      if (log.evangelismContacts.isNotEmpty) parts.add('\uD83D\uDCE2${log.evangelismContacts}');
+      if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
+      if (log.givingType.isNotEmpty) parts.add('\uD83D\uDCB0');
+      if (log.churchType.isNotEmpty) parts.add('\u26EA');
+      if (log.discipleshipWho.isNotEmpty) parts.add('\uD83D\uDC65');
+      if (log.proclamationCount.isNotEmpty) parts.add('\uD83D\uDCE3${log.proclamationCount}');
+      final pct = (log.completeness * 100).round();
+      dayEntries.add('\u2705 ${fmtShort.format(d)} ($pct%) ${parts.join(' ')}');
+    }
+
+    // Summary block
+    final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
+    buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
+    buf.writeln(l.reportSummaryActiveDays(activeDays));
+    buf.writeln(l.reportSummaryBibleChapters(totalChapters));
+    buf.writeln(l.reportSummaryEvangelism(totalContacts));
+    buf.writeln(l.reportSummaryCompletion(avgPct));
+    buf.writeln('');
+
+    // Day-by-day compact view
+    for (final entry in dayEntries) {
+      buf.writeln(entry);
+    }
+    buf.writeln('');
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
+    return buf.toString();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  SEND METHODS
+  // ═══════════════════════════════════════════════════════════
+
+  /// Open the device email client pre-filled with the FULL report.
   Future<bool> sendByEmail(String toEmail, String name, String body, S l) async {
-    final subject = '📖 ${l.reportEmailSubject(
+    final subject = '\uD83D\uDCD6 ${l.reportEmailSubject(
       name.isEmpty ? "Disciple" : name,
       DateFormat('MMM d, y').format(DateTime.now()),
     )}';
@@ -159,14 +348,31 @@ class ReportService {
     return false;
   }
 
-  /// Share the report via WhatsApp (reliable fallback).
-  Future<bool> sendByWhatsApp(String phone, String body) async {
-    // phone in international format without '+' e.g. 237xxxxxxxxx
-    final uri = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(body)}');
-    if (await canLaunchUrl(uri)) {
-      return launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Share the COMPACT report via WhatsApp using deep link.
+  Future<bool> sendByWhatsApp(String phone, String compactReport) async {
+    // Normalise phone: ensure it starts with country code, no +
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final encoded = Uri.encodeComponent(compactReport);
+
+    // Try wa.me HTTPS link first — most reliable across Android versions
+    final webUri = Uri.parse('https://wa.me/$cleanPhone?text=$encoded');
+    try {
+      final ok = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (ok) return true;
+    } catch (_) {}
+
+    // Fallback: whatsapp:// deep link
+    final waUri = Uri.parse('whatsapp://send?phone=$cleanPhone&text=$encoded');
+    try {
+      return await launchUrl(waUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
     }
-    return false;
+  }
+
+  /// Share the report via the system share sheet (any app).
+  Future<void> shareReport(String report) async {
+    await SharePlus.instance.share(ShareParams(text: report));
   }
 
   String _encodeQuery(Map<String, String> params) => params.entries

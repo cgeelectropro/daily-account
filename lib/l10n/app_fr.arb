@@ -311,7 +311,7 @@
   "autoSendSection": "Envoi automatique",
   "autoSendEnabled": "Rappel d\u2019envoi le dimanche",
   "autoSendTime": "Heure du rappel",
-  "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application vous rappellera d\u2019envoyer votre compte \u00e0 votre faiseur de disciples.",
+  "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application ouvrira automatiquement WhatsApp pour envoyer ton compte \u00e0 ton faiseur de disciples.",
 
   "aboutSection": "\u00c0 propos",
   "appVersion": "Version {version}",
@@ -326,5 +326,134 @@
   "resetConfirmTitle": "Tout r\u00e9initialiser ?",
   "resetConfirmBody": "Cela supprimera d\u00e9finitivement tous vos journaux, param\u00e8tres et pr\u00e9f\u00e9rences. Cette action est irr\u00e9versible.",
   "resetConfirmButton": "Tout supprimer",
-  "resetSuccess": "Toutes les donn\u00e9es ont \u00e9t\u00e9 r\u00e9initialis\u00e9es."
+  "resetSuccess": "Toutes les donn\u00e9es ont \u00e9t\u00e9 r\u00e9initialis\u00e9es.",
+
+  "thisWeek": "Cette Semaine",
+  "today": "Aujourd'hui",
+  "weekOf": "Semaine du {date}",
+  "@weekOf": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "monthlyReport": "Mensuel",
+  "weeklyReport": "Hebdomadaire",
+  "monthOf": "Mois de {month}",
+  "@monthOf": {
+    "placeholders": { "month": { "type": "String" } }
+  },
+  "monthlySummaryHeader": "R\u00c9SUM\u00c9 MENSUEL",
+  "monthlySummaryActiveDays": "Jours actifs : {count}/{total}",
+  "@monthlySummaryActiveDays": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "monthlySummaryWeeks": "Semaines rapport\u00e9es : {count}",
+  "@monthlySummaryWeeks": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noReportForWeek": "Aucune entr\u00e9e pour cette semaine.\nVa dans l'onglet Journal et s\u00e9lectionne une date pass\u00e9e pour saisir des donn\u00e9es.",
+
+  "reportHistory": "Historique des Rapports",
+  "reportHistoryEmpty": "Aucun rapport g\u00e9n\u00e9r\u00e9 pour le moment.\nTes rapports appara\u00eetront ici apr\u00e8s les avoir consult\u00e9s.",
+  "reportHistorySection": "Archive des Rapports",
+  "sentVia": "Envoy\u00e9 via {channel}",
+  "@sentVia": {
+    "placeholders": { "channel": { "type": "String" } }
+  },
+  "notSentYet": "Pas encore envoy\u00e9",
+  "resend": "Renvoyer",
+  "viewReport": "Voir le Rapport",
+  "deleteReport": "Supprimer",
+  "reportSaved": "Rapport sauvegard\u00e9 dans l'archive.",
+  "reportDeleted": "Rapport supprim\u00e9.",
+  "copyFromYesterday": "Copier d'hier",
+  "copiedFromYesterday": "Entr\u00e9es d'hier copi\u00e9es !",
+  "nothingToCopy": "Aucune entr\u00e9e d'hier \u00e0 copier.",
+
+  "securitySection": "S\u00e9curit\u00e9",
+  "appLockEnabled": "Verrouillage de l'app",
+  "useBiometrics": "Empreinte digitale / Face ID",
+  "changePin": "Changer le PIN",
+  "setPinTitle": "D\u00e9finir un PIN",
+  "setPinBody": "Choisissez un code PIN \u00e0 4 chiffres pour verrouiller l'application.",
+  "confirmPinTitle": "Confirmer le PIN",
+  "confirmPinBody": "Ressaisissez votre PIN pour confirmer.",
+  "pinMismatch": "Les PINs ne correspondent pas. R\u00e9essayez.",
+  "pinSet": "PIN de l'application d\u00e9fini avec succ\u00e8s !",
+  "pinRemoved": "Verrouillage d\u00e9sactiv\u00e9.",
+  "enterPin": "Entrez votre PIN",
+  "wrongPin": "PIN incorrect",
+  "useBiometricsPrompt": "D\u00e9verrouiller Compte Journalier",
+
+  "saveAsPdf": "Enregistrer en PDF",
+  "sharePdf": "Partager le PDF",
+  "shareReport": "Partager",
+
+  "tabStopwatch": "Chrono",
+  "stopwatchTitle": "Chronomètre",
+  "stopwatchSubtitle": "Mesure tes disciplines spirituelles en temps réel",
+  "todayTotal": "Total aujourd'hui",
+  "timerStopped": "Chrono arrêté — durée enregistrée !",
+  "timerAlreadyRunning": "Un autre chrono est en cours. Il sera mis en pause.",
+  "stopwatchFillFields": "Remplis les détails avant de démarrer (optionnel)",
+  "startTimer": "Démarrer le chrono",
+  "addActivity": "Ajouter une activité",
+  "activityName": "Nom de l'activité",
+  "activityNameHint": "ex. Louange, Méditation",
+  "activityIcon": "Icône emoji",
+  "activityCreated": "Activité ajoutée !",
+  "activityDeleted": "Activité supprimée.",
+  "deleteActivityConfirm": "Supprimer cette activité ?",
+  "customFieldLabel": "Libellé du champ notes (optionnel)",
+  "customFieldHint": "ex. Qu'as-tu appris ?",
+
+  "ddegShort": "RDQD",
+  "bibleStartRef": "Référence de début",
+  "bibleStartHint": "ex. Jean 1",
+  "bibleEndRef": "Référence de fin (après lecture)",
+  "bibleEndHint": "ex. Jean 3",
+  "bibleChaptersRead": "{count} chapitre(s) lu(s)",
+  "@bibleChaptersRead": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "enterEndReference": "Où as-tu terminé ta lecture ?",
+  "timerStoppedDuration": "Durée : {duration}",
+  "@timerStoppedDuration": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "done": "Terminé",
+
+  "sectionProclamation": "Proclamation",
+  "proclamationCountLabel": "Nombre de proclamations",
+  "proclamationCountHint": "ex. 50",
+  "proclamationDurationLabel": "Durée (optionnel)",
+  "proclamationDurationHint": "ex. 10 minutes",
+  "proclamationCounter": "Compteur de Proclamation",
+  "proclamationSubtitle": "Proclame : Jésus-Christ est Seigneur !",
+  "proclamationTap": "Appuie pour proclamer",
+  "proclamationSave": "Enregistrer et Fermer",
+  "reportProclamation": "Proclamation : {count} fois ({duration})",
+  "@reportProclamation": {
+    "placeholders": {
+      "count": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+
+  "followUpReminders": "Rappels de suivi",
+  "followUpDescription": "Après le rappel principal, des alertes de suivi sonnent toutes les 30 minutes pour ne rien oublier.",
+  "followUpCount": "{count, plural, =0{Aucun suivi} =1{1 suivi (+30 min)} =2{2 suivis (+30, +60 min)} other{3 suivis (+30, +60, +90 min)}}",
+  "@followUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationIntensity": "Intensité des notifications",
+  "intensityAggressive": "Agressive (style alarme)",
+  "intensityAggressiveDesc": "Alertes plein écran, son, vibration, LED — comme un réveil",
+  "sundayFollowUps": "Suivis du dimanche",
+  "sundayFollowUpCount": "{count, plural, =0{Aucun suivi} =1{1 suivi (+30 min)} =2{2 suivis (+30, +60 min)} other{{count} suivis}}",
+  "@sundayFollowUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  }
 }

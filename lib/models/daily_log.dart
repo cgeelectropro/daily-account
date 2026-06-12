@@ -66,6 +66,10 @@ class DailyLog {
   String discipleshipTopic;
   String discipleshipDuration;
 
+  // ── Proclamation ──
+  String proclamationCount; // number of times proclaimed
+  String proclamationDuration; // optional duration
+
   // AI reflection (cached)
   String aiReflection;
 
@@ -98,6 +102,8 @@ class DailyLog {
     this.discipleshipWho = '',
     this.discipleshipTopic = '',
     this.discipleshipDuration = '',
+    this.proclamationCount = '',
+    this.proclamationDuration = '',
     this.aiReflection = '',
     this.completed = false,
   }) : literature = literature ?? [LiteratureEntry()];
@@ -116,9 +122,10 @@ class DailyLog {
       givingType.isNotEmpty,
       churchType.isNotEmpty,
       discipleshipWho.isNotEmpty,
+      proclamationCount.isNotEmpty,
     ];
     final filled = checks.where((c) => c).length;
-    return filled / 10;
+    return filled / 11;
   }
 
   Map<String, dynamic> toMap() => {
@@ -148,6 +155,8 @@ class DailyLog {
         'discipleshipWho': discipleshipWho,
         'discipleshipTopic': discipleshipTopic,
         'discipleshipDuration': discipleshipDuration,
+        'proclamationCount': proclamationCount,
+        'proclamationDuration': proclamationDuration,
         'aiReflection': aiReflection,
         'completed': completed ? 1 : 0,
       };
@@ -190,6 +199,8 @@ class DailyLog {
       discipleshipWho: m['discipleshipWho'] ?? '',
       discipleshipTopic: m['discipleshipTopic'] ?? '',
       discipleshipDuration: m['discipleshipDuration'] ?? '',
+      proclamationCount: m['proclamationCount'] ?? '',
+      proclamationDuration: m['proclamationDuration'] ?? '',
       aiReflection: m['aiReflection'] ?? '',
       completed: (m['completed'] ?? 0) == 1,
     );

@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'theme/app_theme.dart';
+import 'screens/lock_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
+import 'services/timer_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await NotificationService.instance.init();
+  await TimerService.instance.init();
   runApp(const DailyAccountApp());
 }
 
@@ -77,7 +80,7 @@ class _DailyAccountAppState extends State<DailyAccountApp> {
       locale: _locale,
       supportedLocales: S.supportedLocales,
       localizationsDelegates: S.localizationsDelegates,
-      home: const SplashScreen(),
+      home: const LockScreen(child: SplashScreen()),
     );
   }
 }
