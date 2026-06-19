@@ -32,7 +32,10 @@ class _SectionCardState extends State<SectionCard> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Semantics(
+      label: widget.title,
+      expanded: _expanded,
+      child: Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.fromLTRB(22, 20, 22, 8),
@@ -69,11 +72,15 @@ class _SectionCardState extends State<SectionCard> {
           ],
         ],
       ),
+      ),
     );
   }
 }
 
-/// A gold-labelled text field.
+/// A gold-labelled text field with optional autocomplete suggestions.
+///
+/// When [suggestions] is provided, the field becomes an autocomplete field
+/// that proposes matching options as the user types.
 class GoldField extends StatelessWidget {
   final String label;
   final String hint;
@@ -81,6 +88,9 @@ class GoldField extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final TextInputType? keyboardType;
   final int maxLines;
+  /// Optional list of suggestion strings. When provided, the field shows
+  /// autocomplete proposals as the user types.
+  final List<String>? suggestions;
 
   const GoldField({
     super.key,
@@ -90,45 +100,78 @@ class GoldField extends StatelessWidget {
     this.hint = '',
     this.keyboardType,
     this.maxLines = 1,
+    this.suggestions,
   });
+
+  InputDecoration _decoration(BuildContext context, Color accent, bool dark) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: AppTheme.serif(14, color: AppTheme.faintColor(context)),
+      filled: true,
+      fillColor: dark
+          ? Colors.white.withValues(alpha: 0.05)
+          : Colors.black.withValues(alpha: 0.04),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: accent.withValues(alpha: 0.25)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: accent, width: 1.4),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final accent = AppTheme.accentGold(context);
     final dark = AppTheme.isDark(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label.toUpperCase(),
-              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
-          const SizedBox(height: 6),
-          TextFormField(
-            initialValue: value,
-            onChanged: onChanged,
-            keyboardType: keyboardType,
-            maxLines: maxLines,
-            style: AppTheme.serif(15, color: AppTheme.textColor(context)),
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTheme.serif(14, color: AppTheme.faintColor(context)),
-              filled: true,
-              fillColor: dark
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : Colors.black.withValues(alpha: 0.04),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: accent.withValues(alpha: 0.25)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: accent, width: 1.4),
-              ),
+
+    if (suggestions != null && suggestions!.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(),
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            _GoldFieldAutocomplete(
+              initialValue: value,
+              suggestions: suggestions!,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              maxLines: maxLines,
+              decoration: _decoration(context, accent, dark),
+              textStyle: AppTheme.serif(15, color: AppTheme.textColor(context)),
             ),
-          ),
-        ],
+          ],
+        ),
+      );
+    }
+
+    return Semantics(
+      label: label,
+      textField: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(),
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            TextFormField(
+              initialValue: value,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              maxLines: maxLines,
+              style: AppTheme.serif(15, color: AppTheme.textColor(context)),
+              decoration: _decoration(context, accent, dark),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -139,19 +182,28 @@ class ProgressRing extends StatelessWidget {
   final double progress; // 0..1
   final double size;
   final String centerText;
-  const ProgressRing({super.key, required this.progress, this.size = 64, this.centerText = ''});
+  /// Optional callback when user taps the ring.
+  final VoidCallback? onTap;
+  const ProgressRing({super.key, required this.progress, this.size = 64, this.centerText = '', this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final accent = AppTheme.accentGold(context);
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _RingPainter(progress, accent),
-        child: Center(
-          child: Text(centerText,
-              style: AppTheme.display(size * 0.28, color: accent)),
+    return Semantics(
+      label: 'Progress ${(progress * 100).round()} percent',
+      button: onTap != null,
+      child: GestureDetector(
+        onTap: onTap,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: CustomPaint(
+            painter: _RingPainter(progress, accent),
+            child: Center(
+              child: Text(centerText,
+                  style: AppTheme.display(size * 0.28, color: accent)),
+            ),
+          ),
         ),
       ),
     );
@@ -201,24 +253,84 @@ class StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppTheme.accentGold(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: accent.withValues(alpha: 0.18)),
+    return Semantics(
+      label: '$label: $value',
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: 0.18)),
+        ),
+        child: Column(
+          children: [
+            ExcludeSemantics(child: Text(icon, style: const TextStyle(fontSize: 20))),
+            const SizedBox(height: 6),
+            Text(value, style: AppTheme.display(22, color: accent)),
+            const SizedBox(height: 2),
+            Text(label.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: AppTheme.label(9, color: AppTheme.mutedColor(context))),
+          ],
+        ),
       ),
-      child: Column(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 6),
-          Text(value, style: AppTheme.display(22, color: accent)),
-          const SizedBox(height: 2),
-          Text(label.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: AppTheme.label(9, color: AppTheme.mutedColor(context))),
-        ],
-      ),
+    );
+  }
+}
+
+/// Stateful wrapper for Autocomplete inside GoldField.
+/// Ensures the controller listener is added only once.
+class _GoldFieldAutocomplete extends StatefulWidget {
+  final String initialValue;
+  final List<String> suggestions;
+  final ValueChanged<String> onChanged;
+  final TextInputType? keyboardType;
+  final int maxLines;
+  final InputDecoration decoration;
+  final TextStyle textStyle;
+
+  const _GoldFieldAutocomplete({
+    required this.initialValue,
+    required this.suggestions,
+    required this.onChanged,
+    this.keyboardType,
+    this.maxLines = 1,
+    required this.decoration,
+    required this.textStyle,
+  });
+
+  @override
+  State<_GoldFieldAutocomplete> createState() => _GoldFieldAutocompleteState();
+}
+
+class _GoldFieldAutocompleteState extends State<_GoldFieldAutocomplete> {
+  bool _listenerAdded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Autocomplete<String>(
+      initialValue: TextEditingValue(text: widget.initialValue),
+      optionsBuilder: (textEditingValue) {
+        if (textEditingValue.text.isEmpty) return const [];
+        final input = textEditingValue.text.toLowerCase();
+        return widget.suggestions.where(
+            (s) => s.toLowerCase().contains(input));
+      },
+      onSelected: widget.onChanged,
+      fieldViewBuilder: (ctx, controller, focusNode, onSubmitted) {
+        if (!_listenerAdded) {
+          controller.addListener(() => widget.onChanged(controller.text));
+          _listenerAdded = true;
+        }
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: widget.keyboardType,
+          maxLines: widget.maxLines,
+          style: widget.textStyle,
+          decoration: widget.decoration,
+        );
+      },
     );
   }
 }

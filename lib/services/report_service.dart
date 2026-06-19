@@ -1,3 +1,4 @@
+import 'package:daily_account/models/daily_log.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,6 +30,34 @@ class MonthStats {
     required this.weeksReported,
     required this.avgCompletion,
   });
+}
+
+/// Per-discipline consistency data for trend analysis.
+class TrendData {
+  /// Overall consistency this week (0.0–1.0).
+  final double currentConsistency;
+  /// Overall consistency last month (0.0–1.0).
+  final double lastMonthConsistency;
+  /// Per-discipline consistency this week — discipline name → (days done / total days).
+  final Map<String, double> disciplineRates;
+  /// Best discipline name.
+  final String? bestDiscipline;
+  /// Weakest discipline name.
+  final String? weakDiscipline;
+  /// Whether enough data exists.
+  final bool hasData;
+
+  TrendData({
+    required this.currentConsistency,
+    required this.lastMonthConsistency,
+    required this.disciplineRates,
+    this.bestDiscipline,
+    this.weakDiscipline,
+    required this.hasData,
+  });
+
+  /// Change percentage points: positive = improvement.
+  double get change => currentConsistency - lastMonthConsistency;
 }
 
 /// Builds the weekly report and dispatches it via email, WhatsApp, or share.
@@ -81,6 +110,93 @@ class ReportService {
       }
     }
     return streak;
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  TREND ANALYSIS
+  // ═══════════════════════════════════════════════════════════
+
+  static const _disciplineNames = [
+    'Bible', 'Literature', 'DDEG', 'Prayer (alone)',
+    'Prayer (others)', 'Evangelism', 'Fasting',
+    'Giving', 'Church', 'Discipleship', 'Proclamation',
+  ];
+
+  static List<bool> _disciplineChecks(DailyLog l) => [
+    l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty,
+    l.literature.any((e) => e.title.isNotEmpty),
+    l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
+    l.prayerAloneDuration.isNotEmpty,
+    l.prayerOthersDuration.isNotEmpty,
+    l.evangelismContacts.isNotEmpty,
+    l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
+    l.givingType.isNotEmpty,
+    l.churchType.isNotEmpty,
+    l.discipleshipWho.isNotEmpty,
+    l.proclamationCount.isNotEmpty,
+  ];
+
+  /// Compare this week's discipline consistency with the previous 30 days.
+  Future<TrendData> computeTrend([DateTime? ref]) async {
+    final dates = weekDates(ref);
+    final weekLogs = await StorageService.instance
+        .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
+
+    if (weekLogs.isEmpty) {
+      return TrendData(
+        currentConsistency: 0, lastMonthConsistency: 0,
+        disciplineRates: {}, hasData: false,
+      );
+    }
+
+    // Current week per-discipline rates
+    final weekCounts = List.filled(11, 0);
+    for (final log in weekLogs) {
+      final checks = _disciplineChecks(log);
+      for (int i = 0; i < 11; i++) {
+        if (checks[i]) weekCounts[i]++;
+      }
+    }
+    final weekRates = <String, double>{};
+    for (int i = 0; i < 11; i++) {
+      weekRates[_disciplineNames[i]] = weekCounts[i] / weekLogs.length;
+    }
+    final currentConsistency = weekRates.values.fold(0.0, (a, b) => a + b) / 11;
+
+    // Last 30 days (excluding current week)
+    final monthEnd = dates.first.subtract(const Duration(days: 1));
+    final monthStart = monthEnd.subtract(const Duration(days: 29));
+    final monthLogs = await StorageService.instance
+        .getLogsBetween(keyFor(monthStart), keyFor(monthEnd));
+
+    double lastMonthConsistency = 0;
+    if (monthLogs.isNotEmpty) {
+      final monthCounts = List.filled(11, 0);
+      for (final log in monthLogs) {
+        final checks = _disciplineChecks(log);
+        for (int i = 0; i < 11; i++) {
+          if (checks[i]) monthCounts[i]++;
+        }
+      }
+      lastMonthConsistency = monthCounts.fold(0.0, (a, c) => a + c / monthLogs.length) / 11;
+    }
+
+    // Best & weakest
+    String? best, weak;
+    double bestVal = -1, weakVal = 2;
+    for (final entry in weekRates.entries) {
+      if (entry.value > bestVal) { bestVal = entry.value; best = entry.key; }
+      if (entry.value < weakVal) { weakVal = entry.value; weak = entry.key; }
+    }
+
+    return TrendData(
+      currentConsistency: currentConsistency,
+      lastMonthConsistency: lastMonthConsistency,
+      disciplineRates: weekRates,
+      bestDiscipline: best,
+      weakDiscipline: weak,
+      hasData: true,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -137,13 +253,16 @@ class ReportService {
 
   Future<String> buildMonthlyReport(String name, S l, int year, int month) async {
     final fmtMonth = DateFormat('MMMM yyyy');
+    final fmtLong = DateFormat('EEEE, MMM d');
     final monthDate = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
     final buf = StringBuffer();
 
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.monthOf(fmtMonth.format(monthDate)));
     buf.writeln('');
 
+    // Monthly summary at the top
     final stats = await computeMonthStats(year, month);
     buf.writeln('\uD83D\uDCCA ${l.monthlySummaryHeader}');
     buf.writeln(l.monthlySummaryActiveDays(stats.daysLogged, stats.totalDays));
@@ -154,16 +273,69 @@ class ReportService {
     buf.writeln(l.reportSummaryCompletion(avgPct));
     buf.writeln('');
 
-    // Week-by-week breakdown
-    final weeks = _weeksInMonth(year, month);
-    final fmtRange = DateFormat('MMM d');
-    for (final mon in weeks) {
-      final sun = mon.add(const Duration(days: 6));
-      final weekStats = await computeWeekStats(mon);
-      buf.writeln('\u2500\u2500\u2500 ${fmtRange.format(mon)} \u2013 ${fmtRange.format(sun)} \u2500\u2500\u2500');
-      buf.writeln(l.reportSummaryActiveDays(weekStats.daysLogged));
-      buf.writeln(l.reportSummaryBibleChapters(weekStats.totalBibleChapters));
-      buf.writeln(l.reportSummaryEvangelism(weekStats.totalEvangelismContacts));
+    // Full day-by-day detail for every day of the month
+    for (int day = 1; day <= lastDay.day; day++) {
+      final d = DateTime(year, month, day);
+      // Don't include future days
+      if (d.isAfter(DateTime.now())) break;
+
+      final log = await StorageService.instance.getLog(keyFor(d));
+      buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+      buf.writeln('\uD83D\uDCC5 ${fmtLong.format(d).toUpperCase()}');
+      final hasContent = log != null && log.completeness > 0;
+      if (!hasContent) {
+        buf.writeln('   \u26A0\uFE0F  ${l.reportNoEntry}');
+        buf.writeln('');
+        continue;
+      }
+
+      // Same detailed output as the weekly full report
+      if (log.bibleReference.isNotEmpty) {
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
+      }
+      for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
+        buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
+      }
+      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
+        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
+        if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
+        if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
+        if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
+      }
+      if (log.prayerAloneDuration.isNotEmpty) {
+        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
+      }
+      if (log.prayerOthersDuration.isNotEmpty) {
+        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
+      }
+      if (log.evangelismContacts.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
+          final parts = <String>[];
+          if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
+          if (log.evangelismBeingDiscipled.isNotEmpty) parts.add('${l.evangelismBeingDiscipled}: ${log.evangelismBeingDiscipled}');
+          buf.writeln('   \uD83C\uDF31 ${parts.join(' | ')}');
+        }
+        if (log.evangelismFollowUpNotes.isNotEmpty) {
+          buf.writeln('   \uD83D\uDCDD ${log.evangelismFollowUpNotes}');
+        }
+      }
+      if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
+        buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
+      }
+      if (log.givingType.isNotEmpty) {
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+      }
+      if (log.churchType.isNotEmpty) {
+        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+      }
+      if (log.discipleshipWho.isNotEmpty) {
+        buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
+      }
+      if (log.proclamationCount.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
       buf.writeln('');
     }
 
@@ -225,6 +397,15 @@ class ReportService {
       }
       if (log.evangelismContacts.isNotEmpty) {
         buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
+          final parts = <String>[];
+          if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
+          if (log.evangelismBeingDiscipled.isNotEmpty) parts.add('${l.evangelismBeingDiscipled}: ${log.evangelismBeingDiscipled}');
+          buf.writeln('   \uD83C\uDF31 ${parts.join(' | ')}');
+        }
+        if (log.evangelismFollowUpNotes.isNotEmpty) {
+          buf.writeln('   \uD83D\uDCDD ${log.evangelismFollowUpNotes}');
+        }
       }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
         buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');

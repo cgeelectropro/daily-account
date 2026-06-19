@@ -12,24 +12,128 @@ class BackupService {
   BackupService._();
   static final BackupService instance = BackupService._();
 
+  /// Maximum number of rolling auto-backups to keep
+  static const _maxAutoBackups = 3;
+
+  // ═════════════════════════════════════════════════════════════
+  //  AUTO-BACKUP — runs silently on every app start
+  // ═════════════════════════════════════════════════════════════
+
+  /// Run a silent auto-backup to the app's documents directory.
+  /// Keeps the last [_maxAutoBackups] files, deletes older ones.
+  /// Safe to call on every app start — skips if last backup was < 6 hours ago.
+  Future<void> autoBackup() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory('${dir.path}/auto_backups');
+      if (!await backupDir.exists()) {
+        await backupDir.create(recursive: true);
+      }
+
+      // Check if we backed up recently (within 6 hours)
+      final existing = backupDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json'))
+          .toList()
+        ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
+      if (existing.isNotEmpty) {
+        final lastBackup = existing.first.lastModifiedSync();
+        if (DateTime.now().difference(lastBackup).inHours < 6) return;
+      }
+
+      // Build backup data
+      final data = await _buildBackupData();
+      if (data == null) return;
+
+      final json = const JsonEncoder.withIndent('  ').convert(data);
+      final timestamp = DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now());
+      final file = File('${backupDir.path}/auto_backup_$timestamp.json');
+      await file.writeAsString(json);
+
+      // Prune old backups — keep only the newest _maxAutoBackups
+      final allBackups = backupDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json'))
+          .toList()
+        ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
+      if (allBackups.length > _maxAutoBackups) {
+        for (final old in allBackups.sublist(_maxAutoBackups)) {
+          await old.delete();
+        }
+      }
+    } catch (_) {
+      // Auto-backup is best-effort — never crash the app
+    }
+  }
+
+  /// Restore from the most recent auto-backup (for recovery after data loss).
+  /// Returns null if no auto-backup exists.
+  Future<Map<String, dynamic>?> getLatestAutoBackup() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final backupDir = Directory('${dir.path}/auto_backups');
+      if (!await backupDir.exists()) return null;
+
+      final backups = backupDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json'))
+          .toList()
+        ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
+      if (backups.isEmpty) return null;
+
+      final json = await backups.first.readAsString();
+      return jsonDecode(json) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Build backup data map from current DB state.
+  Future<Map<String, dynamic>?> _buildBackupData() async {
+    try {
+      final logs = await StorageService.instance.getAllLogs();
+      if (logs.isEmpty) return null; // nothing to back up
+
+      final settings = <String, String>{};
+      for (final key in [
+        'myName', 'discipleEmail', 'discipleWhatsApp', 'language',
+        'dailyHour', 'dailyMin', 'sundayHour', 'sundayMin',
+        'appLockEnabled', 'useBiometrics', 'themeMode',
+        'notificationsEnabled', 'autoSendEnabled',
+        'autoSendHour', 'autoSendMin',
+        'dailyFollowUps', 'sundayFollowUps',
+      ]) {
+        settings[key] = await StorageService.instance.getSetting(key);
+      }
+      final reports = await StorageService.instance.getAllReports();
+      return {
+        'version': 3,
+        'exportDate': DateTime.now().toIso8601String(),
+        'autoBackup': true,
+        'settings': settings,
+        'logs': logs.map((l) => l.toMap()).toList(),
+        'saved_reports': reports.map((r) => r.toMap()).toList(),
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  MANUAL EXPORT / IMPORT
+  // ═════════════════════════════════════════════════════════════
+
   /// Export all logs and settings to a JSON file and share it
   Future<bool> exportData() async {
-    final logs = await StorageService.instance.getAllLogs();
-    final settings = <String, String>{};
-    for (final key in [
-      'myName', 'discipleEmail', 'discipleWhatsApp', 'language',
-      'dailyHour', 'dailyMin', 'sundayHour', 'sundayMin',
-    ]) {
-      settings[key] = await StorageService.instance.getSetting(key);
-    }
-    final reports = await StorageService.instance.getAllReports();
-    final data = {
-      'version': 3,
-      'exportDate': DateTime.now().toIso8601String(),
-      'settings': settings,
-      'logs': logs.map((l) => l.toMap()).toList(),
-      'saved_reports': reports.map((r) => r.toMap()).toList(),
-    };
+    final data = await _buildBackupData();
+    if (data == null) return false;
+    data.remove('autoBackup'); // not an auto-backup
     final json = const JsonEncoder.withIndent('  ').convert(data);
     final dir = await getTemporaryDirectory();
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());

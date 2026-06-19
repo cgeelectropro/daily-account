@@ -43,6 +43,9 @@ class DailyLog {
   String evangelismContacts;
   String evangelismOutcome;
   String evangelismNotes;
+  String evangelismNewBelievers;
+  String evangelismBeingDiscipled;
+  String evangelismFollowUpNotes;
 
   // Other
   String other;
@@ -70,6 +73,9 @@ class DailyLog {
   String proclamationCount; // number of times proclaimed
   String proclamationDuration; // optional duration
 
+  // Voice note (file path)
+  String voiceNotePath;
+
   // AI reflection (cached)
   String aiReflection;
 
@@ -90,6 +96,9 @@ class DailyLog {
     this.evangelismContacts = '',
     this.evangelismOutcome = '',
     this.evangelismNotes = '',
+    this.evangelismNewBelievers = '',
+    this.evangelismBeingDiscipled = '',
+    this.evangelismFollowUpNotes = '',
     this.other = '',
     this.fastingType = '',
     this.fastingDuration = '',
@@ -104,6 +113,7 @@ class DailyLog {
     this.discipleshipDuration = '',
     this.proclamationCount = '',
     this.proclamationDuration = '',
+    this.voiceNotePath = '',
     this.aiReflection = '',
     this.completed = false,
   }) : literature = literature ?? [LiteratureEntry()];
@@ -143,6 +153,9 @@ class DailyLog {
         'evangelismContacts': evangelismContacts,
         'evangelismOutcome': evangelismOutcome,
         'evangelismNotes': evangelismNotes,
+        'evangelismNewBelievers': evangelismNewBelievers,
+        'evangelismBeingDiscipled': evangelismBeingDiscipled,
+        'evangelismFollowUpNotes': evangelismFollowUpNotes,
         'other': other,
         'fastingType': fastingType,
         'fastingDuration': fastingDuration,
@@ -157,6 +170,7 @@ class DailyLog {
         'discipleshipDuration': discipleshipDuration,
         'proclamationCount': proclamationCount,
         'proclamationDuration': proclamationDuration,
+        'voiceNotePath': voiceNotePath,
         'aiReflection': aiReflection,
         'completed': completed ? 1 : 0,
       };
@@ -187,6 +201,9 @@ class DailyLog {
       evangelismContacts: m['evangelismContacts'] ?? '',
       evangelismOutcome: m['evangelismOutcome'] ?? '',
       evangelismNotes: m['evangelismNotes'] ?? '',
+      evangelismNewBelievers: m['evangelismNewBelievers'] ?? '',
+      evangelismBeingDiscipled: m['evangelismBeingDiscipled'] ?? '',
+      evangelismFollowUpNotes: m['evangelismFollowUpNotes'] ?? '',
       other: m['other'] ?? '',
       fastingType: m['fastingType'] ?? '',
       fastingDuration: m['fastingDuration'] ?? '',
@@ -201,6 +218,7 @@ class DailyLog {
       discipleshipDuration: m['discipleshipDuration'] ?? '',
       proclamationCount: m['proclamationCount'] ?? '',
       proclamationDuration: m['proclamationDuration'] ?? '',
+      voiceNotePath: m['voiceNotePath'] ?? '',
       aiReflection: m['aiReflection'] ?? '',
       completed: (m['completed'] ?? 0) == 1,
     );

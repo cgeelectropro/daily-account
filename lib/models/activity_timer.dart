@@ -1,6 +1,7 @@
 /// Represents a trackable spiritual activity with timer support.
 enum ActivityType {
   bibleReading,
+  literature,
   ddeg,
   prayerAlone,
   prayerOthers,
@@ -9,6 +10,43 @@ enum ActivityType {
   discipleship,
   church,
   proclamation,
+}
+
+/// A key that identifies either a built-in [ActivityType] or a custom activity
+/// by its [customId]. Used as the map key in [TimerService].
+class TimerKey {
+  final ActivityType? builtIn;
+  final String? customId;
+
+  const TimerKey.builtIn(ActivityType type) : builtIn = type, customId = null;
+  const TimerKey.custom(String id) : customId = id, builtIn = null;
+
+  bool get isBuiltIn => builtIn != null;
+  bool get isCustom => customId != null;
+
+  /// Stable string for serialization.
+  String get serialKey => isBuiltIn ? 'b:${builtIn!.index}' : 'c:$customId';
+
+  factory TimerKey.fromSerialKey(String key) {
+    if (key.startsWith('b:')) {
+      final idx = int.parse(key.substring(2));
+      return TimerKey.builtIn(ActivityType.values[idx]);
+    }
+    return TimerKey.custom(key.substring(2));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimerKey &&
+          builtIn == other.builtIn &&
+          customId == other.customId;
+
+  @override
+  int get hashCode => builtIn.hashCode ^ customId.hashCode;
+
+  @override
+  String toString() => isBuiltIn ? 'TimerKey(${builtIn!.name})' : 'TimerKey(custom:$customId)';
 }
 
 /// Maps an ActivityType to the DailyLog duration field it should auto-fill.
@@ -38,6 +76,8 @@ extension ActivityTypeMapping on ActivityType {
     switch (this) {
       case ActivityType.bibleReading:
         return '\uD83D\uDCD6';
+      case ActivityType.literature:
+        return '\uD83D\uDCDA';
       case ActivityType.ddeg:
         return '\uD83D\uDD25';
       case ActivityType.prayerAlone:
@@ -62,6 +102,8 @@ extension ActivityTypeMapping on ActivityType {
     switch (this) {
       case ActivityType.bibleReading:
         return 'LB';
+      case ActivityType.literature:
+        return 'Lit';
       case ActivityType.ddeg:
         return 'RDQD';
       case ActivityType.prayerAlone:
@@ -84,7 +126,7 @@ extension ActivityTypeMapping on ActivityType {
 
 /// A single timer session for one activity on a specific date.
 class TimerSession {
-  final ActivityType activity;
+  final TimerKey key;
   final String dateKey; // 'yyyy-MM-dd'
   Duration elapsed;
   DateTime? startedAt; // non-null means running
@@ -94,8 +136,11 @@ class TimerSession {
   /// Keys match DailyLog field names.
   Map<String, String> fields;
 
+  /// Convenience: the built-in activity type (null for custom).
+  ActivityType? get activity => key.builtIn;
+
   TimerSession({
-    required this.activity,
+    required this.key,
     required this.dateKey,
     this.elapsed = Duration.zero,
     this.startedAt,
@@ -149,7 +194,7 @@ class TimerSession {
   }
 
   Map<String, dynamic> toMap() => {
-        'activity': activity.index,
+        'timerKey': key.serialKey,
         'dateKey': dateKey,
         'elapsedMs': elapsed.inMilliseconds,
         'startedAt': startedAt?.toIso8601String(),
@@ -157,14 +202,25 @@ class TimerSession {
         'fields': fields,
       };
 
-  factory TimerSession.fromMap(Map<String, dynamic> m) => TimerSession(
-        activity: ActivityType.values[m['activity'] as int],
-        dateKey: m['dateKey'] as String,
-        elapsed: Duration(milliseconds: m['elapsedMs'] as int),
-        startedAt: m['startedAt'] != null ? DateTime.parse(m['startedAt'] as String) : null,
-        paused: (m['paused'] as int) == 1,
-        fields: m['fields'] != null
-            ? Map<String, String>.from(m['fields'] as Map)
-            : {},
-      );
+  factory TimerSession.fromMap(Map<String, dynamic> m) {
+    // Support legacy format (activity index) and new format (timerKey)
+    TimerKey timerKey;
+    if (m.containsKey('timerKey')) {
+      timerKey = TimerKey.fromSerialKey(m['timerKey'] as String);
+    } else {
+      timerKey = TimerKey.builtIn(ActivityType.values[m['activity'] as int]);
+    }
+    return TimerSession(
+      key: timerKey,
+      dateKey: m['dateKey'] as String,
+      elapsed: Duration(milliseconds: m['elapsedMs'] as int),
+      startedAt: m['startedAt'] != null
+          ? DateTime.parse(m['startedAt'] as String)
+          : null,
+      paused: (m['paused'] as int) == 1,
+      fields: m['fields'] != null
+          ? Map<String, String>.from(m['fields'] as Map)
+          : {},
+    );
+  }
 }

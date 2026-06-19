@@ -17,14 +17,14 @@ class AppTheme {
   static const Color green = Color(0xFF6FBF73); // success / complete
   static const Color rust = Color(0xFFC97B5A); // warning / error
 
-  // ── Light palette (parchment + deep gold) ─────────────────
-  static const Color lightBg0 = Color(0xFFFAF6EF); // lightest background
-  static const Color lightBg1 = Color(0xFFF0E8D8); // mid background
-  static const Color lightBg2 = Color(0xFFE8DCC8); // raised surface
-  static const Color lightText = Color(0xFF2D1E0F); // primary text
-  static const Color lightMuted = Color(0xFF7A6A50); // secondary text
-  static const Color lightFaint = Color(0xFFA09070); // faint text
-  static const Color lightGold = Color(0xFFB8922D); // darker gold for contrast
+  // ── Light palette (clean warm white + rich gold) ───────────
+  static const Color lightBg0 = Color(0xFFFFFDF8); // clean warm white
+  static const Color lightBg1 = Color(0xFFF5F0E6); // subtle warm tint for nav
+  static const Color lightBg2 = Color(0xFFEDE6D6); // raised cards/surfaces
+  static const Color lightText = Color(0xFF1A1207); // near-black for max readability
+  static const Color lightMuted = Color(0xFF5C4E38); // readable secondary text
+  static const Color lightFaint = Color(0xFF8A7C64); // tertiary / hints
+  static const Color lightGold = Color(0xFF9A7B1C); // rich deep gold for contrast
 
   // ── Gradients ─────────────────────────────────────────────
   static const LinearGradient bgGradient = LinearGradient(
@@ -35,10 +35,9 @@ class AppTheme {
   );
 
   static const LinearGradient lightBgGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [lightBg0, lightBg1, lightBg0],
-    stops: [0.0, 0.5, 1.0],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [lightBg0, lightBg0],
   );
 
   static const LinearGradient goldGradient = LinearGradient(

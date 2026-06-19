@@ -123,7 +123,19 @@ class PdfReportService {
   Future<pw.Document> _buildMonthlyPdf(String name, int year, int month) async {
     final monthStats = await ReportService.instance.computeMonthStats(year, month);
     final fmtMonth = DateFormat('MMMM yyyy');
+    final fmtLong = DateFormat('EEEE, MMM d');
     final monthDate = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+
+    // Collect all day logs for the month
+    final dayDates = <DateTime>[];
+    final dayLogs = <DailyLog?>[];
+    for (int day = 1; day <= lastDay.day; day++) {
+      final d = DateTime(year, month, day);
+      if (d.isAfter(DateTime.now())) break;
+      dayDates.add(d);
+      dayLogs.add(await StorageService.instance.getLog(ReportService.instance.keyFor(d)));
+    }
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(
@@ -145,9 +157,15 @@ class PdfReportService {
         build: (ctx) {
           final widgets = <pw.Widget>[];
 
-          // Monthly summary
+          // Monthly summary at the top
           widgets.add(_monthlySummaryBlock(monthStats));
-          widgets.add(pw.SizedBox(height: 20));
+          widgets.add(pw.SizedBox(height: 16));
+
+          // Full day-by-day entries — same format as weekly PDF
+          for (int i = 0; i < dayDates.length; i++) {
+            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i]));
+            if (i < dayDates.length - 1) widgets.add(pw.SizedBox(height: 8));
+          }
 
           return widgets;
         },
@@ -419,11 +437,174 @@ class PdfReportService {
     if (log.discipleshipWho.isNotEmpty) {
       rows.add(_detailRow('Discipleship', '${log.discipleshipWho}${log.discipleshipTopic.isNotEmpty ? " — ${log.discipleshipTopic}" : ""}${log.discipleshipDuration.isNotEmpty ? " (${log.discipleshipDuration})" : ""}'));
     }
+    if (log.proclamationCount.isNotEmpty) {
+      rows.add(_detailRow('Proclamation', '${log.proclamationCount} times${log.proclamationDuration.isNotEmpty ? " (${log.proclamationDuration})" : ""}'));
+    }
     if (log.other.isNotEmpty) {
       rows.add(_detailRow('Other', log.other));
     }
 
     return rows;
+  }
+
+  // ═════════════════════════════════════════════════════════
+  //  CERTIFICATE PDF
+  // ═════════════════════════════════════════════════════════
+
+  Future<void> shareCertificatePdf(String name, int year, int month) async {
+    final doc = await _buildCertificatePdf(name, year, month);
+    final fmtMonth = DateFormat('MMMM_yyyy');
+    final fileName = 'Certificate_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
+    await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
+  }
+
+  Future<pw.Document> _buildCertificatePdf(String name, int year, int month) async {
+    final stats = await ReportService.instance.computeMonthStats(year, month);
+    final fmtMonth = DateFormat('MMMM yyyy');
+    final monthLabel = fmtMonth.format(DateTime(year, month, 1));
+    final pct = stats.totalDays > 0 ? (stats.avgCompletion * 100).round() : 0;
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: await PdfGoogleFonts.loraRegular(),
+        bold: await PdfGoogleFonts.loraBold(),
+        italic: await PdfGoogleFonts.loraItalic(),
+      ),
+    );
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: const pw.EdgeInsets.all(30),
+        build: (ctx) {
+          return pw.Container(
+            padding: const pw.EdgeInsets.all(20),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: _gold, width: 4),
+              borderRadius: pw.BorderRadius.circular(12),
+            ),
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: _goldDeep, width: 1),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    '\u2720',
+                    style: const pw.TextStyle(fontSize: 36, color: _gold),
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    'CERTIFICATE OF FAITHFULNESS',
+                    style: pw.TextStyle(
+                      fontSize: 28,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _gold,
+                      letterSpacing: 4,
+                    ),
+                  ),
+                  pw.SizedBox(height: 6),
+                  pw.Container(
+                    width: 200,
+                    height: 2,
+                    color: _gold,
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text(
+                    'This certifies that',
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      color: _sand,
+                      fontStyle: pw.FontStyle.italic,
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    name.isEmpty ? 'Disciple' : name,
+                    style: pw.TextStyle(
+                      fontSize: 30,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _goldDeep,
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    'demonstrated faithful spiritual discipline during',
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      color: _sand,
+                      fontStyle: pw.FontStyle.italic,
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    monthLabel,
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _gold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 16),
+                  // Achievement stats row
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    decoration: pw.BoxDecoration(
+                      color: const PdfColor.fromInt(0xFFFAF6EF),
+                      borderRadius: pw.BorderRadius.circular(8),
+                      border: pw.Border.all(color: _gold, width: 0.5),
+                    ),
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _statCell('$pct%', 'Consistency'),
+                        _statCell('${stats.daysLogged}/${stats.totalDays}', 'Days Active'),
+                        _statCell('${stats.totalBibleChapters}', 'Chapters Read'),
+                        _statCell('${stats.totalEvangelismContacts}', 'Souls Reached'),
+                        _statCell('${stats.litItems}', 'Books Read'),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 24),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text(
+                        '"Be faithful unto death, and I will give you the crown of life." — Revelation 2:10',
+                        style: pw.TextStyle(
+                          fontSize: 10,
+                          color: _sand,
+                          fontStyle: pw.FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 16),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Generated: ${DateFormat('MMMM d, yyyy').format(DateTime.now())}',
+                        style: const pw.TextStyle(fontSize: 8, color: _sand),
+                      ),
+                      pw.Text(
+                        'Daily Account \u2022 CMFI Discipleship',
+                        style: const pw.TextStyle(fontSize: 8, color: _sand),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    return doc;
   }
 
   pw.Widget _detailRow(String label, String value) {

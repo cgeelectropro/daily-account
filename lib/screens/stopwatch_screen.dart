@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../l10n/generated/app_localizations.dart';
@@ -50,6 +51,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     switch (type) {
       case ActivityType.bibleReading:
         return l.sectionBible;
+      case ActivityType.literature:
+        return l.sectionLiterature;
       case ActivityType.ddeg:
         return l.ddegShort;
       case ActivityType.prayerAlone:
@@ -74,7 +77,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final l = S.of(context);
     final ts = TimerService.instance;
     final accent = AppTheme.accentGold(context);
-    final running = ts.activeActivity;
+    final runningKey = ts.activeKey;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
@@ -86,8 +89,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         const SizedBox(height: 16),
 
         // Active timer hero (if running)
-        if (running != null) ...[
-          _activeTimerHero(running, ts, accent),
+        if (runningKey != null) ...[
+          _activeTimerHero(runningKey, ts, accent),
           const SizedBox(height: 20),
         ],
 
@@ -101,8 +104,21 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     );
   }
 
-  Widget _activeTimerHero(ActivityType activity, TimerService ts, Color accent) {
-    final session = ts.getSession(activity)!;
+  Widget _activeTimerHero(TimerKey key, TimerService ts, Color accent) {
+    final session = ts.getSession(key)!;
+    final icon = key.isBuiltIn
+        ? key.builtIn!.icon
+        : _customActivities
+            .where((c) => c.id == key.customId)
+            .map((c) => c.icon)
+            .firstOrNull ?? '\u2728';
+    final label = key.isBuiltIn
+        ? _label(S.of(context), key.builtIn!)
+        : _customActivities
+            .where((c) => c.id == key.customId)
+            .map((c) => c.name)
+            .firstOrNull ?? '';
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       decoration: BoxDecoration(
@@ -115,36 +131,27 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       child: Column(
         children: [
-          // Activity icon + name
-          Text(activity.icon, style: const TextStyle(fontSize: 32)),
+          Text(icon, style: const TextStyle(fontSize: 32)),
           const SizedBox(height: 8),
-          Text(
-            _label(S.of(context), activity),
-            style: AppTheme.serif(14, color: AppTheme.textColor(context)),
-          ),
+          Text(label,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context))),
           const SizedBox(height: 12),
-          // Big timer display
-          Text(
-            session.stopwatchDisplay,
-            style: AppTheme.display(48, color: accent),
-          ),
+          Text(session.stopwatchDisplay,
+              style: AppTheme.display(48, color: accent)),
           const SizedBox(height: 16),
-          // Controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Pause
               _controlButton(
                 icon: Icons.pause_rounded,
                 color: AppTheme.goldSoft,
-                onTap: () => ts.pause(activity),
+                onTap: () => ts.pause(key),
               ),
               const SizedBox(width: 24),
-              // Stop
               _controlButton(
                 icon: Icons.stop_rounded,
                 color: AppTheme.rust,
-                onTap: () => _stopActivity(activity),
+                onTap: () => _stopTimer(key),
               ),
             ],
           ),
@@ -168,13 +175,11 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       child: Row(
         children: [
-          Text('\u23F1\uFE0F', style: const TextStyle(fontSize: 20)),
+          const Text('\u23F1\uFE0F', style: TextStyle(fontSize: 20)),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              S.of(context).todayTotal,
-              style: AppTheme.serif(13, color: AppTheme.mutedColor(context)),
-            ),
+            child: Text(S.of(context).todayTotal,
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
           ),
           Text(display, style: AppTheme.display(20, color: accent)),
         ],
@@ -184,7 +189,6 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
   Widget _activityGrid(S l, TimerService ts, Color accent) {
     final builtIn = ActivityType.values;
-    // Total = built-in + custom + 1 for "Add" button
     final totalCount = builtIn.length + _customActivities.length + 1;
 
     return GridView.builder(
@@ -205,14 +209,15 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         if (customIdx < _customActivities.length) {
           return _customActivityTile(_customActivities[customIdx], ts, accent);
         }
-        // "Add" button tile
         return _addActivityTile(l, accent);
       },
     );
   }
 
-  Widget _activityTile(ActivityType activity, S l, TimerService ts, Color accent) {
-    final session = ts.getSession(activity);
+  Widget _activityTile(
+      ActivityType activity, S l, TimerService ts, Color accent) {
+    final key = TimerKey.builtIn(activity);
+    final session = ts.getSession(key);
     final isRunning = session?.isRunning ?? false;
     final isPaused = session?.paused ?? false;
     final hasElapsed = session != null && session.currentElapsed > Duration.zero;
@@ -237,30 +242,24 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon + label
           Row(
             children: [
               Text(activity.icon, style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(
-                  _label(l, activity),
-                  style: AppTheme.serif(11, color: AppTheme.textColor(context)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(_label(l, activity),
+                    style:
+                        AppTheme.serif(11, color: AppTheme.textColor(context)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ),
             ],
           ),
           const Spacer(),
-          // Elapsed time
           if (hasElapsed)
-            Text(
-              session.formattedDuration,
-              style: AppTheme.display(16, color: accent),
-            ),
+            Text(session.formattedDuration,
+                style: AppTheme.display(16, color: accent)),
           const Spacer(),
-          // Controls row
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
@@ -274,17 +273,19 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 }),
               if (isRunning) ...[
                 _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
-                  ts.pause(activity);
+                  ts.pause(key);
                 }),
                 const SizedBox(width: 8),
-                _tileButton(Icons.stop_rounded, AppTheme.rust, () => _stopActivity(activity)),
+                _tileButton(
+                    Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
               ],
               if (isPaused) ...[
                 _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
-                  ts.start(activity);
+                  ts.start(key);
                 }),
                 const SizedBox(width: 8),
-                _tileButton(Icons.stop_rounded, AppTheme.rust, () => _stopActivity(activity)),
+                _tileButton(
+                    Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
               ],
             ],
           ),
@@ -295,7 +296,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
   // ── Custom activity tiles ────────────────────────────────────
 
-  Widget _customActivityTile(CustomActivity ca, TimerService ts, Color accent) {
+  Widget _customActivityTile(
+      CustomActivity ca, TimerService ts, Color accent) {
+    final key = TimerKey.custom(ca.id);
+    final session = ts.getSession(key);
+    final isRunning = session?.isRunning ?? false;
+    final isPaused = session?.paused ?? false;
+    final hasElapsed = session != null && session.currentElapsed > Duration.zero;
     final dark = AppTheme.isDark(context);
 
     return GestureDetector(
@@ -303,11 +310,18 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: dark
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.04),
+          color: isRunning
+              ? accent.withValues(alpha: 0.15)
+              : dark
+                  ? Colors.white.withValues(alpha: 0.04)
+                  : Colors.black.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: accent.withValues(alpha: 0.12)),
+          border: Border.all(
+            color: isRunning
+                ? accent.withValues(alpha: 0.5)
+                : accent.withValues(alpha: 0.12),
+            width: isRunning ? 1.5 : 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,23 +331,42 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 Text(ca.icon, style: const TextStyle(fontSize: 18)),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    ca.name,
-                    style: AppTheme.serif(11, color: AppTheme.textColor(context)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  child: Text(ca.name,
+                      style: AppTheme.serif(11,
+                          color: AppTheme.textColor(context)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
                 ),
               ],
             ),
             const Spacer(),
+            if (hasElapsed)
+              Text(session.formattedDuration,
+                  style: AppTheme.display(16, color: accent)),
             const Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
-                  _showCustomFieldsAndStart(ca);
-                }),
+                if (!isRunning && !isPaused)
+                  _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                    _showCustomFieldsAndStart(ca);
+                  }),
+                if (isRunning) ...[
+                  _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
+                    ts.pause(key);
+                  }),
+                  const SizedBox(width: 8),
+                  _tileButton(
+                      Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+                ],
+                if (isPaused) ...[
+                  _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                    ts.start(key);
+                  }),
+                  const SizedBox(width: 8),
+                  _tileButton(
+                      Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+                ],
               ],
             ),
           ],
@@ -360,11 +393,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
           children: [
             Icon(Icons.add_rounded, color: accent, size: 32),
             const SizedBox(height: 6),
-            Text(
-              l.addActivity,
-              style: AppTheme.serif(11, color: accent),
-              textAlign: TextAlign.center,
-            ),
+            Text(l.addActivity,
+                style: AppTheme.serif(11, color: accent),
+                textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -385,9 +416,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-          20, 20, 20,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -401,13 +430,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 labelText: l.activityName,
                 hintText: l.activityNameHint,
                 labelStyle: AppTheme.serif(12, color: accent),
-                hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(context)),
+                hintStyle:
+                    AppTheme.serif(12, color: AppTheme.faintColor(context)),
                 enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
-                ),
+                    borderSide:
+                        BorderSide(color: accent.withValues(alpha: 0.3))),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent),
-                ),
+                    borderSide: BorderSide(color: accent)),
               ),
             ),
             const SizedBox(height: 12),
@@ -418,11 +447,10 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 labelText: l.activityIcon,
                 labelStyle: AppTheme.serif(12, color: accent),
                 enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
-                ),
+                    borderSide:
+                        BorderSide(color: accent.withValues(alpha: 0.3))),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent),
-                ),
+                    borderSide: BorderSide(color: accent)),
               ),
             ),
             const SizedBox(height: 12),
@@ -433,13 +461,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 labelText: l.customFieldLabel,
                 hintText: l.customFieldHint,
                 labelStyle: AppTheme.serif(12, color: accent),
-                hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(context)),
+                hintStyle:
+                    AppTheme.serif(12, color: AppTheme.faintColor(context)),
                 enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
-                ),
+                    borderSide:
+                        BorderSide(color: accent.withValues(alpha: 0.3))),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: accent),
-                ),
+                    borderSide: BorderSide(color: accent)),
               ),
             ),
             const SizedBox(height: 20),
@@ -451,7 +479,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   final activity = CustomActivity(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     name: nameCtrl.text.trim(),
-                    icon: iconCtrl.text.trim().isEmpty ? '\u2728' : iconCtrl.text.trim(),
+                    icon: iconCtrl.text.trim().isEmpty
+                        ? '\u2728'
+                        : iconCtrl.text.trim(),
                     fieldLabels: fieldCtrl.text.trim().isNotEmpty
                         ? [fieldCtrl.text.trim()]
                         : [],
@@ -472,7 +502,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: Text(l.addActivity, style: AppTheme.display(16, color: AppTheme.bg0)),
+                  child: Text(l.addActivity,
+                      style: AppTheme.display(16, color: AppTheme.bg0)),
                 ),
               ),
             ),
@@ -489,12 +520,15 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surfaceColor(context),
-        title: Text(l.deleteActivityConfirm, style: AppTheme.display(18, color: accent)),
-        content: Text('${ca.icon} ${ca.name}', style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+        title: Text(l.deleteActivityConfirm,
+            style: AppTheme.display(18, color: accent)),
+        content: Text('${ca.icon} ${ca.name}',
+            style: AppTheme.serif(14, color: AppTheme.textColor(context))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+            child: Text(l.cancel,
+                style: TextStyle(color: AppTheme.mutedColor(context))),
           ),
           TextButton(
             onPressed: () async {
@@ -502,36 +536,25 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
               Navigator.pop(ctx);
               _loadCustomActivities();
             },
-            child: Text(l.deleteReport, style: const TextStyle(color: AppTheme.rust)),
+            child: Text(l.deleteReport,
+                style: const TextStyle(color: AppTheme.rust)),
           ),
         ],
       ),
     );
   }
 
-  /// Show fields for a custom activity, then start a built-in timer
-  /// that writes to the "other" field when stopped.
+  /// Show fields for a custom activity, then start its timer.
   void _showCustomFieldsAndStart(CustomActivity ca) {
     final l = S.of(context);
     final accent = AppTheme.accentGold(context);
+    final key = TimerKey.custom(ca.id);
     final controllers = List.generate(
-      ca.fieldLabels.length,
-      (_) => TextEditingController(),
-    );
-
-    // For custom activities, use ActivityType.church as a proxy
-    // (we'll override the fields written). Actually, let's just
-    // start a generic timer and handle it via the "other" field.
-    // We'll use the evangelism type if no fields, but really we
-    // need a way to track custom timers. For now, we build the
-    // notes string and write to "other".
+        ca.fieldLabels.length, (_) => TextEditingController());
 
     if (ca.fieldLabels.isEmpty) {
-      // No fields — just start directly and track duration to "other"
-      TimerService.instance.start(ActivityType.church, fields: {
-        'churchType': ca.name,
-        'churchNotes': '',
-      });
+      // No fields — start directly
+      TimerService.instance.start(key, fields: {'_customName': ca.name});
       return;
     }
 
@@ -544,9 +567,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-          20, 20, 20,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,51 +577,53 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 Text(ca.icon, style: const TextStyle(fontSize: 24)),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(ca.name, style: AppTheme.display(18, color: accent)),
-                ),
+                    child: Text(ca.name,
+                        style: AppTheme.display(18, color: accent))),
               ],
             ),
             const SizedBox(height: 4),
             Text(l.stopwatchFillFields,
-                style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+                style:
+                    AppTheme.serif(12, color: AppTheme.mutedColor(context))),
             const SizedBox(height: 16),
-            ...List.generate(ca.fieldLabels.length, (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: TextField(
-                controller: controllers[i],
-                style: AppTheme.serif(14, color: AppTheme.textColor(context)),
-                decoration: InputDecoration(
-                  labelText: ca.fieldLabels[i],
-                  labelStyle: AppTheme.serif(12, color: accent),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent),
+            ...List.generate(
+              ca.fieldLabels.length,
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controllers[i],
+                  style: AppTheme.serif(14,
+                      color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: ca.fieldLabels[i],
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent)),
                   ),
                 ),
               ),
-            )),
+            ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
                 onTap: () {
-                  final notes = controllers
-                      .asMap()
-                      .entries
-                      .where((e) => e.value.text.isNotEmpty)
-                      .map((e) => '${ca.fieldLabels[e.key]}: ${e.value.text}')
-                      .join('; ');
+                  final fieldMap = <String, String>{
+                    '_customName': ca.name,
+                  };
+                  for (var i = 0; i < controllers.length; i++) {
+                    if (controllers[i].text.isNotEmpty) {
+                      fieldMap[ca.fieldLabels[i]] = controllers[i].text;
+                    }
+                  }
                   for (final c in controllers) {
                     c.dispose();
                   }
                   Navigator.pop(ctx);
-                  // Use "other" field to store custom activity data
-                  TimerService.instance.start(ActivityType.church, fields: {
-                    'churchType': ca.name,
-                    'churchNotes': notes,
-                  });
+                  TimerService.instance.start(key, fields: fieldMap);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -612,9 +635,11 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.play_arrow_rounded, color: AppTheme.bg0, size: 22),
+                      const Icon(Icons.play_arrow_rounded,
+                          color: AppTheme.bg0, size: 22),
                       const SizedBox(width: 8),
-                      Text(l.startTimer, style: AppTheme.display(16, color: AppTheme.bg0)),
+                      Text(l.startTimer,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
                     ],
                   ),
                 ),
@@ -628,46 +653,45 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
   // ── Field definitions per activity ──────────────────────────
 
-  /// Returns a list of (fieldKey, label, hint) for the bottom sheet.
   List<(String, String, String)> _fieldsFor(S l, ActivityType type) {
     switch (type) {
       case ActivityType.bibleReading:
-        return [
-          ('bibleStartRef', l.bibleStartRef, l.bibleStartHint),
-        ];
+        return [('bibleStartRef', l.bibleStartRef, l.bibleStartHint)];
+      case ActivityType.literature:
+        return [('literatureTitle', l.bookTitleLabel, l.bookTitleHint)];
       case ActivityType.ddeg:
-        return [
-          ('ddegScripture', l.ddegScriptureLabel, l.ddegScriptureHint),
-        ];
+        return [('ddegScripture', l.ddegScriptureLabel, l.ddegScriptureHint)];
       case ActivityType.prayerAlone:
         return [
-          ('prayerAloneNotes', l.prayerAloneNotesLabel, l.prayerAloneNotesHint),
+          ('prayerAloneNotes', l.prayerAloneNotesLabel, l.prayerAloneNotesHint)
         ];
       case ActivityType.prayerOthers:
         return [
-          ('prayerOthersContext', l.prayerOthersContextLabel, l.prayerOthersContextHint),
+          ('prayerOthersContext', l.prayerOthersContextLabel,
+              l.prayerOthersContextHint)
         ];
       case ActivityType.evangelism:
         return [
-          ('evangelismContacts', l.evangelismContactsLabel, l.evangelismContactsHint),
+          ('evangelismContacts', l.evangelismContactsLabel,
+              l.evangelismContactsHint),
           ('evangelismNotes', l.evangelismNotesLabel, l.evangelismNotesHint),
         ];
       case ActivityType.fasting:
         return [
           ('fastingType', l.fastingTypeLabel, l.fastingTypeHint),
-          ('fastingPrayerFocus', l.fastingPrayerFocusLabel, l.fastingPrayerFocusHint),
+          ('fastingPrayerFocus', l.fastingPrayerFocusLabel,
+              l.fastingPrayerFocusHint),
         ];
       case ActivityType.discipleship:
         return [
           ('discipleshipWho', l.discipleshipWhoLabel, l.discipleshipWhoHint),
-          ('discipleshipTopic', l.discipleshipTopicLabel, l.discipleshipTopicHint),
+          ('discipleshipTopic', l.discipleshipTopicLabel,
+              l.discipleshipTopicHint),
         ];
       case ActivityType.church:
-        return [
-          ('churchType', l.churchTypeLabel, l.churchTypeHint),
-        ];
+        return [('churchType', l.churchTypeLabel, l.churchTypeHint)];
       case ActivityType.proclamation:
-        return []; // Proclamation uses a special counter screen, no pre-fields
+        return [];
     }
   }
 
@@ -681,6 +705,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       controllers[f.$1] = TextEditingController();
     }
 
+    final key = TimerKey.builtIn(activity);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -690,54 +716,89 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
-          20, 20, 20,
-          MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
                 Text(activity.icon, style: const TextStyle(fontSize: 24)),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    _label(l, activity),
-                    style: AppTheme.display(18, color: accent),
-                  ),
-                ),
+                    child: Text(_label(l, activity),
+                        style: AppTheme.display(18, color: accent))),
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              l.stopwatchFillFields,
-              style: AppTheme.serif(12, color: AppTheme.mutedColor(context)),
-            ),
+            Text(l.stopwatchFillFields,
+                style:
+                    AppTheme.serif(12, color: AppTheme.mutedColor(context))),
             const SizedBox(height: 16),
-            // Fields
-            ...fields.map((f) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: TextField(
-                controller: controllers[f.$1],
-                style: AppTheme.serif(14, color: AppTheme.textColor(context)),
-                decoration: InputDecoration(
-                  labelText: f.$2,
-                  hintText: f.$3,
-                  labelStyle: AppTheme.serif(12, color: accent),
-                  hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(context)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
+            ...fields.map((f) {
+              final needsAutocomplete =
+                  f.$1 == 'bibleStartRef' || f.$1 == 'ddegScripture';
+              if (needsAutocomplete) {
+                final locale = Localizations.localeOf(context).languageCode;
+                final bookNames = BibleBooks.bookNames(locale);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Autocomplete<String>(
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) return const [];
+                      final input = textEditingValue.text.toLowerCase();
+                      return bookNames
+                          .where((name) => name.toLowerCase().contains(input));
+                    },
+                    fieldViewBuilder:
+                        (ctx2, controller, focusNode, onSubmitted) {
+                      controller.addListener(() {
+                        controllers[f.$1]!.text = controller.text;
+                      });
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        style: AppTheme.serif(14,
+                            color: AppTheme.textColor(context)),
+                        decoration: InputDecoration(
+                          labelText: f.$2,
+                          hintText: f.$3,
+                          labelStyle: AppTheme.serif(12, color: accent),
+                          hintStyle: AppTheme.serif(12,
+                              color: AppTheme.faintColor(context)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: accent.withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: accent)),
+                        ),
+                      );
+                    },
                   ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controllers[f.$1],
+                  style:
+                      AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: f.$2,
+                    hintText: f.$3,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    hintStyle: AppTheme.serif(12,
+                        color: AppTheme.faintColor(context)),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent)),
                   ),
                 ),
-              ),
-            )),
+              );
+            }),
             const SizedBox(height: 8),
-            // Start button
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
@@ -752,7 +813,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     c.dispose();
                   }
                   Navigator.pop(ctx);
-                  TimerService.instance.start(activity, fields: fieldMap);
+                  TimerService.instance.start(key, fields: fieldMap);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -764,15 +825,16 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.play_arrow_rounded, color: AppTheme.bg0, size: 22),
+                      const Icon(Icons.play_arrow_rounded,
+                          color: AppTheme.bg0, size: 22),
                       const SizedBox(width: 8),
-                      Text(l.startTimer, style: AppTheme.display(16, color: AppTheme.bg0)),
+                      Text(l.startTimer,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
                     ],
                   ),
                 ),
               ),
             ),
-            // Skip — start without fields
             const SizedBox(height: 8),
             Center(
               child: GestureDetector(
@@ -781,14 +843,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     c.dispose();
                   }
                   Navigator.pop(ctx);
-                  TimerService.instance.start(activity);
+                  TimerService.instance.start(key);
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(8),
-                  child: Text(
-                    l.skip,
-                    style: AppTheme.serif(12, color: AppTheme.mutedColor(context)),
-                  ),
+                  child: Text(l.skip,
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
                 ),
               ),
             ),
@@ -827,41 +888,32 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
             return Padding(
               padding: EdgeInsets.fromLTRB(
-                20, 20, 20,
-                MediaQuery.of(ctx).viewInsets.bottom + 20,
-              ),
+                  20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Header
-                  Text('\uD83D\uDCE3', style: const TextStyle(fontSize: 36)),
+                  const Text('\uD83D\uDCE3',
+                      style: TextStyle(fontSize: 36)),
                   const SizedBox(height: 8),
                   Text(l.proclamationCounter,
                       style: AppTheme.display(20, color: accent)),
                   const SizedBox(height: 4),
                   Text(l.proclamationSubtitle,
-                      style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                      style: AppTheme.serif(13,
+                          color: AppTheme.mutedColor(context))),
                   const SizedBox(height: 24),
-
-                  // Big counter display
-                  Text(
-                    '$count',
-                    style: AppTheme.display(72, color: accent),
-                  ),
+                  Text('$count', style: AppTheme.display(72, color: accent)),
                   const SizedBox(height: 8),
                   Text(l.proclamationTap,
-                      style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                      style: AppTheme.serif(13,
+                          color: AppTheme.mutedColor(context))),
                   const SizedBox(height: 20),
-
-                  // Big tap button
                   GestureDetector(
                     onTap: () {
                       setSheetState(() => count++);
-                      // Auto-start timer on first tap
                       if (!timerRunning && !stopwatch.isRunning) {
                         stopwatch.start();
                         timerRunning = true;
-                        // Update display every second
                         Future.doWhile(() async {
                           await Future.delayed(const Duration(seconds: 1));
                           if (ctx.mounted && stopwatch.isRunning) {
@@ -887,19 +939,16 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                         ],
                       ),
                       child: const Center(
-                        child: Icon(Icons.add, color: AppTheme.bg0, size: 48),
-                      ),
+                          child:
+                              Icon(Icons.add, color: AppTheme.bg0, size: 48)),
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // Timer display (auto-starts on first tap)
                   if (timerRunning || stopwatch.elapsed > Duration.zero)
                     Text(timerDisplay,
-                        style: AppTheme.display(20, color: AppTheme.mutedColor(context))),
+                        style: AppTheme.display(20,
+                            color: AppTheme.mutedColor(context))),
                   const SizedBox(height: 24),
-
-                  // Controls: pause timer / save
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -917,7 +966,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                             stopwatch.start();
                             setSheetState(() {});
                             Future.doWhile(() async {
-                              await Future.delayed(const Duration(seconds: 1));
+                              await Future.delayed(
+                                  const Duration(seconds: 1));
                               if (ctx.mounted && stopwatch.isRunning) {
                                 setSheetState(() {});
                                 return true;
@@ -927,13 +977,11 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                           },
                         ),
                       const SizedBox(width: 24),
-                      // Save button
                       GestureDetector(
                         onTap: () async {
                           stopwatch.stop();
                           Navigator.pop(ctx);
                           if (count > 0) {
-                            // Build duration string
                             String durationStr = '';
                             final d = stopwatch.elapsed;
                             if (d.inMinutes > 0) {
@@ -945,12 +993,12 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                                 durationStr = '$dm minutes';
                               }
                             }
-                            // Save to daily log directly
                             final dateKey = _todayKey;
-                            final log = await StorageService.instance.getLog(dateKey) ??
+                            final log = await StorageService.instance
+                                    .getLog(dateKey) ??
                                 DailyLog(dateKey: dateKey);
-                            // Accumulate count if already has proclamations today
-                            final existing = int.tryParse(log.proclamationCount) ?? 0;
+                            final existing =
+                                int.tryParse(log.proclamationCount) ?? 0;
                             log.proclamationCount = '${existing + count}';
                             if (durationStr.isNotEmpty) {
                               log.proclamationDuration = durationStr;
@@ -960,13 +1008,15 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                           }
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
                           decoration: BoxDecoration(
                             gradient: AppTheme.goldGradient,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(l.proclamationSave,
-                              style: AppTheme.display(16, color: AppTheme.bg0)),
+                              style:
+                                  AppTheme.display(16, color: AppTheme.bg0)),
                         ),
                       ),
                     ],
@@ -983,17 +1033,24 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
   String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-  /// Stop handler that intercepts Bible reading to ask for end reference.
-  Future<void> _stopActivity(ActivityType activity) async {
+  /// Unified stop handler for both built-in and custom activities.
+  Future<void> _stopTimer(TimerKey key) async {
+    HapticFeedback.mediumImpact();
     final ts = TimerService.instance;
-    final session = ts.getSession(activity);
+    final session = ts.getSession(key);
     if (session == null) return;
 
-    if (activity == ActivityType.bibleReading) {
-      // Show dialog asking for end reference before finalizing
-      await _showBibleEndDialog(session);
+    if (key.isBuiltIn) {
+      if (key.builtIn == ActivityType.bibleReading) {
+        await _showBibleEndDialog(session);
+      } else if (key.builtIn == ActivityType.literature) {
+        await _showLiteratureEndDialog(session);
+      } else {
+        await ts.stop(key);
+      }
     } else {
-      await ts.stop(activity);
+      // Custom activity — just stop, data goes to "other" field
+      await ts.stop(key);
     }
     widget.onTimerStopped?.call();
   }
@@ -1006,8 +1063,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final startRef = session.fields['bibleStartRef'] ?? '';
     final ts = TimerService.instance;
 
-    // Pause the timer first so elapsed is finalized
-    ts.pause(session.activity);
+    ts.pause(session.key);
     final duration = session.formattedDuration;
 
     final locale = Localizations.localeOf(context).languageCode;
@@ -1027,48 +1083,51 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
             padding: EdgeInsets.fromLTRB(
-              20, 20, 20,
-              MediaQuery.of(ctx).viewInsets.bottom + 20,
-            ),
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Text('\uD83D\uDCD6', style: TextStyle(fontSize: 24)),
+                    const Text('\uD83D\uDCD6',
+                        style: TextStyle(fontSize: 24)),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(l.sectionBible, style: AppTheme.display(18, color: accent)),
-                    ),
+                        child: Text(l.sectionBible,
+                            style: AppTheme.display(18, color: accent))),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(l.timerStoppedDuration(duration),
-                    style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                    style: AppTheme.serif(13,
+                        color: AppTheme.mutedColor(context))),
                 if (startRef.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text('${l.bibleStartRef}: $startRef',
-                      style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
                 ],
                 const SizedBox(height: 16),
                 Text(l.enterEndReference,
-                    style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                    style: AppTheme.serif(14,
+                        color: AppTheme.textColor(context))),
                 const SizedBox(height: 8),
                 Autocomplete<String>(
                   optionsBuilder: (textEditingValue) {
                     if (textEditingValue.text.isEmpty) return const [];
                     final input = textEditingValue.text.toLowerCase();
-                    return bookNames.where((name) =>
-                        name.toLowerCase().contains(input));
+                    return bookNames
+                        .where((name) => name.toLowerCase().contains(input));
                   },
-                  fieldViewBuilder: (ctx, controller, focusNode, onSubmitted) {
-                    // Sync with our controller
+                  fieldViewBuilder:
+                      (ctx, controller, focusNode, onSubmitted) {
                     controller.addListener(() {
                       endRefCtrl.text = controller.text;
-                      // Try to calculate chapters in real-time
-                      if (startRef.isNotEmpty && controller.text.isNotEmpty) {
-                        final chapters = BibleBooks.calculateChapters(startRef, controller.text);
+                      if (startRef.isNotEmpty &&
+                          controller.text.isNotEmpty) {
+                        final chapters = BibleBooks.calculateChapters(
+                            startRef, controller.text);
                         setSheetState(() => calculatedChapters = chapters);
                       } else {
                         setSheetState(() => calculatedChapters = null);
@@ -1078,18 +1137,19 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                       controller: controller,
                       focusNode: focusNode,
                       autofocus: true,
-                      style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                      style: AppTheme.serif(14,
+                          color: AppTheme.textColor(context)),
                       decoration: InputDecoration(
                         labelText: l.bibleEndRef,
                         hintText: l.bibleEndHint,
                         labelStyle: AppTheme.serif(12, color: accent),
-                        hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(context)),
+                        hintStyle: AppTheme.serif(12,
+                            color: AppTheme.faintColor(context)),
                         enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
-                        ),
+                            borderSide: BorderSide(
+                                color: accent.withValues(alpha: 0.3))),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: accent),
-                        ),
+                            borderSide: BorderSide(color: accent)),
                       ),
                     );
                   },
@@ -1097,7 +1157,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 if (calculatedChapters != null) ...[
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: AppTheme.green.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
@@ -1114,7 +1175,6 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   child: GestureDetector(
                     onTap: () async {
                       final endRef = endRefCtrl.text.trim();
-                      // Build the full reference
                       String fullRef = startRef;
                       if (endRef.isNotEmpty && startRef.isNotEmpty) {
                         fullRef = '$startRef – $endRef';
@@ -1122,24 +1182,20 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                         fullRef = endRef;
                       }
 
-                      // Calculate chapters
-                      final chapters = (startRef.isNotEmpty && endRef.isNotEmpty)
-                          ? BibleBooks.calculateChapters(startRef, endRef)
-                          : null;
+                      final chapters =
+                          (startRef.isNotEmpty && endRef.isNotEmpty)
+                              ? BibleBooks.calculateChapters(
+                                  startRef, endRef)
+                              : null;
 
-                      // Update session fields before stopping
                       session.fields['bibleReference'] = fullRef;
                       if (chapters != null) {
                         session.fields['bibleChapters'] = '$chapters';
-                      } else if (endRef.isNotEmpty) {
-                        // If calculation fails, just keep what user entered
-                        session.fields['bibleReference'] = fullRef;
                       }
-                      // Remove the temporary startRef field
                       session.fields.remove('bibleStartRef');
 
                       Navigator.pop(ctx);
-                      await ts.stop(ActivityType.bibleReading);
+                      await ts.stop(TimerKey.builtIn(ActivityType.bibleReading));
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1148,7 +1204,171 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.center,
-                      child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                      child: Text(l.done,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show dialog after Literature timer stops asking how much was read.
+  Future<void> _showLiteratureEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final amountCtrl = TextEditingController();
+    final ts = TimerService.instance;
+    final title = session.fields['literatureTitle'] ?? '';
+
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    String selectedUnit = 'pages';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('\uD83D\uDCDA',
+                        style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(l.sectionLiterature,
+                            style: AppTheme.display(18, color: accent))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(l.timerStoppedDuration(duration),
+                    style: AppTheme.serif(13,
+                        color: AppTheme.mutedColor(context))),
+                if (title.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('${l.bookTitleLabel}: $title',
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
+                ],
+                const SizedBox(height: 16),
+                Text(l.amountLabel,
+                    style: AppTheme.serif(14,
+                        color: AppTheme.textColor(context))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: amountCtrl,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        style: AppTheme.serif(14,
+                            color: AppTheme.textColor(context)),
+                        decoration: InputDecoration(
+                          hintText: l.amountHint,
+                          hintStyle: AppTheme.serif(12,
+                              color: AppTheme.faintColor(context)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: accent.withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: accent)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.isDark(context)
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: accent.withValues(alpha: 0.25)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedUnit,
+                          dropdownColor: AppTheme.surfaceColor(context),
+                          style: AppTheme.serif(14,
+                              color: AppTheme.textColor(context)),
+                          items: [
+                            DropdownMenuItem(
+                                value: 'pages', child: Text(l.unitPages)),
+                            DropdownMenuItem(
+                                value: 'chapters',
+                                child: Text(l.unitChapters)),
+                            DropdownMenuItem(
+                                value: 'books', child: Text(l.unitBooks)),
+                          ],
+                          onChanged: (v) =>
+                              setSheetState(() => selectedUnit = v ?? 'pages'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+
+                      final dateKey = _todayKey;
+                      final log =
+                          await StorageService.instance.getLog(dateKey) ??
+                              DailyLog(dateKey: dateKey);
+
+                      final amount = amountCtrl.text.trim();
+                      if (title.isNotEmpty || amount.isNotEmpty) {
+                        if (log.literature.length == 1 &&
+                            log.literature.first.title.isEmpty) {
+                          log.literature[0] = LiteratureEntry(
+                            title: title,
+                            amount: amount,
+                            unit: selectedUnit,
+                          );
+                        } else {
+                          log.literature.add(LiteratureEntry(
+                            title: title,
+                            amount: amount,
+                            unit: selectedUnit,
+                          ));
+                        }
+                      }
+                      await StorageService.instance.saveLog(log);
+
+                      await ts.stop(TimerKey.builtIn(ActivityType.literature));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.done,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
                     ),
                   ),
                 ),
@@ -1182,7 +1402,10 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
 
   Widget _tileButton(IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
       child: Container(
         width: 36,
         height: 36,

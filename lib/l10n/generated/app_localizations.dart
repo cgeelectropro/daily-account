@@ -667,6 +667,12 @@ abstract class S {
   /// **'Cancel'**
   String get cancel;
 
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
   /// No description provided for @send.
   ///
   /// In en, this message translates to:
@@ -792,6 +798,36 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Backup & Restore'**
   String get backupSection;
+
+  /// No description provided for @autoBackupInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data is automatically backed up every 6 hours and synced to Google Drive.'**
+  String get autoBackupInfo;
+
+  /// No description provided for @restoreAutoBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Auto-Backup'**
+  String get restoreAutoBackup;
+
+  /// No description provided for @autoBackupFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-backup found from {date}. Restore it?'**
+  String autoBackupFound(String date);
+
+  /// No description provided for @noAutoBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'No auto-backup found.'**
+  String get noAutoBackup;
+
+  /// No description provided for @restoreButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreButton;
 
   /// No description provided for @exportData.
   ///
@@ -1752,6 +1788,780 @@ abstract class S {
   /// In en, this message translates to:
   /// **'{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{{count} follow-ups}}'**
   String sundayFollowUpCount(int count);
+
+  /// No description provided for @tabPrayer.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer'**
+  String get tabPrayer;
+
+  /// No description provided for @prayerRequestsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer Requests'**
+  String get prayerRequestsTitle;
+
+  /// No description provided for @prayerRequestsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bring your burdens before the Lord'**
+  String get prayerRequestsSubtitle;
+
+  /// No description provided for @prayerActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get prayerActive;
+
+  /// No description provided for @prayerAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get prayerAnswered;
+
+  /// No description provided for @prayerEmptyActive.
+  ///
+  /// In en, this message translates to:
+  /// **'No prayer requests yet.\nTap + to add your first request.'**
+  String get prayerEmptyActive;
+
+  /// No description provided for @prayerAnsweredSection.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 answered prayer} other{{count} answered prayers}}'**
+  String prayerAnsweredSection(int count);
+
+  /// No description provided for @prayerAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Prayer Request'**
+  String get prayerAddTitle;
+
+  /// No description provided for @prayerTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer request'**
+  String get prayerTitleLabel;
+
+  /// No description provided for @prayerTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Healing for my brother'**
+  String get prayerTitleHint;
+
+  /// No description provided for @prayerDescLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Details (optional)'**
+  String get prayerDescLabel;
+
+  /// No description provided for @prayerDescHint.
+  ///
+  /// In en, this message translates to:
+  /// **'More context about this request...'**
+  String get prayerDescHint;
+
+  /// No description provided for @prayerAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Prayer Request'**
+  String get prayerAddButton;
+
+  /// No description provided for @prayerCatPersonal.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal'**
+  String get prayerCatPersonal;
+
+  /// No description provided for @prayerCatFamily.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get prayerCatFamily;
+
+  /// No description provided for @prayerCatChurch.
+  ///
+  /// In en, this message translates to:
+  /// **'Church'**
+  String get prayerCatChurch;
+
+  /// No description provided for @prayerCatNation.
+  ///
+  /// In en, this message translates to:
+  /// **'Nation'**
+  String get prayerCatNation;
+
+  /// No description provided for @prayerCatHealth.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get prayerCatHealth;
+
+  /// No description provided for @prayerMarkAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer Answered!'**
+  String get prayerMarkAnswered;
+
+  /// No description provided for @prayerAnswerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'How did God answer?'**
+  String get prayerAnswerNote;
+
+  /// No description provided for @prayerAnswerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe how this prayer was answered...'**
+  String get prayerAnswerHint;
+
+  /// No description provided for @prayerConfirmAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as Answered'**
+  String get prayerConfirmAnswered;
+
+  /// No description provided for @weeklyChart.
+  ///
+  /// In en, this message translates to:
+  /// **'WEEKLY PROGRESS'**
+  String get weeklyChart;
+
+  /// No description provided for @chartCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Completion %'**
+  String get chartCompletion;
+
+  /// No description provided for @quickLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Log'**
+  String get quickLogTitle;
+
+  /// No description provided for @quickLogSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap each discipline you practiced today'**
+  String get quickLogSubtitle;
+
+  /// No description provided for @quickLogSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick log saved!'**
+  String get quickLogSaved;
+
+  /// No description provided for @quickLogButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Log'**
+  String get quickLogButton;
+
+  /// No description provided for @badgeStreakWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'7-Day Warrior'**
+  String get badgeStreakWeek;
+
+  /// No description provided for @badgeStreakMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'30-Day Champion'**
+  String get badgeStreakMonth;
+
+  /// No description provided for @badgeBibleMarathon.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible Marathon'**
+  String get badgeBibleMarathon;
+
+  /// No description provided for @badgePrayerWarrior.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer Warrior'**
+  String get badgePrayerWarrior;
+
+  /// No description provided for @badgeEvangelismFire.
+  ///
+  /// In en, this message translates to:
+  /// **'Soul Winner'**
+  String get badgeEvangelismFire;
+
+  /// No description provided for @badgePerfectWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Perfect Week'**
+  String get badgePerfectWeek;
+
+  /// No description provided for @badgesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'ACHIEVEMENTS'**
+  String get badgesTitle;
+
+  /// No description provided for @badgesEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep going! Badges will appear as you grow.'**
+  String get badgesEmpty;
+
+  /// No description provided for @snoozeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Snooze 15 min'**
+  String get snoozeLabel;
+
+  /// No description provided for @testNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Test Notification'**
+  String get testNotification;
+
+  /// No description provided for @testNotificationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification sent! If you don\'t see it, check your system notification settings.'**
+  String get testNotificationSuccess;
+
+  /// No description provided for @testNotificationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification failed. Please enable notifications in your device settings.'**
+  String get testNotificationFailed;
+
+  /// No description provided for @pendingNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No scheduled notifications} =1{1 notification scheduled} other{{count} notifications scheduled}}'**
+  String pendingNotifications(int count);
+
+  /// No description provided for @missingDisciplinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing Disciplines'**
+  String get missingDisciplinesTitle;
+
+  /// No description provided for @missingDisciplinesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to complete these today'**
+  String get missingDisciplinesSubtitle;
+
+  /// No description provided for @disciplineDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get disciplineDone;
+
+  /// No description provided for @disciplineMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing'**
+  String get disciplineMissing;
+
+  /// No description provided for @allDisciplinesDone.
+  ///
+  /// In en, this message translates to:
+  /// **'All disciplines completed! Great job!'**
+  String get allDisciplinesDone;
+
+  /// No description provided for @pendingReportBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Report pending — will send when online'**
+  String get pendingReportBanner;
+
+  /// No description provided for @pendingReportRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry now'**
+  String get pendingReportRetry;
+
+  /// No description provided for @pendingReportSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending report sent!'**
+  String get pendingReportSent;
+
+  /// No description provided for @offlineStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get offlineStatus;
+
+  /// No description provided for @midWeekNudgeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mid-Week Check-in'**
+  String get midWeekNudgeTitle;
+
+  /// No description provided for @midWeekNudgeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve completed {done}/{total} disciplines this week. Keep going!'**
+  String midWeekNudgeBody(int done, int total);
+
+  /// No description provided for @trendUp.
+  ///
+  /// In en, this message translates to:
+  /// **'up {percent}%'**
+  String trendUp(int percent);
+
+  /// No description provided for @trendDown.
+  ///
+  /// In en, this message translates to:
+  /// **'down {percent}%'**
+  String trendDown(int percent);
+
+  /// No description provided for @trendSteady.
+  ///
+  /// In en, this message translates to:
+  /// **'steady'**
+  String get trendSteady;
+
+  /// No description provided for @trendVsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last month'**
+  String get trendVsLastMonth;
+
+  /// No description provided for @trendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TRENDS'**
+  String get trendTitle;
+
+  /// No description provided for @trendConsistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency'**
+  String get trendConsistency;
+
+  /// No description provided for @trendBestDiscipline.
+  ///
+  /// In en, this message translates to:
+  /// **'Strongest'**
+  String get trendBestDiscipline;
+
+  /// No description provided for @trendWeakDiscipline.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get trendWeakDiscipline;
+
+  /// No description provided for @trendNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data for trends yet'**
+  String get trendNoData;
+
+  /// No description provided for @reflectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Reflection'**
+  String get reflectionTitle;
+
+  /// No description provided for @reflectionEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete some disciplines to receive a reflection'**
+  String get reflectionEmpty;
+
+  /// No description provided for @reflectionGreatDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Wonderful day of faithfulness! You covered {count} disciplines — your commitment is bearing fruit.'**
+  String reflectionGreatDay(int count);
+
+  /// No description provided for @reflectionGoodDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Good effort today with {count} disciplines. Keep building consistency!'**
+  String reflectionGoodDay(int count);
+
+  /// No description provided for @reflectionStartDay.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve started with {count} discipline. Every step counts — keep pressing forward!'**
+  String reflectionStartDay(int count);
+
+  /// No description provided for @reflectionPrayerFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Your prayer life is strong today. Let it fuel your other disciplines.'**
+  String get reflectionPrayerFocus;
+
+  /// No description provided for @reflectionBibleFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Great Bible engagement today. Let the Word guide your day.'**
+  String get reflectionBibleFocus;
+
+  /// No description provided for @reflectionEvangelismFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Active in evangelism today — souls are being reached!'**
+  String get reflectionEvangelismFocus;
+
+  /// No description provided for @reflectionBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'A beautifully balanced day across your disciplines.'**
+  String get reflectionBalanced;
+
+  /// No description provided for @reflectionStreakEncouragement.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on a {days}-day streak! Don\'t break it!'**
+  String reflectionStreakEncouragement(int days);
+
+  /// No description provided for @evangelismFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up'**
+  String get evangelismFollowUp;
+
+  /// No description provided for @evangelismNewBelievers.
+  ///
+  /// In en, this message translates to:
+  /// **'New believers'**
+  String get evangelismNewBelievers;
+
+  /// No description provided for @evangelismNewBelieversHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of people who accepted Christ'**
+  String get evangelismNewBelieversHint;
+
+  /// No description provided for @evangelismBeingDiscipled.
+  ///
+  /// In en, this message translates to:
+  /// **'Being discipled'**
+  String get evangelismBeingDiscipled;
+
+  /// No description provided for @evangelismBeingDiscipledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Number now in discipleship'**
+  String get evangelismBeingDiscipledHint;
+
+  /// No description provided for @evangelismFollowUpNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow-up notes'**
+  String get evangelismFollowUpNotes;
+
+  /// No description provided for @evangelismFollowUpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Names, next steps, needs...'**
+  String get evangelismFollowUpHint;
+
+  /// No description provided for @textSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get textSizeLabel;
+
+  /// No description provided for @textSizeSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'A'**
+  String get textSizeSmall;
+
+  /// No description provided for @textSizeLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'A+'**
+  String get textSizeLarge;
+
+  /// No description provided for @textSizePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview text'**
+  String get textSizePreview;
+
+  /// No description provided for @disciplineReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Discipline reminders'**
+  String get disciplineReminders;
+
+  /// No description provided for @disciplineRemindersDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a time for each discipline'**
+  String get disciplineRemindersDesc;
+
+  /// No description provided for @disciplineReminderOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get disciplineReminderOff;
+
+  /// No description provided for @disciplineReminderSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Set'**
+  String get disciplineReminderSet;
+
+  /// No description provided for @weeklyGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Goals'**
+  String get weeklyGoals;
+
+  /// No description provided for @weeklyGoalsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set targets for the week'**
+  String get weeklyGoalsDesc;
+
+  /// No description provided for @goalBibleChapters.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible chapters'**
+  String get goalBibleChapters;
+
+  /// No description provided for @goalPrayerMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer (minutes)'**
+  String get goalPrayerMinutes;
+
+  /// No description provided for @goalEvangelismContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Evangelism contacts'**
+  String get goalEvangelismContacts;
+
+  /// No description provided for @goalLiteratureItems.
+  ///
+  /// In en, this message translates to:
+  /// **'Literature items'**
+  String get goalLiteratureItems;
+
+  /// No description provided for @goalProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{target}'**
+  String goalProgress(String current, String target);
+
+  /// No description provided for @goalReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal reached!'**
+  String get goalReached;
+
+  /// No description provided for @setGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Set goals'**
+  String get setGoals;
+
+  /// No description provided for @saveGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveGoals;
+
+  /// No description provided for @voiceNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note'**
+  String get voiceNote;
+
+  /// No description provided for @voiceNoteRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to record'**
+  String get voiceNoteRecord;
+
+  /// No description provided for @voiceNoteRecording.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording...'**
+  String get voiceNoteRecording;
+
+  /// No description provided for @voiceNotePlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get voiceNotePlay;
+
+  /// No description provided for @voiceNoteDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete recording'**
+  String get voiceNoteDelete;
+
+  /// No description provided for @voiceNoteDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this voice note?'**
+  String get voiceNoteDeleteConfirm;
+
+  /// No description provided for @voiceNoteSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice note saved'**
+  String get voiceNoteSaved;
+
+  /// No description provided for @fastingPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Fasting period'**
+  String get fastingPeriod;
+
+  /// No description provided for @fastingStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get fastingStartDate;
+
+  /// No description provided for @fastingEndDate.
+  ///
+  /// In en, this message translates to:
+  /// **'End date'**
+  String get fastingEndDate;
+
+  /// No description provided for @fastingTypeComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete fast'**
+  String get fastingTypeComplete;
+
+  /// No description provided for @fastingTypePartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial fast'**
+  String get fastingTypePartial;
+
+  /// No description provided for @fastingTypeEsther.
+  ///
+  /// In en, this message translates to:
+  /// **'Esther fast'**
+  String get fastingTypeEsther;
+
+  /// No description provided for @fastingDaysRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days remaining'**
+  String fastingDaysRemaining(int days);
+
+  /// No description provided for @fastingDayOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {current} of {total}'**
+  String fastingDayOf(int current, int total);
+
+  /// No description provided for @fastingActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active fast'**
+  String get fastingActive;
+
+  /// No description provided for @fastingCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Fast completed!'**
+  String get fastingCompleted;
+
+  /// No description provided for @fastingNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No active fast'**
+  String get fastingNone;
+
+  /// No description provided for @startFast.
+  ///
+  /// In en, this message translates to:
+  /// **'Start a fast'**
+  String get startFast;
+
+  /// No description provided for @endFast.
+  ///
+  /// In en, this message translates to:
+  /// **'End fast'**
+  String get endFast;
+
+  /// No description provided for @certificateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Certificate of Faithfulness'**
+  String get certificateTitle;
+
+  /// No description provided for @certificateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Spiritual Achievement'**
+  String get certificateSubtitle;
+
+  /// No description provided for @certificateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This certifies that {name} demonstrated faithful spiritual discipline during {month}, achieving {percent}% overall consistency across all disciplines.'**
+  String certificateBody(String name, String month, int percent);
+
+  /// No description provided for @certificateGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate certificate'**
+  String get certificateGenerate;
+
+  /// No description provided for @certificateShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share certificate'**
+  String get certificateShare;
+
+  /// No description provided for @certificateNoData.
+  ///
+  /// In en, this message translates to:
+  /// **'Need at least 80% consistency to earn a certificate'**
+  String get certificateNoData;
+
+  /// No description provided for @autoFillBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-filled from your recent patterns'**
+  String get autoFillBanner;
+
+  /// No description provided for @autoFillUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get autoFillUndo;
+
+  /// No description provided for @reportLanguageSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Language'**
+  String get reportLanguageSection;
+
+  /// No description provided for @reportLanguageDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the language for sent reports and PDF documents'**
+  String get reportLanguageDesc;
+
+  /// No description provided for @reportLanguageSameAsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as app'**
+  String get reportLanguageSameAsApp;
+
+  /// No description provided for @saturdaySummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your week so far'**
+  String get saturdaySummaryTitle;
+
+  /// No description provided for @saturdaySummaryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}/7 days logged, {chapters} chapters read, {contacts} contacts evangelized. Finish strong tomorrow!'**
+  String saturdaySummaryBody(int days, int chapters, int contacts);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

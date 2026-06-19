@@ -8,7 +8,7 @@
 
 ## Overview
 
-Replace the current monolithic 4x3 Android home screen widget with three purpose-built widgets ("The Living Altar" system) that prioritize actionability, spiritual motivation, and polished UI design. All widgets feature real-time sync with app activity — no stale data.
+Replace the current monolithic 4x3 Android home screen widget with four purpose-built widgets ("The Living Altar" system) that prioritize actionability, spiritual motivation, and polished UI design. All widgets feature real-time sync with app activity — no stale data. All user-facing text on widgets respects the app's current language setting (English/French).
 
 ## Design Priorities
 
@@ -24,6 +24,18 @@ Replace the current monolithic 4x3 Android home screen widget with three purpose
 - **Typography**: Cormorant Garamond (numbers, scripture, headings), Lora (labels, body)
 - **Border**: Thin gold border (1dp), rounded corners (Android 12+ widget style)
 - **Signature**: Cross watermark at 10% opacity where space allows
+
+## Language Awareness
+
+All widget text respects the app's in-app language setting (English or French). The app saves its current locale to SharedPreferences key `widget_locale` (`"en"` or `"fr"`). Each widget provider reads this value on every `onUpdate()` and selects the appropriate strings:
+
+- Labels (e.g., "Daily Verse" / "Verset du Jour", "Proclamations Today" / "Proclamations Aujourd'hui")
+- Discipline abbreviations (BIB, LIT, DDG, PRY, EVG — kept as abbreviations in both languages for space)
+- Button text ("Start Timer" / "Démarrer", "Open Log" / "Ouvrir Journal")
+- Motivational text ("Keep your streak alive" / "Maintenez votre série")
+- The proclamation: "JESUS CHRIST IS THE LORD" / "JÉSUS-CHRIST EST LE SEIGNEUR"
+
+String resources are defined in `res/values/strings.xml` (English) and `res/values-fr/strings.xml` (French).
 
 ---
 
@@ -41,8 +53,8 @@ Pure spiritual motivation — a beautiful, living piece of scripture on the home
 
 ### Content Rotation Logic
 - **6:00 AM – 12:00 PM**: Daily Bible verse (from curated list of ~365 verses, indexed by day-of-year)
-- **12:00 PM – 10:00 PM**: Proclamation/declaration (from ~50 faith declarations, random rotation)
-- **If DDEG was logged today**: Override with user's own scripture reference + "Your Word Today" label
+- **12:00 PM – 10:00 PM**: Fixed proclamation — "JESUS CHRIST IS THE LORD" / "JÉSUS-CHRIST EST LE SEIGNEUR" (based on app language). Label changes to "Proclamation".
+- **If DDEG was logged today**: Override with user's own scripture reference + "Your Word Today" / "Votre Parole Aujourd'hui" label
 - Widget refreshes every 30 minutes via Android `AlarmManager`
 - Also refreshes on any piggyback widget update (discipline toggle, timer change)
 
@@ -50,9 +62,8 @@ Pure spiritual motivation — a beautiful, living piece of scripture on the home
 - Tap anywhere → Opens the app to today's log screen
 
 ### Content Sources
-- `assets/verses.json` — 365 curated daily verses (indexed by day-of-year)
-- `assets/proclamations.json` — ~50 faith declarations (random rotation)
-- Both loaded by the Kotlin provider directly from assets, no Flutter engine needed
+- `assets/verses.json` — 365 curated daily verses (indexed by day-of-year), with `en` and `fr` translations per entry
+- Proclamation text is hardcoded in string resources (no JSON needed) — one fixed declaration in each language
 
 ---
 
@@ -131,6 +142,34 @@ The complete experience — scripture, disciplines, and timer control in one coh
 
 ---
 
+## Widget 4: Proclamation Counter (2x2)
+
+### Purpose
+Actionability + spiritual motivation — tap to declare "Jesus Christ is the Lord" throughout the day without opening the app.
+
+### Layout
+- Espresso background, thin gold border, rounded corners
+- Large counter number in Cormorant Garamond bold, gold, centered (e.g., "47")
+- Below the number: "JESUS CHRIST IS THE LORD" or "JÉSUS-CHRIST EST LE SEIGNEUR" (based on app language) in small caps Lora, sand color, max 2 lines
+- Bottom edge: thin gold divider, then label "Proclamations Today" / "Proclamations Aujourd'hui" in tiny Lora, muted sand
+
+### Interaction
+- **Tap anywhere** → Increments counter by 1, widget updates instantly
+- **Long press** → Opens app to the full proclamation screen
+- Counter resets daily at midnight (via `AlarmManager` or on first tap of new day)
+
+### Real-Time Sync
+- Each tap fires deep link `dailyaccount://proclamation/increment`
+- App receives via `HomeWidget.widgetClicked`, increments `proclamationCount` on today's `DailyLog`, saves to SQLite
+- Immediately saves updated `proclamation_count` to SharedPreferences → calls `HomeWidget.updateWidget()`
+- If user increments in-app (on the proclamation screen), widget updates immediately too
+- Counter value persisted in SharedPreferences key `proclamation_count` (int)
+
+### Language
+- Proclamation text and label read from `res/values/strings.xml` or `res/values-fr/strings.xml` based on `widget_locale` SharedPreferences value
+
+---
+
 ## Real-Time Sync Architecture
 
 ### Core Principle
@@ -153,6 +192,8 @@ The widget must reflect app activity instantly. No stale data, no waiting for sc
 | `timer_discipline` | String | Which discipline is being timed |
 | `timer_start_ms` | long | System clock millis when timer started |
 | `timer_elapsed` | String | Formatted elapsed time for display |
+| `proclamation_count` | int | Today's proclamation counter |
+| `widget_locale` | String | App language for widget text (`"en"` or `"fr"`) |
 
 ### Sync Triggers (App → Widget, Immediate)
 
@@ -164,6 +205,9 @@ The widget must reflect app activity instantly. No stale data, no waiting for sc
 | Timer controlled from widget | Same | Deep link → app processes → saves → updates widget |
 | Log auto-saved | `completion_percent`, all `disc_*` | Fires on every `_persist()` call |
 | Streak changes | `streak_count` | On day rollover or log save |
+| Proclamation incremented in-app | `proclamation_count` | Immediate widget update |
+| Proclamation incremented from widget | Same | Deep link → app processes → saves → updates widget |
+| App language changed in Settings | `widget_locale` | Immediate update → all widgets re-render with new language |
 
 ### Deep Link URI Schema (Widget → App)
 
@@ -174,6 +218,8 @@ The widget must reflect app activity instantly. No stale data, no waiting for sc
 | `dailyaccount://timer/pause` | Pause running timer |
 | `dailyaccount://timer/stop` | Stop timer and save duration to today's log |
 | `dailyaccount://open/log` | Open app to today's log screen |
+| `dailyaccount://proclamation/increment` | Increment today's proclamation count by 1 |
+| `dailyaccount://open/proclamation` | Open app to proclamation screen (long press) |
 
 ### Widget → App Flow (Example: Discipline Toggle)
 1. `PendingIntent` fires `dailyaccount://toggle/{discipline}`
@@ -203,26 +249,31 @@ The widget must reflect app activity instantly. No stale data, no waiting for sc
 | `ScriptureWidgetProvider.kt` | Provider for Scripture Card widget |
 | `DisciplineBarWidgetProvider.kt` | Provider for Discipline Bar widget |
 | `FullAltarWidgetProvider.kt` | Provider for Full Altar widget |
-| `WidgetHelper.kt` | Shared utilities: scripture loading, data reading, theme constants |
+| `ProclamationWidgetProvider.kt` | Provider for Proclamation Counter widget |
+| `WidgetHelper.kt` | Shared utilities: scripture loading, data reading, locale, theme constants |
 | `widget_scripture.xml` | Layout for Scripture Card (2x2) |
 | `widget_discipline_bar.xml` | Layout for Discipline Bar (4x2) |
 | `widget_full_altar.xml` | Layout for Full Altar (4x3) |
+| `widget_proclamation.xml` | Layout for Proclamation Counter (2x2) |
 | `appwidget_info_scripture.xml` | Widget metadata: min 2x2 |
 | `appwidget_info_discipline_bar.xml` | Widget metadata: min 4x2 |
 | `appwidget_info_full_altar.xml` | Widget metadata: min 4x3 |
-| `assets/verses.json` | 365 curated daily Bible verses |
-| `assets/proclamations.json` | ~50 faith proclamations/declarations |
+| `appwidget_info_proclamation.xml` | Widget metadata: min 2x2 |
+| `res/values/strings.xml` | English widget strings |
+| `res/values-fr/strings.xml` | French widget strings |
+| `assets/verses.json` | 365 curated daily Bible verses (en + fr per entry) |
 
 ### AndroidManifest.xml
 
-Three `<receiver>` entries (one per provider class), each with its own `appwidget-provider` metadata XML pointing to the corresponding `appwidget_info_*.xml`.
+Four `<receiver>` entries (one per provider class), each with its own `appwidget-provider` metadata XML pointing to the corresponding `appwidget_info_*.xml`.
 
 ### Flutter Side
 - `HomeWidget.saveWidgetData()` calls added to:
   - `LogScreen._persist()` — on every field change
   - `TimerService` — on timer state changes
   - `home_shell.dart._toggleDisciplineFromWidget()` — on widget-initiated toggles
-- `HomeWidget.widgetClicked` stream handler expanded to process timer deep links
+- `HomeWidget.widgetClicked` stream handler expanded to process timer and proclamation deep links
+- On language change in Settings: save `widget_locale` → `HomeWidget.updateWidget()` to re-render all widgets
 
 ---
 
@@ -238,11 +289,14 @@ Three `<receiver>` entries (one per provider class), each with its own `appwidge
 
 ## Success Criteria
 
-1. All three widgets render correctly with espresso + gold theme
+1. All four widgets render correctly with espresso + gold theme
 2. Discipline toggles from widget reflect in app and vice versa within ~100ms
 3. Timer can be started, paused, and stopped entirely from the widget
 4. Timer displays real-time elapsed time via Android Chronometer
-5. Scripture rotates based on time of day (verse → proclamation → DDEG override)
-6. Widget survives device reboot (AlarmManager re-registration)
-7. Zero battery impact from widget updates (no polling loops)
-8. Works fully offline
+5. Scripture rotates based on time of day (verse → fixed proclamation → DDEG override)
+6. Proclamation counter increments from widget and syncs to app in real-time
+7. All widget text displays in the user's chosen app language (English/French)
+8. Changing language in Settings immediately updates all widget text
+9. Widget survives device reboot (AlarmManager re-registration)
+10. Zero battery impact from widget updates (no polling loops)
+11. Works fully offline

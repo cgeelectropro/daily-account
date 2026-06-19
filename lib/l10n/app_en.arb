@@ -114,6 +114,7 @@
   "confirmSendTitle": "Send Report?",
   "confirmSendBody": "Send your weekly account to your disciple maker?",
   "cancel": "Cancel",
+  "delete": "Delete",
   "send": "Send",
 
   "settingsTitle": "Settings",
@@ -137,6 +138,14 @@
   "howItWorks": "1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one each Sunday\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device",
 
   "backupSection": "Backup & Restore",
+  "autoBackupInfo": "Your data is automatically backed up every 6 hours and synced to Google Drive.",
+  "restoreAutoBackup": "Restore from Auto-Backup",
+  "autoBackupFound": "Auto-backup found from {date}. Restore it?",
+  "@autoBackupFound": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "noAutoBackup": "No auto-backup found.",
+  "restoreButton": "Restore",
   "exportData": "Export Data",
   "importData": "Import Data",
   "exportSuccess": "Backup saved successfully!",
@@ -454,5 +463,176 @@
   "sundayFollowUpCount": "{count, plural, =0{No follow-ups} =1{1 follow-up (+30 min)} =2{2 follow-ups (+30, +60 min)} other{{count} follow-ups}}",
   "@sundayFollowUpCount": {
     "placeholders": { "count": { "type": "int" } }
-  }
+  },
+
+  "tabPrayer": "Prayer",
+
+  "prayerRequestsTitle": "Prayer Requests",
+  "prayerRequestsSubtitle": "Bring your burdens before the Lord",
+  "prayerActive": "Active",
+  "prayerAnswered": "Answered",
+  "prayerEmptyActive": "No prayer requests yet.\nTap + to add your first request.",
+  "prayerAnsweredSection": "{count, plural, =1{1 answered prayer} other{{count} answered prayers}}",
+  "@prayerAnsweredSection": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "prayerAddTitle": "New Prayer Request",
+  "prayerTitleLabel": "Prayer request",
+  "prayerTitleHint": "e.g. Healing for my brother",
+  "prayerDescLabel": "Details (optional)",
+  "prayerDescHint": "More context about this request...",
+  "prayerAddButton": "Add Prayer Request",
+  "prayerCatPersonal": "Personal",
+  "prayerCatFamily": "Family",
+  "prayerCatChurch": "Church",
+  "prayerCatNation": "Nation",
+  "prayerCatHealth": "Health",
+  "prayerMarkAnswered": "Prayer Answered!",
+  "prayerAnswerNote": "How did God answer?",
+  "prayerAnswerHint": "Describe how this prayer was answered...",
+  "prayerConfirmAnswered": "Mark as Answered",
+
+  "weeklyChart": "WEEKLY PROGRESS",
+  "chartCompletion": "Completion %",
+
+  "quickLogTitle": "Quick Log",
+  "quickLogSubtitle": "Tap each discipline you practiced today",
+  "quickLogSaved": "Quick log saved!",
+  "quickLogButton": "Quick Log",
+
+  "badgeStreakWeek": "7-Day Warrior",
+  "badgeStreakMonth": "30-Day Champion",
+  "badgeBibleMarathon": "Bible Marathon",
+  "badgePrayerWarrior": "Prayer Warrior",
+  "badgeEvangelismFire": "Soul Winner",
+  "badgePerfectWeek": "Perfect Week",
+  "badgesTitle": "ACHIEVEMENTS",
+  "badgesEmpty": "Keep going! Badges will appear as you grow.",
+
+  "snoozeLabel": "Snooze 15 min",
+
+  "testNotification": "Test Notification",
+  "testNotificationSuccess": "Notification sent! If you don't see it, check your system notification settings.",
+  "testNotificationFailed": "Notification failed. Please enable notifications in your device settings.",
+  "pendingNotifications": "{count, plural, =0{No scheduled notifications} =1{1 notification scheduled} other{{count} notifications scheduled}}",
+  "@pendingNotifications": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "missingDisciplinesTitle": "Missing Disciplines",
+  "missingDisciplinesSubtitle": "Tap to complete these today",
+  "disciplineDone": "Done",
+  "disciplineMissing": "Missing",
+  "allDisciplinesDone": "All disciplines completed! Great job!",
+
+  "pendingReportBanner": "Report pending — will send when online",
+  "pendingReportRetry": "Retry now",
+  "pendingReportSent": "Pending report sent!",
+  "offlineStatus": "Offline",
+
+  "midWeekNudgeTitle": "Mid-Week Check-in",
+  "midWeekNudgeBody": "You've completed {done}/{total} disciplines this week. Keep going!",
+  "@midWeekNudgeBody": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+
+  "trendUp": "up {percent}%",
+  "@trendUp": { "placeholders": { "percent": { "type": "int" } } },
+  "trendDown": "down {percent}%",
+  "@trendDown": { "placeholders": { "percent": { "type": "int" } } },
+  "trendSteady": "steady",
+  "trendVsLastMonth": "vs last month",
+  "trendTitle": "TRENDS",
+  "trendConsistency": "Consistency",
+  "trendBestDiscipline": "Strongest",
+  "trendWeakDiscipline": "Needs attention",
+  "trendNoData": "Not enough data for trends yet",
+
+  "reflectionTitle": "Daily Reflection",
+  "reflectionEmpty": "Complete some disciplines to receive a reflection",
+  "reflectionGreatDay": "Wonderful day of faithfulness! You covered {count} disciplines — your commitment is bearing fruit.",
+  "@reflectionGreatDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionGoodDay": "Good effort today with {count} disciplines. Keep building consistency!",
+  "@reflectionGoodDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionStartDay": "You've started with {count} discipline. Every step counts — keep pressing forward!",
+  "@reflectionStartDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionPrayerFocus": "Your prayer life is strong today. Let it fuel your other disciplines.",
+  "reflectionBibleFocus": "Great Bible engagement today. Let the Word guide your day.",
+  "reflectionEvangelismFocus": "Active in evangelism today — souls are being reached!",
+  "reflectionBalanced": "A beautifully balanced day across your disciplines.",
+  "reflectionStreakEncouragement": "You're on a {days}-day streak! Don't break it!",
+  "@reflectionStreakEncouragement": { "placeholders": { "days": { "type": "int" } } },
+
+  "evangelismFollowUp": "Follow-up",
+  "evangelismNewBelievers": "New believers",
+  "evangelismNewBelieversHint": "Number of people who accepted Christ",
+  "evangelismBeingDiscipled": "Being discipled",
+  "evangelismBeingDiscipledHint": "Number now in discipleship",
+  "evangelismFollowUpNotes": "Follow-up notes",
+  "evangelismFollowUpHint": "Names, next steps, needs...",
+
+  "textSizeLabel": "Text size",
+  "textSizeSmall": "A",
+  "textSizeLarge": "A+",
+  "textSizePreview": "Preview text",
+
+  "disciplineReminders": "Discipline reminders",
+  "disciplineRemindersDesc": "Set a time for each discipline",
+  "disciplineReminderOff": "Off",
+  "disciplineReminderSet": "Set",
+
+  "weeklyGoals": "Weekly Goals",
+  "weeklyGoalsDesc": "Set targets for the week",
+  "goalBibleChapters": "Bible chapters",
+  "goalPrayerMinutes": "Prayer (minutes)",
+  "goalEvangelismContacts": "Evangelism contacts",
+  "goalLiteratureItems": "Literature items",
+  "goalProgress": "{current}/{target}",
+  "@goalProgress": { "placeholders": { "current": { "type": "String" }, "target": { "type": "String" } } },
+  "goalReached": "Goal reached!",
+  "setGoals": "Set goals",
+  "saveGoals": "Save",
+
+  "voiceNote": "Voice note",
+  "voiceNoteRecord": "Tap to record",
+  "voiceNoteRecording": "Recording...",
+  "voiceNotePlay": "Play",
+  "voiceNoteDelete": "Delete recording",
+  "voiceNoteDeleteConfirm": "Delete this voice note?",
+  "voiceNoteSaved": "Voice note saved",
+
+  "fastingPeriod": "Fasting period",
+  "fastingStartDate": "Start date",
+  "fastingEndDate": "End date",
+  "fastingTypeComplete": "Complete fast",
+  "fastingTypePartial": "Partial fast",
+  "fastingTypeEsther": "Esther fast",
+  "fastingDaysRemaining": "{days} days remaining",
+  "@fastingDaysRemaining": { "placeholders": { "days": { "type": "int" } } },
+  "fastingDayOf": "Day {current} of {total}",
+  "@fastingDayOf": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+  "fastingActive": "Active fast",
+  "fastingCompleted": "Fast completed!",
+  "fastingNone": "No active fast",
+  "startFast": "Start a fast",
+  "endFast": "End fast",
+
+  "certificateTitle": "Certificate of Faithfulness",
+  "certificateSubtitle": "Monthly Spiritual Achievement",
+  "certificateBody": "This certifies that {name} demonstrated faithful spiritual discipline during {month}, achieving {percent}% overall consistency across all disciplines.",
+  "@certificateBody": { "placeholders": { "name": { "type": "String" }, "month": { "type": "String" }, "percent": { "type": "int" } } },
+  "certificateGenerate": "Generate certificate",
+  "certificateShare": "Share certificate",
+  "certificateNoData": "Need at least 80% consistency to earn a certificate",
+
+  "autoFillBanner": "Auto-filled from your recent patterns",
+  "autoFillUndo": "Undo",
+
+  "reportLanguageSection": "Report Language",
+  "reportLanguageDesc": "Choose the language for sent reports and PDF documents",
+  "reportLanguageSameAsApp": "Same as app",
+
+  "saturdaySummaryTitle": "Your week so far",
+  "saturdaySummaryBody": "{days}/7 days logged, {chapters} chapters read, {contacts} contacts evangelized. Finish strong tomorrow!",
+  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } }
 }

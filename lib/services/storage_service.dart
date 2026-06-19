@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
+import '../models/fasting_period.dart';
+import '../models/prayer_request.dart';
 import '../models/saved_report.dart';
 
 /// Handles all persistence: a SQLite table for daily logs, and
@@ -25,7 +27,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 4,
+      version: 8,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -58,10 +60,16 @@ class StorageService {
             discipleshipTopic TEXT DEFAULT '',
             discipleshipDuration TEXT DEFAULT '',
             proclamationCount TEXT DEFAULT '',
-            proclamationDuration TEXT DEFAULT ''
+            proclamationDuration TEXT DEFAULT '',
+            evangelismNewBelievers TEXT DEFAULT '',
+            evangelismBeingDiscipled TEXT DEFAULT '',
+            evangelismFollowUpNotes TEXT DEFAULT '',
+            voiceNotePath TEXT DEFAULT ''
           )
         ''');
         await _createSavedReportsTable(db);
+        await _createPrayerRequestsTable(db);
+        await _createFastingPeriodsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -82,6 +90,20 @@ class StorageService {
           await db.execute("ALTER TABLE logs ADD COLUMN proclamationCount TEXT DEFAULT ''");
           await db.execute("ALTER TABLE logs ADD COLUMN proclamationDuration TEXT DEFAULT ''");
         }
+        if (oldVersion < 5) {
+          await _createPrayerRequestsTable(db);
+        }
+        if (oldVersion < 6) {
+          for (final col in ['evangelismNewBelievers', 'evangelismBeingDiscipled', 'evangelismFollowUpNotes']) {
+            await db.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+          }
+        }
+        if (oldVersion < 7) {
+          await db.execute("ALTER TABLE logs ADD COLUMN voiceNotePath TEXT DEFAULT ''");
+        }
+        if (oldVersion < 8) {
+          await _createFastingPeriodsTable(db);
+        }
       },
     );
   }
@@ -99,6 +121,111 @@ class StorageService {
         sentAt TEXT DEFAULT ''
       )
     ''');
+  }
+
+  static Future<void> _createPrayerRequestsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE prayer_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        description TEXT DEFAULT '',
+        category TEXT DEFAULT 'personal',
+        createdAt TEXT,
+        answeredAt TEXT DEFAULT '',
+        answerNote TEXT DEFAULT '',
+        isAnswered INTEGER DEFAULT 0
+      )
+    ''');
+  }
+
+  static Future<void> _createFastingPeriodsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE fasting_periods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        startDate TEXT,
+        endDate TEXT,
+        type TEXT,
+        prayerFocus TEXT DEFAULT '',
+        completed INTEGER DEFAULT 0
+      )
+    ''');
+  }
+
+  // ── Fasting Periods CRUD ────────────────────────────────
+  Future<int> addFastingPeriod(FastingPeriod period) async {
+    final db = await database;
+    return db.insert('fasting_periods', period.toMap());
+  }
+
+  Future<FastingPeriod?> getActiveFastingPeriod() async {
+    final db = await database;
+    final rows = await db.query(
+      'fasting_periods',
+      where: 'completed = 0',
+      orderBy: 'startDate DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    final period = FastingPeriod.fromMap(rows.first);
+    return period.isActive ? period : null;
+  }
+
+  Future<List<FastingPeriod>> getFastingHistory() async {
+    final db = await database;
+    final rows = await db.query('fasting_periods', orderBy: 'startDate DESC');
+    return rows.map((r) => FastingPeriod.fromMap(r)).toList();
+  }
+
+  Future<void> endFastingPeriod(int id) async {
+    final db = await database;
+    await db.update('fasting_periods', {'completed': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> deleteFastingPeriod(int id) async {
+    final db = await database;
+    await db.delete('fasting_periods', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ── Prayer Requests CRUD ────────────────────────────────
+  Future<int> addPrayerRequest(PrayerRequest req) async {
+    final db = await database;
+    return db.insert('prayer_requests', req.toMap());
+  }
+
+  Future<void> updatePrayerRequest(PrayerRequest req) async {
+    final db = await database;
+    await db.update('prayer_requests', req.toMap(),
+        where: 'id = ?', whereArgs: [req.id]);
+  }
+
+  Future<void> deletePrayerRequest(int id) async {
+    final db = await database;
+    await db.delete('prayer_requests', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<PrayerRequest>> getPrayerRequests({bool? answered}) async {
+    final db = await database;
+    String? where;
+    List<Object>? whereArgs;
+    if (answered != null) {
+      where = 'isAnswered = ?';
+      whereArgs = [answered ? 1 : 0];
+    }
+    final rows = await db.query('prayer_requests',
+        where: where, whereArgs: whereArgs, orderBy: 'createdAt DESC');
+    return rows.map((r) => PrayerRequest.fromMap(r)).toList();
+  }
+
+  Future<int> getPrayerRequestCount({bool? answered}) async {
+    final db = await database;
+    String query = 'SELECT COUNT(*) as cnt FROM prayer_requests';
+    List<Object>? args;
+    if (answered != null) {
+      query += ' WHERE isAnswered = ?';
+      args = [answered ? 1 : 0];
+    }
+    final result = await db.rawQuery(query, args);
+    return result.first['cnt'] as int;
   }
 
   // ── Log CRUD ──────────────────────────────────────────────

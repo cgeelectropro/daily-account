@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_timer.dart';
 import '../models/daily_log.dart';
+import 'notification_service.dart';
 import 'storage_service.dart';
 
 /// Manages activity stopwatch timers.
@@ -18,20 +19,30 @@ class TimerService extends ChangeNotifier {
 
   static const _storageKey = 'timer_sessions';
 
-  final Map<ActivityType, TimerSession> _sessions = {};
+  final Map<TimerKey, TimerSession> _sessions = {};
   Timer? _ticker;
 
-  Map<ActivityType, TimerSession> get sessions => Map.unmodifiable(_sessions);
+  Map<TimerKey, TimerSession> get sessions => Map.unmodifiable(_sessions);
 
-  /// The currently running activity (if any).
-  ActivityType? get activeActivity {
+  /// The currently running timer key (if any).
+  TimerKey? get activeKey {
     for (final entry in _sessions.entries) {
       if (entry.value.isRunning) return entry.key;
     }
     return null;
   }
 
+  /// The currently running built-in activity (if any). Legacy convenience.
+  ActivityType? get activeActivity => activeKey?.builtIn;
+
   String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  /// Label resolver — set from the UI layer so we can show localized
+  /// activity names in the stopwatch notification.
+  String Function(TimerKey)? timerLabelResolver;
+
+  /// Icon resolver for custom activities in notifications.
+  String Function(TimerKey)? timerIconResolver;
 
   /// Load persisted state. Call once at app startup.
   Future<void> init() async {
@@ -44,34 +55,51 @@ class TimerService extends ChangeNotifier {
           final session = TimerSession.fromMap(Map<String, dynamic>.from(item));
           // Only restore sessions from today
           if (session.dateKey == _todayKey) {
-            _sessions[session.activity] = session;
+            _sessions[session.key] = session;
           }
         }
       } catch (_) {
         // Corrupted data — start fresh
       }
     }
+
+    // Listen for notification action buttons (pause/stop from shade)
+    NotificationService.instance.onTimerAction = _handleNotifAction;
+
     _ensureTicker();
+    // Restore stopwatch notification if a timer was running
+    _updateStopwatchNotification();
     notifyListeners();
   }
 
-  /// Start or resume a timer for [activity].
+  void _handleNotifAction(String action) {
+    final running = activeKey;
+    if (running == null) return;
+    switch (action) {
+      case 'timer_pause':
+        pause(running);
+      case 'timer_stop':
+        stop(running);
+    }
+  }
+
+  /// Start or resume a timer.
   /// [fields] are optional extra DailyLog fields to write when stopped.
-  void start(ActivityType activity, {Map<String, String>? fields}) {
+  void start(TimerKey key, {Map<String, String>? fields}) {
     // Pause any currently running timer first
-    final running = activeActivity;
-    if (running != null && running != activity) {
+    final running = activeKey;
+    if (running != null && running != key) {
       pause(running);
     }
 
-    var session = _sessions[activity];
+    var session = _sessions[key];
     if (session == null) {
       session = TimerSession(
-        activity: activity,
+        key: key,
         dateKey: _todayKey,
         fields: fields,
       );
-      _sessions[activity] = session;
+      _sessions[key] = session;
     } else if (fields != null) {
       // Merge new fields into existing session
       session.fields.addAll(fields);
@@ -81,24 +109,31 @@ class TimerService extends ChangeNotifier {
     session.paused = false;
     _ensureTicker();
     _persist();
+    _updateStopwatchNotification();
     notifyListeners();
   }
 
+  /// Convenience: start a built-in activity timer.
+  void startBuiltIn(ActivityType activity, {Map<String, String>? fields}) {
+    start(TimerKey.builtIn(activity), fields: fields);
+  }
+
   /// Pause a running timer.
-  void pause(ActivityType activity) {
-    final session = _sessions[activity];
+  void pause(TimerKey key) {
+    final session = _sessions[key];
     if (session == null || !session.isRunning) return;
 
     session.elapsed += DateTime.now().difference(session.startedAt!);
     session.startedAt = null;
     session.paused = true;
     _persist();
+    _updateStopwatchNotification();
     notifyListeners();
   }
 
   /// Stop a timer and write the duration to the DailyLog.
-  Future<void> stop(ActivityType activity) async {
-    final session = _sessions[activity];
+  Future<void> stop(TimerKey key) async {
+    final session = _sessions[key];
     if (session == null) return;
 
     // Finalise elapsed
@@ -110,21 +145,26 @@ class TimerService extends ChangeNotifier {
     // Write to DailyLog
     await _writeToDailyLog(session);
 
-    _sessions.remove(activity);
+    _sessions.remove(key);
     _persist();
+    _updateStopwatchNotification();
     notifyListeners();
   }
 
   /// Stop all timers (e.g. end of day).
   Future<void> stopAll() async {
-    final activities = List<ActivityType>.from(_sessions.keys);
-    for (final a in activities) {
-      await stop(a);
+    final keys = List<TimerKey>.from(_sessions.keys);
+    for (final k in keys) {
+      await stop(k);
     }
   }
 
-  /// Get the session for a given activity (may be null).
-  TimerSession? getSession(ActivityType activity) => _sessions[activity];
+  /// Get the session for a given key (may be null).
+  TimerSession? getSession(TimerKey key) => _sessions[key];
+
+  /// Convenience: get session for a built-in activity.
+  TimerSession? getBuiltInSession(ActivityType activity) =>
+      _sessions[TimerKey.builtIn(activity)];
 
   /// Get today's total tracked time across all activities.
   Duration get todayTotal {
@@ -138,14 +178,55 @@ class TimerService extends ChangeNotifier {
   // ── Internal ──────────────────────────────────────────────
 
   void _ensureTicker() {
-    if (activeActivity != null && _ticker == null) {
+    if (activeKey != null && _ticker == null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        _updateStopwatchNotification();
         notifyListeners();
       });
-    } else if (activeActivity == null) {
+    } else if (activeKey == null) {
       _ticker?.cancel();
       _ticker = null;
     }
+  }
+
+  /// Show, update, or cancel the ongoing stopwatch notification.
+  void _updateStopwatchNotification() {
+    final running = activeKey;
+
+    if (running != null) {
+      final session = _sessions[running]!;
+      final label = timerLabelResolver?.call(running) ??
+          (running.isBuiltIn ? running.builtIn!.shortCode : '');
+      final icon = timerIconResolver?.call(running) ??
+          (running.isBuiltIn ? running.builtIn!.icon : '\u2728');
+      NotificationService.instance.showStopwatchNotification(
+        activityLabel: label,
+        elapsed: session.stopwatchDisplay,
+        activityIcon: icon,
+        elapsedMs: session.currentElapsed.inMilliseconds,
+      );
+      return;
+    }
+
+    // Check if any timer is paused
+    for (final entry in _sessions.entries) {
+      if (entry.value.paused) {
+        final label = timerLabelResolver?.call(entry.key) ??
+            (entry.key.isBuiltIn ? entry.key.builtIn!.shortCode : '');
+        final icon = timerIconResolver?.call(entry.key) ??
+            (entry.key.isBuiltIn ? entry.key.builtIn!.icon : '\u2728');
+        NotificationService.instance.showStopwatchNotification(
+          activityLabel: label,
+          elapsed: entry.value.formattedDuration,
+          activityIcon: icon,
+          isPaused: true,
+        );
+        return;
+      }
+    }
+
+    // No running or paused timers — cancel notification
+    NotificationService.instance.cancelStopwatchNotification();
   }
 
   Future<void> _persist() async {
@@ -161,69 +242,160 @@ class TimerService extends ChangeNotifier {
 
     final durationStr = session.logDurationString;
 
-    // Write duration field if the activity has one
-    final field = session.activity.logDurationField;
-    if (field != null) {
-      switch (field) {
-        case 'ddegTime':
-          log.ddegTime = durationStr;
-        case 'prayerAloneDuration':
-          log.prayerAloneDuration = durationStr;
-        case 'prayerOthersDuration':
-          log.prayerOthersDuration = durationStr;
-        case 'fastingDuration':
-          log.fastingDuration = durationStr;
-        case 'discipleshipDuration':
-          log.discipleshipDuration = durationStr;
+    if (session.key.isBuiltIn) {
+      // Accumulate duration field (add to existing) if the activity has one
+      final field = session.key.builtIn!.logDurationField;
+      if (field != null) {
+        switch (field) {
+          case 'ddegTime':
+            log.ddegTime = _accumulateDuration(log.ddegTime, durationStr);
+          case 'prayerAloneDuration':
+            log.prayerAloneDuration =
+                _accumulateDuration(log.prayerAloneDuration, durationStr);
+          case 'prayerOthersDuration':
+            log.prayerOthersDuration =
+                _accumulateDuration(log.prayerOthersDuration, durationStr);
+          case 'fastingDuration':
+            log.fastingDuration =
+                _accumulateDuration(log.fastingDuration, durationStr);
+          case 'discipleshipDuration':
+            log.discipleshipDuration =
+                _accumulateDuration(log.discipleshipDuration, durationStr);
+          case 'proclamationDuration':
+            log.proclamationDuration =
+                _accumulateDuration(log.proclamationDuration, durationStr);
+        }
       }
-    }
 
-    // Write all extra fields captured before start
-    for (final entry in session.fields.entries) {
-      _setLogField(log, entry.key, entry.value);
+      // Merge extra fields captured before start (accumulate, don't overwrite)
+      for (final entry in session.fields.entries) {
+        _mergeLogField(log, entry.key, entry.value);
+      }
+    } else {
+      // Custom activity — write to "other" field with duration
+      final name = session.fields['_customName'] ?? '';
+      final notes = session.fields.entries
+          .where((e) => !e.key.startsWith('_') && e.value.isNotEmpty)
+          .map((e) => '${e.key}: ${e.value}')
+          .join('; ');
+      final parts = <String>[
+        if (name.isNotEmpty) name,
+        if (notes.isNotEmpty) notes,
+        durationStr,
+      ];
+      log.other = _appendText(log.other, parts.join(' — '));
     }
 
     await storage.saveLog(log);
   }
 
-  /// Set a DailyLog field by its string key name.
-  void _setLogField(DailyLog log, String key, String value) {
+  /// Parse a human-readable duration string into total minutes.
+  int _parseDurationMinutes(String s) {
+    if (s.isEmpty) return 0;
+    final cleaned = s.trim().toLowerCase();
+
+    final hm = RegExp(r'(\d+)\s*h\w*\s*(\d+)?\s*m?\w*');
+    final hmMatch = hm.firstMatch(cleaned);
+    if (hmMatch != null) {
+      final h = int.tryParse(hmMatch.group(1)!) ?? 0;
+      final m = int.tryParse(hmMatch.group(2) ?? '0') ?? 0;
+      return h * 60 + m;
+    }
+
+    final mOnly = RegExp(r'(\d+)\s*m(?:in(?:ute)?s?)?$');
+    final mMatch = mOnly.firstMatch(cleaned);
+    if (mMatch != null) return int.tryParse(mMatch.group(1)!) ?? 0;
+
+    final hOnly = RegExp(r'(\d+)\s*h(?:ours?)?$');
+    final hMatch = hOnly.firstMatch(cleaned);
+    if (hMatch != null) return (int.tryParse(hMatch.group(1)!) ?? 0) * 60;
+
+    final plain = int.tryParse(cleaned);
+    if (plain != null) return plain;
+
+    return 0;
+  }
+
+  String _formatMinutes(int totalMinutes) {
+    if (totalMinutes <= 0) return '';
+    final h = totalMinutes ~/ 60;
+    final m = totalMinutes % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}min';
+    if (h > 0) return '${h}h';
+    return '$m minutes';
+  }
+
+  String _accumulateDuration(String existing, String added) {
+    final existingMin = _parseDurationMinutes(existing);
+    final addedMin = _parseDurationMinutes(added);
+    final total = existingMin + addedMin;
+    return _formatMinutes(total);
+  }
+
+  String _appendText(String existing, String added) {
+    if (existing.isEmpty) return added;
+    if (added.isEmpty) return existing;
+    if (existing == added) return existing;
+    return '$existing; $added';
+  }
+
+  String _addNumeric(String existing, String added) {
+    final a = int.tryParse(existing) ?? 0;
+    final b = int.tryParse(added) ?? 0;
+    final sum = a + b;
+    return sum > 0 ? '$sum' : (added.isNotEmpty ? added : existing);
+  }
+
+  void _mergeLogField(DailyLog log, String key, String value) {
     if (value.isEmpty) return;
     switch (key) {
       case 'bibleReference':
-        log.bibleReference = value;
+        log.bibleReference = _appendText(log.bibleReference, value);
       case 'bibleChapters':
-        log.bibleChapters = value;
+        log.bibleChapters = _addNumeric(log.bibleChapters, value);
       case 'ddegScripture':
-        log.ddegScripture = value;
+        log.ddegScripture = _appendText(log.ddegScripture, value);
       case 'ddegNotes':
-        log.ddegNotes = value;
+        log.ddegNotes = _appendText(log.ddegNotes, value);
       case 'prayerAloneNotes':
-        log.prayerAloneNotes = value;
+        log.prayerAloneNotes = _appendText(log.prayerAloneNotes, value);
       case 'prayerOthersContext':
-        log.prayerOthersContext = value;
+        log.prayerOthersContext = _appendText(log.prayerOthersContext, value);
       case 'evangelismContacts':
-        log.evangelismContacts = value;
+        log.evangelismContacts = _addNumeric(log.evangelismContacts, value);
       case 'evangelismOutcome':
-        log.evangelismOutcome = value;
+        log.evangelismOutcome = _appendText(log.evangelismOutcome, value);
       case 'evangelismNotes':
-        log.evangelismNotes = value;
+        log.evangelismNotes = _appendText(log.evangelismNotes, value);
+      case 'evangelismNewBelievers':
+        log.evangelismNewBelievers = _addNumeric(log.evangelismNewBelievers, value);
+      case 'evangelismBeingDiscipled':
+        log.evangelismBeingDiscipled = _addNumeric(log.evangelismBeingDiscipled, value);
+      case 'evangelismFollowUpNotes':
+        log.evangelismFollowUpNotes = _appendText(log.evangelismFollowUpNotes, value);
       case 'fastingType':
-        log.fastingType = value;
+        log.fastingType = _appendText(log.fastingType, value);
       case 'fastingPrayerFocus':
-        log.fastingPrayerFocus = value;
+        log.fastingPrayerFocus = _appendText(log.fastingPrayerFocus, value);
       case 'discipleshipWho':
-        log.discipleshipWho = value;
+        log.discipleshipWho = _appendText(log.discipleshipWho, value);
       case 'discipleshipTopic':
-        log.discipleshipTopic = value;
+        log.discipleshipTopic = _appendText(log.discipleshipTopic, value);
       case 'churchType':
-        log.churchType = value;
+        log.churchType = _appendText(log.churchType, value);
       case 'churchNotes':
-        log.churchNotes = value;
+        log.churchNotes = _appendText(log.churchNotes, value);
       case 'proclamationCount':
-        log.proclamationCount = value;
+        log.proclamationCount = _addNumeric(log.proclamationCount, value);
       case 'proclamationDuration':
-        log.proclamationDuration = value;
+        log.proclamationDuration =
+            _accumulateDuration(log.proclamationDuration, value);
+      case 'other':
+        log.other = _appendText(log.other, value);
+      case 'literatureTitle':
+        break;
+      case 'literatureAmount':
+        break;
     }
   }
 

@@ -311,6 +311,9 @@ class SFr extends S {
   String get cancel => 'Annuler';
 
   @override
+  String get delete => 'Supprimer';
+
+  @override
   String get send => 'Envoyer';
 
   @override
@@ -373,6 +376,24 @@ class SFr extends S {
 
   @override
   String get backupSection => 'Sauvegarde et Restauration';
+
+  @override
+  String get autoBackupInfo =>
+      'Vos données sont automatiquement sauvegardées toutes les 6 heures et synchronisées sur Google Drive.';
+
+  @override
+  String get restoreAutoBackup => 'Restaurer la sauvegarde auto';
+
+  @override
+  String autoBackupFound(String date) {
+    return 'Sauvegarde automatique du $date trouvée. Restaurer ?';
+  }
+
+  @override
+  String get noAutoBackup => 'Aucune sauvegarde automatique trouvée.';
+
+  @override
+  String get restoreButton => 'Restaurer';
 
   @override
   String get exportData => 'Exporter les Données';
@@ -953,5 +974,450 @@ class SFr extends S {
       zero: 'Aucun suivi',
     );
     return '$_temp0';
+  }
+
+  @override
+  String get tabPrayer => 'Prières';
+
+  @override
+  String get prayerRequestsTitle => 'Sujets de Prière';
+
+  @override
+  String get prayerRequestsSubtitle => 'Dépose tes fardeaux devant le Seigneur';
+
+  @override
+  String get prayerActive => 'Actifs';
+
+  @override
+  String get prayerAnswered => 'Exaucés';
+
+  @override
+  String get prayerEmptyActive =>
+      'Aucun sujet de prière.\nAppuie sur + pour ajouter ton premier sujet.';
+
+  @override
+  String prayerAnsweredSection(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prières exaucées',
+      one: '1 prière exaucée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get prayerAddTitle => 'Nouveau Sujet de Prière';
+
+  @override
+  String get prayerTitleLabel => 'Sujet de prière';
+
+  @override
+  String get prayerTitleHint => 'ex. Guérison pour mon frère';
+
+  @override
+  String get prayerDescLabel => 'Détails (optionnel)';
+
+  @override
+  String get prayerDescHint => 'Plus de contexte sur ce sujet...';
+
+  @override
+  String get prayerAddButton => 'Ajouter le Sujet';
+
+  @override
+  String get prayerCatPersonal => 'Personnel';
+
+  @override
+  String get prayerCatFamily => 'Famille';
+
+  @override
+  String get prayerCatChurch => 'Église';
+
+  @override
+  String get prayerCatNation => 'Nation';
+
+  @override
+  String get prayerCatHealth => 'Santé';
+
+  @override
+  String get prayerMarkAnswered => 'Prière Exaucée !';
+
+  @override
+  String get prayerAnswerNote => 'Comment Dieu a-t-il répondu ?';
+
+  @override
+  String get prayerAnswerHint => 'Décris comment cette prière a été exaucée...';
+
+  @override
+  String get prayerConfirmAnswered => 'Marquer comme Exaucé';
+
+  @override
+  String get weeklyChart => 'PROGRESSION HEBDOMADAIRE';
+
+  @override
+  String get chartCompletion => 'Complétion %';
+
+  @override
+  String get quickLogTitle => 'Journal Rapide';
+
+  @override
+  String get quickLogSubtitle =>
+      'Coche chaque discipline pratiquée aujourd\'hui';
+
+  @override
+  String get quickLogSaved => 'Journal rapide enregistré !';
+
+  @override
+  String get quickLogButton => 'Journal Rapide';
+
+  @override
+  String get badgeStreakWeek => 'Guerrier 7 Jours';
+
+  @override
+  String get badgeStreakMonth => 'Champion 30 Jours';
+
+  @override
+  String get badgeBibleMarathon => 'Marathon Biblique';
+
+  @override
+  String get badgePrayerWarrior => 'Guerrier de Prière';
+
+  @override
+  String get badgeEvangelismFire => 'Gagneur d\'Âmes';
+
+  @override
+  String get badgePerfectWeek => 'Semaine Parfaite';
+
+  @override
+  String get badgesTitle => 'ACCOMPLISSEMENTS';
+
+  @override
+  String get badgesEmpty =>
+      'Continue ! Les badges apparaîtront au fur et à mesure.';
+
+  @override
+  String get snoozeLabel => 'Reporter 15 min';
+
+  @override
+  String get testNotification => 'Tester les Notifications';
+
+  @override
+  String get testNotificationSuccess =>
+      'Notification envoyée ! Si vous ne la voyez pas, vérifiez les paramètres de notification.';
+
+  @override
+  String get testNotificationFailed =>
+      'Notification échouée. Activez les notifications dans les paramètres de votre appareil.';
+
+  @override
+  String pendingNotifications(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications planifiées',
+      one: '1 notification planifiée',
+      zero: 'Aucune notification planifiée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get missingDisciplinesTitle => 'Disciplines Manquantes';
+
+  @override
+  String get missingDisciplinesSubtitle =>
+      'Appuyez pour les compléter aujourd\'hui';
+
+  @override
+  String get disciplineDone => 'Fait';
+
+  @override
+  String get disciplineMissing => 'Manquant';
+
+  @override
+  String get allDisciplinesDone =>
+      'Toutes les disciplines complétées ! Excellent !';
+
+  @override
+  String get pendingReportBanner => 'Rapport en attente — sera envoyé en ligne';
+
+  @override
+  String get pendingReportRetry => 'Réessayer';
+
+  @override
+  String get pendingReportSent => 'Rapport en attente envoyé !';
+
+  @override
+  String get offlineStatus => 'Hors ligne';
+
+  @override
+  String get midWeekNudgeTitle => 'Bilan de mi-semaine';
+
+  @override
+  String midWeekNudgeBody(int done, int total) {
+    return 'Vous avez complété $done/$total disciplines cette semaine. Continuez !';
+  }
+
+  @override
+  String trendUp(int percent) {
+    return 'en hausse de $percent%';
+  }
+
+  @override
+  String trendDown(int percent) {
+    return 'en baisse de $percent%';
+  }
+
+  @override
+  String get trendSteady => 'stable';
+
+  @override
+  String get trendVsLastMonth => 'vs le mois dernier';
+
+  @override
+  String get trendTitle => 'TENDANCES';
+
+  @override
+  String get trendConsistency => 'Régularité';
+
+  @override
+  String get trendBestDiscipline => 'Point fort';
+
+  @override
+  String get trendWeakDiscipline => 'À améliorer';
+
+  @override
+  String get trendNoData => 'Pas assez de données pour les tendances';
+
+  @override
+  String get reflectionTitle => 'Réflexion Quotidienne';
+
+  @override
+  String get reflectionEmpty =>
+      'Complétez des disciplines pour recevoir une réflexion';
+
+  @override
+  String reflectionGreatDay(int count) {
+    return 'Magnifique journée de fidélité ! Vous avez couvert $count disciplines — votre engagement porte du fruit.';
+  }
+
+  @override
+  String reflectionGoodDay(int count) {
+    return 'Bon effort aujourd\'hui avec $count disciplines. Continuez à bâtir la régularité !';
+  }
+
+  @override
+  String reflectionStartDay(int count) {
+    return 'Vous avez commencé avec $count discipline. Chaque pas compte — continuez !';
+  }
+
+  @override
+  String get reflectionPrayerFocus =>
+      'Votre vie de prière est forte aujourd\'hui. Qu\'elle nourrisse vos autres disciplines.';
+
+  @override
+  String get reflectionBibleFocus =>
+      'Excellent engagement biblique aujourd\'hui. Que la Parole guide votre journée.';
+
+  @override
+  String get reflectionEvangelismFocus =>
+      'Actif en évangélisation aujourd\'hui — des âmes sont atteintes !';
+
+  @override
+  String get reflectionBalanced =>
+      'Une journée magnifiquement équilibrée à travers vos disciplines.';
+
+  @override
+  String reflectionStreakEncouragement(int days) {
+    return 'Vous êtes sur une série de $days jours ! Ne la brisez pas !';
+  }
+
+  @override
+  String get evangelismFollowUp => 'Suivi';
+
+  @override
+  String get evangelismNewBelievers => 'Nouveaux croyants';
+
+  @override
+  String get evangelismNewBelieversHint =>
+      'Nombre de personnes qui ont accepté Christ';
+
+  @override
+  String get evangelismBeingDiscipled => 'En cours de formation';
+
+  @override
+  String get evangelismBeingDiscipledHint => 'Nombre en formation de disciple';
+
+  @override
+  String get evangelismFollowUpNotes => 'Notes de suivi';
+
+  @override
+  String get evangelismFollowUpHint => 'Noms, prochaines étapes, besoins...';
+
+  @override
+  String get textSizeLabel => 'Taille du texte';
+
+  @override
+  String get textSizeSmall => 'A';
+
+  @override
+  String get textSizeLarge => 'A+';
+
+  @override
+  String get textSizePreview => 'Aperçu du texte';
+
+  @override
+  String get disciplineReminders => 'Rappels par discipline';
+
+  @override
+  String get disciplineRemindersDesc =>
+      'Définir une heure pour chaque discipline';
+
+  @override
+  String get disciplineReminderOff => 'Désactivé';
+
+  @override
+  String get disciplineReminderSet => 'Défini';
+
+  @override
+  String get weeklyGoals => 'Objectifs hebdomadaires';
+
+  @override
+  String get weeklyGoalsDesc => 'Définissez vos cibles pour la semaine';
+
+  @override
+  String get goalBibleChapters => 'Chapitres bibliques';
+
+  @override
+  String get goalPrayerMinutes => 'Prière (minutes)';
+
+  @override
+  String get goalEvangelismContacts => 'Contacts d\'évangélisation';
+
+  @override
+  String get goalLiteratureItems => 'Livres lus';
+
+  @override
+  String goalProgress(String current, String target) {
+    return '$current/$target';
+  }
+
+  @override
+  String get goalReached => 'Objectif atteint !';
+
+  @override
+  String get setGoals => 'Définir les objectifs';
+
+  @override
+  String get saveGoals => 'Enregistrer';
+
+  @override
+  String get voiceNote => 'Note vocale';
+
+  @override
+  String get voiceNoteRecord => 'Appuyez pour enregistrer';
+
+  @override
+  String get voiceNoteRecording => 'Enregistrement...';
+
+  @override
+  String get voiceNotePlay => 'Écouter';
+
+  @override
+  String get voiceNoteDelete => 'Supprimer l\'enregistrement';
+
+  @override
+  String get voiceNoteDeleteConfirm => 'Supprimer cette note vocale ?';
+
+  @override
+  String get voiceNoteSaved => 'Note vocale enregistrée';
+
+  @override
+  String get fastingPeriod => 'Période de jeûne';
+
+  @override
+  String get fastingStartDate => 'Date de début';
+
+  @override
+  String get fastingEndDate => 'Date de fin';
+
+  @override
+  String get fastingTypeComplete => 'Jeûne complet';
+
+  @override
+  String get fastingTypePartial => 'Jeûne partiel';
+
+  @override
+  String get fastingTypeEsther => 'Jeûne d\'Esther';
+
+  @override
+  String fastingDaysRemaining(int days) {
+    return '$days jours restants';
+  }
+
+  @override
+  String fastingDayOf(int current, int total) {
+    return 'Jour $current sur $total';
+  }
+
+  @override
+  String get fastingActive => 'Jeûne actif';
+
+  @override
+  String get fastingCompleted => 'Jeûne terminé !';
+
+  @override
+  String get fastingNone => 'Pas de jeûne actif';
+
+  @override
+  String get startFast => 'Commencer un jeûne';
+
+  @override
+  String get endFast => 'Terminer le jeûne';
+
+  @override
+  String get certificateTitle => 'Certificat de fidélité';
+
+  @override
+  String get certificateSubtitle => 'Réalisation spirituelle mensuelle';
+
+  @override
+  String certificateBody(String name, String month, int percent) {
+    return 'Ceci certifie que $name a fait preuve de discipline spirituelle fidèle au cours de $month, atteignant $percent% de cohérence globale.';
+  }
+
+  @override
+  String get certificateGenerate => 'Générer le certificat';
+
+  @override
+  String get certificateShare => 'Partager le certificat';
+
+  @override
+  String get certificateNoData =>
+      'Il faut au moins 80% de régularité pour obtenir un certificat';
+
+  @override
+  String get autoFillBanner =>
+      'Rempli automatiquement selon vos habitudes récentes';
+
+  @override
+  String get autoFillUndo => 'Annuler';
+
+  @override
+  String get reportLanguageSection => 'Langue du rapport';
+
+  @override
+  String get reportLanguageDesc =>
+      'Choisissez la langue des rapports envoyés et des documents PDF';
+
+  @override
+  String get reportLanguageSameAsApp => 'Identique à l\'application';
+
+  @override
+  String get saturdaySummaryTitle => 'Votre semaine jusqu\'ici';
+
+  @override
+  String saturdaySummaryBody(int days, int chapters, int contacts) {
+    return '$days/7 jours enregistrés, $chapters chapitres lus, $contacts contacts évangélisés. Terminez en beauté demain !';
   }
 }
