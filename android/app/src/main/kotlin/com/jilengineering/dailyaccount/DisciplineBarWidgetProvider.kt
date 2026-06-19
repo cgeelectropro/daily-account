@@ -1,5 +1,5 @@
 // android/app/src/main/kotlin/com/example/daily_account/DisciplineBarWidgetProvider.kt
-package com.example.daily_account
+package com.jilengineering.dailyaccount
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

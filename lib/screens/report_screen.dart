@@ -1,8 +1,11 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../l10n/generated/app_localizations_en.dart';
+import '../l10n/generated/app_localizations_fr.dart';
 import '../services/notification_service.dart';
 import '../services/pdf_report_service.dart';
 import '../services/report_service.dart';
@@ -34,6 +37,18 @@ class _ReportScreenState extends State<ReportScreen> {
   MonthStats? _monthStats;
   String _monthlyReport = '';
 
+  // Chart data — completion % per day of the week
+  List<double> _weekCompletions = List.filled(7, 0.0);
+
+  // Trend data
+  TrendData? _trend;
+
+  // Weekly goals
+  Map<String, int> _goals = {};
+
+  // Badges
+  List<(String, String, bool)> _badges = []; // (emoji, label, earned)
+
   @override
   void initState() {
     super.initState();
@@ -62,15 +77,65 @@ class _ReportScreenState extends State<ReportScreen> {
     _whatsapp = await s.getSetting('discipleWhatsApp');
     _stats = await ReportService.instance.computeWeekStats(_weekRef);
     _streak = await ReportService.instance.computeStreak();
+    _trend = await ReportService.instance.computeTrend(_weekRef);
+    await _loadWeekCompletions();
+    await _loadGoals();
+    _computeBadges();
     if (mounted) {
       setState(() => _loading = false);
       _buildReport();
     }
   }
 
-  Future<void> _buildReport() async {
+  Future<void> _loadWeekCompletions() async {
+    final dates = ReportService.instance.weekDates(_weekRef);
+    final completions = <double>[];
+    for (final d in dates) {
+      final log = await StorageService.instance.getLog(ReportService.instance.keyFor(d));
+      completions.add(log?.completeness ?? 0.0);
+    }
+    _weekCompletions = completions;
+  }
+
+  Future<void> _loadGoals() async {
+    final s = StorageService.instance;
+    _goals = {
+      'bibleChapters': int.tryParse(await s.getSetting('goalBibleChapters', fallback: '0')) ?? 0,
+      'prayerMinutes': int.tryParse(await s.getSetting('goalPrayerMinutes', fallback: '0')) ?? 0,
+      'evangelismContacts': int.tryParse(await s.getSetting('goalEvangelismContacts', fallback: '0')) ?? 0,
+      'literatureItems': int.tryParse(await s.getSetting('goalLiteratureItems', fallback: '0')) ?? 0,
+    };
+  }
+
+  bool get _hasGoals => _goals.values.any((v) => v > 0);
+
+  void _computeBadges() {
     if (!mounted) return;
     final l = S.of(context);
+    final s = _stats;
+    _badges = [
+      ('\uD83D\uDD25', l.badgeStreakWeek, _streak >= 7),
+      ('\uD83C\uDFC6', l.badgeStreakMonth, _streak >= 30),
+      ('\uD83D\uDCD6', l.badgeBibleMarathon, (s?.totalBibleChapters ?? 0) >= 20),
+      ('\uD83D\uDE4F', l.badgePrayerWarrior, (s?.daysLogged ?? 0) >= 5),
+      ('\uD83D\uDCE2', l.badgeEvangelismFire, (s?.totalEvangelismContacts ?? 0) >= 5),
+      ('\u2B50', l.badgePerfectWeek, (s?.daysLogged ?? 0) == 7),
+    ];
+  }
+
+  /// Get the S instance for the user's chosen report language.
+  /// Falls back to app locale if not set.
+  Future<S> _reportLocalizations() async {
+    final lang = await StorageService.instance.getSetting('reportLanguage', fallback: '');
+    if (lang == 'en') return SEn();
+    if (lang == 'fr') return SFr();
+    // Default: use the app's current locale
+    return S.of(context);
+  }
+
+  Future<void> _buildReport() async {
+    if (!mounted) return;
+    final l = await _reportLocalizations();
     if (_isMonthly) {
       _monthStats = await ReportService.instance.computeMonthStats(_weekRef.year, _weekRef.month);
       _monthlyReport = await ReportService.instance.buildMonthlyReport(_name, l, _weekRef.year, _weekRef.month);
@@ -172,6 +237,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final l = S.of(context);
     if (_email.isEmpty) { _toast('\u26A0\uFE0F ${l.addEmailInSettings}'); return; }
     if (!await _confirmSend()) return;
+    HapticFeedback.mediumImpact();
     setState(() => _sending = true);
     try {
       final ok = await ReportService.instance.sendByEmail(_email, _name, _activeReport, l);
@@ -188,6 +254,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final l = S.of(context);
     if (_whatsapp.isEmpty) { _toast('\u26A0\uFE0F ${l.addWhatsAppInSettings}'); return; }
     if (!await _confirmSend()) return;
+    HapticFeedback.mediumImpact();
     setState(() => _sending = true);
     try {
       final report = _isMonthly ? _monthlyReport : _fullReport;
@@ -324,6 +391,26 @@ class _ReportScreenState extends State<ReportScreen> {
 
         const SizedBox(height: 16),
 
+        // Weekly goals progress
+        if (!_isMonthly && _hasGoals && _stats != null)
+          _buildGoalsCard(l, accent),
+
+        // Trend analysis
+        if (!_isMonthly && _trend != null && _trend!.hasData)
+          _buildTrendCard(l, accent),
+
+        // Weekly progress chart
+        if (!_isMonthly) ...[
+          _buildWeeklyChart(l, accent),
+          const SizedBox(height: 16),
+        ],
+
+        // Badges / achievements
+        if (!_isMonthly && _isCurrentWeek) ...[
+          _buildBadges(l, accent),
+          const SizedBox(height: 16),
+        ],
+
         // Sunday banner
         if (!_isMonthly && _isCurrentWeek && DateTime.now().weekday == DateTime.sunday)
           Container(
@@ -345,6 +432,12 @@ class _ReportScreenState extends State<ReportScreen> {
               ],
             ),
           ).animate().fadeIn(),
+
+        // Monthly certificate
+        if (_isMonthly && _monthStats != null) ...[
+          _buildCertificateCard(l, accent),
+          const SizedBox(height: 16),
+        ],
 
         // Empty state or report preview + send buttons
         if (_isMonthly) ...[
@@ -466,6 +559,422 @@ class _ReportScreenState extends State<ReportScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildGoalsCard(S l, Color accent) {
+    final s = _stats!;
+    final items = <(String, String, int, int)>[]; // (icon, label, current, target)
+    final gb = _goals['bibleChapters'] ?? 0;
+    if (gb > 0) items.add(('\uD83D\uDCD6', l.goalBibleChapters, s.totalBibleChapters, gb));
+    final gp = _goals['prayerMinutes'] ?? 0;
+    if (gp > 0) items.add(('\uD83D\uDE4F', l.goalPrayerMinutes, s.daysLogged * 30, gp)); // estimate 30 min/day logged
+    final ge = _goals['evangelismContacts'] ?? 0;
+    if (ge > 0) items.add(('\uD83D\uDCE2', l.goalEvangelismContacts, s.totalEvangelismContacts, ge));
+    final gl = _goals['literatureItems'] ?? 0;
+    if (gl > 0) items.add(('\uD83D\uDCDA', l.goalLiteratureItems, s.litItems, gl));
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.isDark(context)
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.weeklyGoals.toUpperCase(),
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 12),
+            ...items.map((item) => _goalProgressRow(item.$1, item.$2, item.$3, item.$4, accent)),
+          ],
+        ),
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _goalProgressRow(String icon, String label, int current, int target, Color accent) {
+    final progress = target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+    final reached = current >= target;
+    final l = S.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+              ),
+              Text(
+                reached ? l.goalReached : l.goalProgress('$current', '$target'),
+                style: AppTheme.label(11, color: reached ? AppTheme.green : accent),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: accent.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                reached ? AppTheme.green : accent,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendCard(S l, Color accent) {
+    final t = _trend!;
+    final changePct = (t.change * 100).round();
+    final currentPct = (t.currentConsistency * 100).round();
+
+    String trendLabel;
+    String trendIcon;
+    Color trendColor;
+    if (changePct > 2) {
+      trendLabel = l.trendUp(changePct);
+      trendIcon = '\u2B06\uFE0F';
+      trendColor = Colors.green;
+    } else if (changePct < -2) {
+      trendLabel = l.trendDown(changePct.abs());
+      trendIcon = '\u2B07\uFE0F';
+      trendColor = Colors.redAccent;
+    } else {
+      trendLabel = l.trendSteady;
+      trendIcon = '\u2796';
+      trendColor = accent;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.isDark(context)
+              ? Colors.white.withValues(alpha: 0.04)
+              : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.trendTitle, style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 12),
+            // Main consistency row
+            Row(
+              children: [
+                Text(trendIcon, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$currentPct%  ${l.trendConsistency}',
+                        style: AppTheme.display(20, color: accent)),
+                    Text('$trendLabel ${l.trendVsLastMonth}',
+                        style: AppTheme.serif(12, color: trendColor)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Best & weakest disciplines
+            Row(
+              children: [
+                if (t.bestDiscipline != null) ...[
+                  Expanded(
+                    child: _trendChip('\u2B50', l.trendBestDiscipline, t.bestDiscipline!, accent),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                if (t.weakDiscipline != null)
+                  Expanded(
+                    child: _trendChip('\uD83D\uDCA1', l.trendWeakDiscipline, t.weakDiscipline!, accent),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _trendChip(String icon, String label, String value, Color accent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: accent.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 4),
+              Text(label.toUpperCase(), style: AppTheme.label(9, color: AppTheme.mutedColor(context))),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(value, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCertificateCard(S l, Color accent) {
+    final pct = _monthStats != null ? (_monthStats!.avgCompletion * 100).round() : 0;
+    final eligible = pct >= 80;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.isDark(context)
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.certificateTitle.toUpperCase(),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 8),
+          Text(l.certificateSubtitle,
+              style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+          const SizedBox(height: 12),
+          if (eligible)
+            GestureDetector(
+              onTap: () async {
+                await PdfReportService.instance.shareCertificatePdf(
+                  _name, _weekRef.year, _weekRef.month,
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.goldGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Text('\uD83C\uDFC6 ${l.certificateGenerate}',
+                    style: AppTheme.display(15, color: AppTheme.bg0)),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withValues(alpha: 0.15)),
+              ),
+              child: Text(
+                l.certificateNoData,
+                style: AppTheme.serif(12, color: AppTheme.mutedColor(context)),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _buildWeeklyChart(S l, Color accent) {
+    final dates = ReportService.instance.weekDates(_weekRef);
+    final dayLabels = dates.map((d) => DateFormat('E').format(d).substring(0, 1)).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.isDark(context)
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.weeklyChart, style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 150,
+            child: BarChart(
+              BarChartData(
+                maxY: 100,
+                minY: 0,
+                barTouchData: BarTouchData(
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => AppTheme.surfaceColor(context),
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      return BarTooltipItem(
+                        '${rod.toY.round()}%',
+                        AppTheme.serif(12, color: accent),
+                      );
+                    },
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 25,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: accent.withValues(alpha: 0.1),
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 50,
+                      getTitlesWidget: (value, meta) => Text(
+                        '${value.toInt()}',
+                        style: AppTheme.label(9, color: AppTheme.faintColor(context)),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= dayLabels.length) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(dayLabels[idx],
+                              style: AppTheme.label(10, color: AppTheme.faintColor(context))),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                barGroups: List.generate(7, (i) {
+                  final pct = (_weekCompletions.length > i ? _weekCompletions[i] : 0.0) * 100;
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: pct,
+                        width: 20,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            accent.withValues(alpha: 0.4),
+                            accent,
+                          ],
+                        ),
+                        backDrawRodData: BackgroundBarChartRodData(
+                          show: true,
+                          toY: 100,
+                          color: accent.withValues(alpha: 0.06),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn();
+  }
+
+  Widget _buildBadges(S l, Color accent) {
+    final earned = _badges.where((b) => b.$3).toList();
+    final locked = _badges.where((b) => !b.$3).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.isDark(context)
+            ? Colors.white.withValues(alpha: 0.04)
+            : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.badgesTitle, style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 12),
+          if (earned.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(l.badgesEmpty,
+                  style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: earned.map((b) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  gradient: AppTheme.goldGradient,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(b.$1, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 6),
+                    Text(b.$2, style: AppTheme.serif(11, color: AppTheme.bg0, weight: FontWeight.w600)),
+                  ],
+                ),
+              )).toList(),
+            ),
+          if (locked.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: locked.map((b) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: accent.withValues(alpha: 0.12)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('\uD83D\uDD12', style: TextStyle(fontSize: 14, color: AppTheme.faintColor(context))),
+                    const SizedBox(width: 6),
+                    Text(b.$2, style: AppTheme.serif(11, color: AppTheme.faintColor(context))),
+                  ],
+                ),
+              )).toList(),
+            ),
+          ],
+        ],
+      ),
+    ).animate().fadeIn();
   }
 
   Widget _buildReportPreviewAndButtons(S l, Color accent, String report) {

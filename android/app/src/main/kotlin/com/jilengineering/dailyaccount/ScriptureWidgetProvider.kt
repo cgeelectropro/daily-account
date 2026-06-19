@@ -1,5 +1,5 @@
 // android/app/src/main/kotlin/com/example/daily_account/ScriptureWidgetProvider.kt
-package com.example.daily_account
+package com.jilengineering.dailyaccount
 
 import android.appwidget.AppWidgetManager
 import android.app.PendingIntent

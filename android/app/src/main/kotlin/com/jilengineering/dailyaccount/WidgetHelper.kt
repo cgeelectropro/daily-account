@@ -1,5 +1,5 @@
 // android/app/src/main/kotlin/com/example/daily_account/WidgetHelper.kt
-package com.example.daily_account
+package com.jilengineering.dailyaccount
 
 import android.content.Context
 import android.content.SharedPreferences

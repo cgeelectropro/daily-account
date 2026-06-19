@@ -1,7 +1,7 @@
 name: daily_account
 description: "Daily Account — A spiritual accountability app for your daily walk with God (CMFI discipline)."
 publish_to: 'none'
-version: 1.2.0+3
+version: 2.0.0+4
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -48,6 +48,9 @@ dependencies:
   # Voice notes — recording & playback
   record: ^5.1.2
   audioplayers: ^6.1.0
+
+dependency_overrides:
+  record_linux: ^1.3.0
 
 dev_dependencies:
   flutter_test:
