@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/proclamation_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_altar_bg"
+    android:padding="12dp">
+
+    <!-- Large counter number -->
+    <TextView
+        android:id="@+id/proclamation_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_above="@+id/proclamation_text"
+        android:gravity="center"
+        android:text="0"
+        android:textColor="#D4AF64"
+        android:textSize="36sp"
+        android:fontFamily="serif"
+        android:textStyle="bold" />
+
+    <!-- Proclamation text -->
+    <TextView
+        android:id="@+id/proclamation_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:text="JESUS CHRIST IS THE LORD"
+        android:textColor="#A09070"
+        android:textSize="9sp"
+        android:fontFamily="serif"
+        android:textAllCaps="true"
+        android:letterSpacing="0.08"
+        android:maxLines="2"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Gold divider -->
+    <View
+        android:id="@+id/proclamation_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_above="@+id/proclamation_label"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/widget_gold_divider" />
+
+    <!-- Label -->
+    <TextView
+        android:id="@+id/proclamation_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="center"
+        android:text="PROCLAMATIONS TODAY"
+        android:textColor="#7A6A4A"
+        android:textSize="7sp"
+        android:fontFamily="serif"
+        android:textAllCaps="true"
+        android:letterSpacing="0.15" />
+
+</RelativeLayout>
