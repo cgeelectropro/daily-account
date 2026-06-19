@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Legacy (keep) -->
+    <string name="widget_description">Your spiritual dashboard — disciplines, timer, streak &amp; daily scripture at a glance</string>
+
+    <!-- Scripture Card -->
+    <string name="widget_scripture_desc">Daily scripture card — verse, proclamation &amp; your word for today</string>
+    <string name="widget_daily_verse">Daily Verse</string>
+    <string name="widget_proclamation_label">Proclamation</string>
+    <string name="widget_your_word_today">Your Word Today</string>
+    <string name="widget_proclamation_text">JESUS CHRIST IS THE LORD</string>
+
+    <!-- Discipline Bar -->
+    <string name="widget_discipline_bar_desc">Quick-toggle disciplines &amp; track your daily progress</string>
+
+    <!-- Full Altar -->
+    <string name="widget_full_altar_desc">Complete dashboard — scripture, disciplines &amp; timer controls</string>
+    <string name="widget_start_timer">Start Timer</string>
+    <string name="widget_open_log">Open Log</string>
+    <string name="widget_keep_streak">Keep your streak alive!</string>
+    <string name="widget_days_this_week">%1$d of 7 days this week</string>
+    <string name="widget_prayer">Prayer</string>
+    <string name="widget_bible">Bible</string>
+    <string name="widget_literature">Literature</string>
+
+    <!-- Proclamation Counter -->
+    <string name="widget_proclamation_counter_desc">Tap to proclaim — Jesus Christ is the Lord</string>
+    <string name="widget_proclamations_today">Proclamations Today</string>
+</resources>
