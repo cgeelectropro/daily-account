@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
@@ -32,6 +33,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _sundayFollowUps = 2; // default aggressive: 2 follow-ups
   bool _loading = true;
   String _version = '';
+  String _reportLanguage = ''; // empty = same as app
+
+  // Weekly goals
+  int _goalBibleChapters = 0;
+  int _goalPrayerMinutes = 0;
+  int _goalEvangelismContacts = 0;
+  int _goalLiteratureItems = 0;
+
+  /// Per-discipline reminder times. null = off.
+  final Map<int, TimeOfDay?> _disciplineTimes = {};
+  static const _disciplineNames = [
+    'Bible', 'Literature', 'DDEG', 'Prayer (alone)', 'Prayer (others)',
+    'Evangelism', 'Fasting', 'Giving', 'Church', 'Discipleship', 'Proclamation',
+  ];
+  static const _disciplineIcons = [
+    '\uD83D\uDCD6', '\uD83D\uDCDA', '\uD83D\uDD25', '\uD83D\uDE4F', '\uD83E\uDD1D',
+    '\uD83D\uDCE2', '\uD83C\uDF7D\uFE0F', '\uD83D\uDCB0', '\u26EA', '\uD83D\uDC65', '\uD83D\uDCE3',
+  ];
 
   @override
   void initState() {
@@ -72,6 +91,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {
       _version = '1.2.0';
     }
+    // Load report language
+    _reportLanguage = await s.getSetting('reportLanguage', fallback: '');
+    // Load weekly goals
+    _goalBibleChapters = int.tryParse(await s.getSetting('goalBibleChapters', fallback: '0')) ?? 0;
+    _goalPrayerMinutes = int.tryParse(await s.getSetting('goalPrayerMinutes', fallback: '0')) ?? 0;
+    _goalEvangelismContacts = int.tryParse(await s.getSetting('goalEvangelismContacts', fallback: '0')) ?? 0;
+    _goalLiteratureItems = int.tryParse(await s.getSetting('goalLiteratureItems', fallback: '0')) ?? 0;
+    // Load per-discipline reminder times
+    for (int i = 0; i < 11; i++) {
+      final raw = await s.getSetting('discReminder_$i', fallback: '');
+      if (raw.isNotEmpty) {
+        final parts = raw.split(':');
+        if (parts.length == 2) {
+          _disciplineTimes[i] = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
+    }
     if (mounted) setState(() => _loading = false);
   }
 
@@ -102,6 +141,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _scheduleAllNotifications() async {
     final l = S.of(context);
+    final s = StorageService.instance;
+
+    // Persist localized strings so they can be re-used on app restart
+    // (notification re-scheduling runs without BuildContext)
+    await s.setSetting('notifDailyTitle', l.notifDailyTitle);
+    await s.setSetting('notifDailyBody', l.notifDailyBody);
+    await s.setSetting('notifSundayTitle', l.notifSundayTitle);
+    await s.setSetting('notifSundayBody', l.notifSundayBody);
+
     await NotificationService.instance.scheduleDailyReminder(
       _dailyTime.hour, _dailyTime.minute,
       title: l.notifDailyTitle,
@@ -414,6 +462,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) _toast(success ? l.importSuccess : l.importFailed);
   }
 
+  // ── Auto-backup restore ────────────────────────────────────
+
+  Future<void> _restoreAutoBackup() async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final data = await BackupService.instance.getLatestAutoBackup();
+    if (data == null) {
+      if (mounted) _toast(l.noAutoBackup);
+      return;
+    }
+    final exportDate = data['exportDate'] as String? ?? '';
+    final dateStr = exportDate.isNotEmpty
+        ? exportDate.substring(0, 16).replaceFirst('T', ' ')
+        : '?';
+    final logs = data['logs'] as List? ?? [];
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.restoreAutoBackup, style: AppTheme.display(18, color: accent)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.autoBackupFound(dateStr),
+                style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+            const SizedBox(height: 8),
+            Text(l.importPreview(logs.length),
+                style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.restoreButton, style: TextStyle(color: accent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final success = await BackupService.instance.importData(data, merge: true);
+    if (mounted) _toast(success ? l.importSuccess : l.importFailed);
+  }
+
   // ── Reset ──────────────────────────────────────────────────
 
   Future<void> _resetAll() async {
@@ -482,7 +579,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final accent = AppTheme.accentGold(context);
     return Expanded(
       child: GestureDetector(
-        onTap: () => DailyAccountApp.setLocale(context, Locale(code)),
+        onTap: () async {
+          DailyAccountApp.setLocale(context, Locale(code));
+          await StorageService.instance.setSetting('appLocale', code);
+          await HomeWidget.saveWidgetData('widget_locale', code);
+          await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
+          await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
+          await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
@@ -578,8 +682,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ]),
 
+        // ── Weekly Goals ──
+        SectionCard(icon: '\uD83C\uDFAF', title: l.weeklyGoals, initiallyExpanded: false, children: [
+          Text(l.weeklyGoalsDesc, style: AppTheme.serif(12, color: mutedCol)),
+          const SizedBox(height: 12),
+          _goalField(l.goalBibleChapters, '\uD83D\uDCD6', _goalBibleChapters, (v) {
+            setState(() => _goalBibleChapters = v);
+            StorageService.instance.setSetting('goalBibleChapters', '$v');
+          }),
+          _goalField(l.goalPrayerMinutes, '\uD83D\uDE4F', _goalPrayerMinutes, (v) {
+            setState(() => _goalPrayerMinutes = v);
+            StorageService.instance.setSetting('goalPrayerMinutes', '$v');
+          }),
+          _goalField(l.goalEvangelismContacts, '\uD83D\uDCE2', _goalEvangelismContacts, (v) {
+            setState(() => _goalEvangelismContacts = v);
+            StorageService.instance.setSetting('goalEvangelismContacts', '$v');
+          }),
+          _goalField(l.goalLiteratureItems, '\uD83D\uDCDA', _goalLiteratureItems, (v) {
+            setState(() => _goalLiteratureItems = v);
+            StorageService.instance.setSetting('goalLiteratureItems', '$v');
+          }),
+        ]),
+
         // ── Disciple Maker ──
-        SectionCard(icon: '📧', title: l.discipleMakerSection, children: [
+        SectionCard(icon: '\uD83D\uDCE7', title: l.discipleMakerSection, children: [
           GoldField(
             label: l.emailLabel,
             hint: l.emailHint,
@@ -604,6 +730,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(width: 12),
               _themeCard(l.themeLight, Icons.light_mode, false),
             ],
+          ),
+          const SizedBox(height: 16),
+          // Text size slider
+          Text(l.textSizeLabel.toUpperCase(),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(l.textSizeSmall, style: AppTheme.serif(13, color: mutedCol)),
+              Expanded(
+                child: Slider(
+                  value: DailyAccountApp.getTextScale(context),
+                  min: 0.8,
+                  max: 1.6,
+                  divisions: 8,
+                  activeColor: accent,
+                  inactiveColor: accent.withValues(alpha: 0.2),
+                  label: '${(DailyAccountApp.getTextScale(context) * 100).round()}%',
+                  onChanged: (v) {
+                    DailyAccountApp.setTextScale(context, v);
+                  },
+                ),
+              ),
+              Text(l.textSizeLarge, style: AppTheme.display(18, color: mutedCol)),
+            ],
+          ),
+          // Preview
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.12)),
+            ),
+            child: Text(l.textSizePreview,
+                style: AppTheme.serif(14, color: textCol)),
           ),
         ]),
 
@@ -706,6 +869,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(l.saveReminders, style: AppTheme.display(15, color: AppTheme.bg0)),
               ),
             ),
+            const SizedBox(height: 20),
+            // ── Per-discipline reminders ──
+            Text(l.disciplineReminders.toUpperCase(),
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 4),
+            Text(l.disciplineRemindersDesc,
+                style: AppTheme.serif(11, color: mutedCol)),
+            const SizedBox(height: 8),
+            ...List.generate(11, (i) => _disciplineReminderRow(i, accent, textCol, mutedCol)),
           ],
         ]),
 
@@ -721,18 +893,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Language ──
-        SectionCard(icon: '🌐', title: l.languageSection, children: [
+        SectionCard(icon: '\uD83C\uDF10', title: l.languageSection, children: [
           Row(
             children: [
-              _languageCard('🇬🇧', l.languageEnglish, 'en'),
+              _languageCard('\uD83C\uDDEC\uD83C\uDDE7', l.languageEnglish, 'en'),
               const SizedBox(width: 12),
-              _languageCard('🇫🇷', l.languageFrench, 'fr'),
+              _languageCard('\uD83C\uDDEB\uD83C\uDDF7', l.languageFrench, 'fr'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Report language
+          Text(l.reportLanguageSection.toUpperCase(),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 4),
+          Text(l.reportLanguageDesc,
+              style: AppTheme.serif(11, color: mutedCol)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _reportLanguageCard(l.reportLanguageSameAsApp, '', accent, textCol),
+              const SizedBox(width: 8),
+              _reportLanguageCard('English', 'en', accent, textCol),
+              const SizedBox(width: 8),
+              _reportLanguageCard('Français', 'fr', accent, textCol),
             ],
           ),
         ]),
 
         // ── Backup ──
         SectionCard(icon: '💾', title: l.backupSection, children: [
+          // Auto-backup info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.green.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_done, color: AppTheme.green, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(l.autoBackupInfo, style: AppTheme.serif(11, color: AppTheme.green))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -749,6 +955,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _import,
               icon: Icon(Icons.download, color: accent),
               label: Text(l.importData, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _restoreAutoBackup,
+              icon: Icon(Icons.restore, color: accent),
+              label: Text(l.restoreAutoBackup, style: TextStyle(color: accent)),
               style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
             ),
           ),
@@ -920,5 +1136,194 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _disciplineReminderRow(int index, Color accent, Color textCol, Color mutedCol) {
+    final time = _disciplineTimes[index];
+    final name = _disciplineNames[index];
+    final icon = _disciplineIcons[index];
+    final l = S.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () async {
+          if (time != null) {
+            // Show option to change or turn off
+            final action = await showModalBottomSheet<String>(
+              context: context,
+              backgroundColor: AppTheme.surfaceColor(context),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (ctx) => Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$icon $name', style: AppTheme.display(18, color: accent)),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: Icon(Icons.access_time, color: accent),
+                      title: Text(l.disciplineReminderSet, style: AppTheme.serif(14, color: textCol)),
+                      onTap: () => Navigator.pop(ctx, 'change'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.notifications_off, color: AppTheme.rust),
+                      title: Text(l.disciplineReminderOff, style: AppTheme.serif(14, color: AppTheme.rust)),
+                      onTap: () => Navigator.pop(ctx, 'off'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+            if (action == 'change') {
+              await _pickDisciplineTime(index);
+            } else if (action == 'off') {
+              setState(() => _disciplineTimes.remove(index));
+              await StorageService.instance.setSetting('discReminder_$index', '');
+              await NotificationService.instance.cancelDisciplineReminder(index);
+            }
+          } else {
+            await _pickDisciplineTime(index);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: time != null
+                ? accent.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: time != null
+                  ? accent.withValues(alpha: 0.2)
+                  : AppTheme.faintColor(context).withValues(alpha: 0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(name, style: AppTheme.serif(13, color: textCol)),
+              ),
+              if (time != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(time.format(context),
+                      style: AppTheme.label(10, color: accent)),
+                )
+              else
+                Text(l.disciplineReminderOff,
+                    style: AppTheme.label(10, color: mutedCol)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _reportLanguageCard(String label, String code, Color accent, Color textCol) {
+    final isSelected = _reportLanguage == code;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _reportLanguage = code);
+          StorageService.instance.setSetting('reportLanguage', code);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? accent.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? accent : accent.withValues(alpha: 0.2),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(label,
+              style: AppTheme.serif(12, color: isSelected ? accent : textCol),
+              textAlign: TextAlign.center),
+        ),
+      ),
+    );
+  }
+
+  Widget _goalField(String label, String icon, int value, ValueChanged<int> onChanged) {
+    final accent = AppTheme.accentGold(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+          ),
+          GestureDetector(
+            onTap: () {
+              if (value > 0) onChanged(value - 1);
+            },
+            child: Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.remove, size: 18, color: value > 0 ? accent : AppTheme.faintColor(context)),
+            ),
+          ),
+          Container(
+            width: 44,
+            alignment: Alignment.center,
+            child: Text('$value',
+                style: AppTheme.display(16, color: value > 0 ? accent : AppTheme.mutedColor(context))),
+          ),
+          GestureDetector(
+            onTap: () => onChanged(value + 1),
+            child: Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Icon(Icons.add, size: 18, color: accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDisciplineTime(int index) async {
+    final accent = AppTheme.accentGold(context);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _disciplineTimes[index] ?? const TimeOfDay(hour: 6, minute: 0),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: AppTheme.isDark(context)
+              ? ColorScheme.dark(primary: accent, surface: AppTheme.bg2, onSurface: AppTheme.cream)
+              : ColorScheme.light(primary: accent, surface: AppTheme.lightBg2, onSurface: AppTheme.lightText),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() => _disciplineTimes[index] = picked);
+      final key = 'discReminder_$index';
+      await StorageService.instance.setSetting(key, '${picked.hour}:${picked.minute}');
+      await NotificationService.instance.scheduleDisciplineReminder(
+        index, picked.hour, picked.minute, _disciplineNames[index],
+      );
+    }
   }
 }
