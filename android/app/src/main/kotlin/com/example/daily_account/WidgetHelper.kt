@@ -25,6 +25,13 @@ object WidgetHelper {
     // ── Discipline abbreviations (same in both languages for space) ──
     val DISC_LABELS = listOf("BIB", "LIT", "DDG", "PRY", "EVG")
 
+    /**
+     * Get the 3-letter abbreviation for a discipline by index.
+     */
+    fun getDisciplineLabel(index: Int): String {
+        return if (index in DISC_LABELS.indices) DISC_LABELS[index] else ""
+    }
+
     // ── Discipline SharedPreferences keys (5 core for new widgets) ──
     val DISC_KEYS_PREFS = listOf("d_bible", "d_lit", "d_ddeg", "d_prayer", "d_evangelism")
     val DISC_KEYS_TOGGLE = listOf("bible", "literature", "ddeg", "prayerAlone", "evangelism")
