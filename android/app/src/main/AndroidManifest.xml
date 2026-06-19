@@ -67,17 +67,6 @@
         </receiver>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
 
-        <!-- Home screen widget -->
-        <receiver android:name=".DailyAccountWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/daily_account_widget_info"/>
-        </receiver>
-
         <!-- Scripture Card widget (2x2) -->
         <receiver android:name=".ScriptureWidgetProvider"
             android:exported="true">

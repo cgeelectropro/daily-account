@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,7 @@ class _HomeShellState extends State<HomeShell> {
   Map<String, bool> _weekCompletion = {};
   int _reportKey = 0; // forces ReportScreen rebuild on data change
   bool _hasPendingReport = false;
+  StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    _widgetClickSub?.cancel();
     TimerService.instance.removeListener(_onTimerTick);
     super.dispose();
   }
@@ -62,7 +65,7 @@ class _HomeShellState extends State<HomeShell> {
 
   /// Listen for widget click deep links.
   void _handleWidgetClicks() {
-    HomeWidget.widgetClicked.listen((uri) {
+    _widgetClickSub = HomeWidget.widgetClicked.listen((uri) {
       if (uri == null) return;
       _processWidgetUri(uri);
     });
@@ -359,41 +362,6 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   /// Push today's completion % , streak, and discipline flags to the Android home widget.
-  /// Daily scriptures for the widget — rotates based on day of year.
-  static const _widgetScriptures = [
-    'Be faithful unto death, and I will give you the crown of life. — Rev 2:10',
-    'I can do all things through Christ who strengthens me. — Phil 4:13',
-    'The Lord is my shepherd; I shall not want. — Psalm 23:1',
-    'For God so loved the world that He gave His only Son. — John 3:16',
-    'Trust in the Lord with all your heart. — Prov 3:5',
-    'Be strong and courageous. Do not be afraid. — Josh 1:9',
-    'The joy of the Lord is your strength. — Neh 8:10',
-    'Pray without ceasing. — 1 Thess 5:17',
-    'But seek first the kingdom of God and His righteousness. — Matt 6:33',
-    'Go therefore and make disciples of all nations. — Matt 28:19',
-    'He must increase, but I must decrease. — John 3:30',
-    'Draw near to God and He will draw near to you. — James 4:8',
-    'Let your light shine before others. — Matt 5:16',
-    'Cast all your anxiety on Him because He cares for you. — 1 Pet 5:7',
-    'For to me, to live is Christ and to die is gain. — Phil 1:21',
-    'The Lord is near to the brokenhearted. — Psalm 34:18',
-    'Set your minds on things above. — Col 3:2',
-    'In all your ways acknowledge Him, and He shall direct your paths. — Prov 3:6',
-    'Delight yourself in the Lord and He will give you the desires of your heart. — Psalm 37:4',
-    'Fear not, for I am with you. — Isa 41:10',
-    'If God is for us, who can be against us? — Rom 8:31',
-    'He who began a good work in you will carry it on to completion. — Phil 1:6',
-    'Walk by faith, not by sight. — 2 Cor 5:7',
-    'The Lord will fight for you; you need only to be still. — Ex 14:14',
-    'Create in me a clean heart, O God. — Psalm 51:10',
-    'You are the salt of the earth. — Matt 5:13',
-    'The word of God is living and active. — Heb 4:12',
-    'Be still, and know that I am God. — Psalm 46:10',
-    'No weapon formed against you shall prosper. — Isa 54:17',
-    'His mercies are new every morning. — Lam 3:23',
-    'I have been crucified with Christ. It is no longer I who live. — Gal 2:20',
-  ];
-
   Future<void> _updateHomeWidget() async {
     if (!Platform.isAndroid) return;
     try {
@@ -482,9 +450,6 @@ class _HomeShellState extends State<HomeShell> {
         }
       }
 
-      // Reset timer picker flag
-      await HomeWidget.saveWidgetData('show_timer_picker', '0');
-
       // Days logged this week (for motivational text)
       final daysThisWeek = await _countDaysThisWeek();
       await HomeWidget.saveWidgetData('days_this_week', '$daysThisWeek');
@@ -494,13 +459,7 @@ class _HomeShellState extends State<HomeShell> {
           fallback: 'en');
       await HomeWidget.saveWidgetData('widget_locale', widgetLocale);
 
-      // Daily rotating scripture (for legacy widget)
-      final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
-      final scripture = _widgetScriptures[dayOfYear % _widgetScriptures.length];
-      await HomeWidget.saveWidgetData('scripture', scripture);
-
       // Update ALL widget providers
-      await HomeWidget.updateWidget(androidName: 'DailyAccountWidgetProvider');
       await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
       await HomeWidget.updateWidget(androidName: 'DisciplineBarWidgetProvider');
       await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
