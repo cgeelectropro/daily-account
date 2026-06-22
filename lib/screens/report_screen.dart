@@ -397,6 +397,10 @@ class _ReportScreenState extends State<ReportScreen> {
         if (!_isMonthly && _hasGoals && _stats != null)
           _buildGoalsCard(l, accent),
 
+        // Weekly challenge
+        if (!_isMonthly && _isCurrentWeek && _stats != null)
+          _buildChallengeCard(l, accent),
+
         // Trend analysis
         if (!_isMonthly && _trend != null && _trend!.hasData)
           _buildTrendCard(l, accent),
@@ -643,6 +647,97 @@ class _ReportScreenState extends State<ReportScreen> {
         ],
       ),
     );
+  }
+
+  /// Generate dynamic weekly challenges based on user's stats and weak areas.
+  Widget _buildChallengeCard(S l, Color accent) {
+    final s = _stats!;
+    final challenges = <(String, String)>[]; // (emoji, challenge text)
+
+    // Based on weakest discipline from trend data
+    if (_trend != null && _trend!.weakDiscipline != null) {
+      final weak = _trend!.weakDiscipline!;
+      challenges.add(('\uD83C\uDFAF', l.challengeWeakDiscipline(weak)));
+    }
+
+    // Prayer challenge based on days logged
+    if (s.daysLogged < 5) {
+      challenges.add(('\uD83D\uDE4F', l.challengePrayerDaily));
+    }
+
+    // Bible challenge
+    if (s.totalBibleChapters < 7) {
+      challenges.add(('\uD83D\uDCD6', l.challengeBibleDaily));
+    }
+
+    // Evangelism challenge
+    if (s.totalEvangelismContacts < 3) {
+      challenges.add(('\uD83D\uDCE2', l.challengeEvangelism));
+    }
+
+    // Streak challenge
+    if (_streak > 0 && _streak < 7) {
+      challenges.add(('\uD83D\uDD25', l.challengeStreak7));
+    } else if (_streak >= 7 && _streak < 30) {
+      challenges.add(('\uD83C\uDFC6', l.challengeStreak30));
+    }
+
+    // Perfect week challenge
+    if (s.daysLogged >= 5 && s.daysLogged < 7) {
+      challenges.add(('\u2B50', l.challengePerfectWeek));
+    }
+
+    if (challenges.isEmpty) return const SizedBox.shrink();
+
+    // Show at most 3 challenges
+    final shown = challenges.take(3).toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              accent.withValues(alpha: 0.08),
+              accent.withValues(alpha: 0.03),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('\u26A1', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text(l.weeklyChallenge.toUpperCase(),
+                    style: AppTheme.label(11, color: accent)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...shown.map((c) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(c.$1, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(c.$2,
+                        style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(delay: 200.ms);
   }
 
   Widget _buildTrendCard(S l, Color accent) {

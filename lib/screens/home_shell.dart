@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/generated/app_localizations_en.dart';
 import '../l10n/generated/app_localizations_fr.dart';
@@ -370,7 +372,130 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void _onDataChanged() {
     _loadWeekCompletion();
     _updateHomeWidget();
+    _checkMilestones();
     setState(() => _reportKey++);
+  }
+
+  /// Check for milestone achievements and show celebration.
+  Future<void> _checkMilestones() async {
+    final streak = await ReportService.instance.computeStreak();
+    final stats = await ReportService.instance.computeWeekStats();
+    final storage = StorageService.instance;
+    if (!mounted) return;
+    final l = S.of(context);
+
+    // Check streak milestones: 7, 30, 100
+    for (final threshold in [7, 30, 100]) {
+      if (streak >= threshold) {
+        final key = 'milestone_streak_$threshold';
+        final celebrated = await storage.getSetting(key, fallback: '');
+        // Only celebrate once per streak (reset if streak breaks)
+        if (celebrated != 'true') {
+          await storage.setSetting(key, 'true');
+          final title = threshold == 7 ? l.milestoneStreak7
+              : threshold == 30 ? l.milestoneStreak30
+              : l.milestoneStreak100;
+          final body = threshold == 7 ? l.milestoneStreak7Body
+              : threshold == 30 ? l.milestoneStreak30Body
+              : l.milestoneStreak100Body;
+          _showMilestoneCelebration(title, body, '\uD83D\uDD25');
+          NotificationService.instance.showMilestoneNotification(title: title, body: body);
+          return; // Only one milestone at a time
+        }
+      }
+    }
+
+    // Reset milestone flags if streak broke
+    if (streak < 7) await storage.setSetting('milestone_streak_7', '');
+    if (streak < 30) await storage.setSetting('milestone_streak_30', '');
+    if (streak < 100) await storage.setSetting('milestone_streak_100', '');
+
+    // Perfect week check
+    if (stats.daysLogged == 7) {
+      final weekKey = _key(_weekMonday);
+      final pfKey = 'milestone_perfect_$weekKey';
+      final celebrated = await storage.getSetting(pfKey, fallback: '');
+      if (celebrated != 'true') {
+        await storage.setSetting(pfKey, 'true');
+        _showMilestoneCelebration(l.milestonePerfectWeek, l.milestonePerfectWeekBody, '\u2B50');
+        NotificationService.instance.showMilestoneNotification(
+          title: l.milestonePerfectWeek, body: l.milestonePerfectWeekBody);
+        return;
+      }
+    }
+
+    // Bible marathon check (20+ chapters in a week)
+    if (stats.totalBibleChapters >= 20) {
+      final weekKey = _key(_weekMonday);
+      final bmKey = 'milestone_bible_$weekKey';
+      final celebrated = await storage.getSetting(bmKey, fallback: '');
+      if (celebrated != 'true') {
+        await storage.setSetting(bmKey, 'true');
+        _showMilestoneCelebration(l.milestoneBibleMarathon, l.milestoneBibleMarathonBody, '\uD83D\uDCD6');
+        NotificationService.instance.showMilestoneNotification(
+          title: l.milestoneBibleMarathon, body: l.milestoneBibleMarathonBody);
+      }
+    }
+  }
+
+  /// Show a celebration dialog with animation.
+  void _showMilestoneCelebration(String title, String body, String emoji) {
+    if (!mounted) return;
+    final accent = AppTheme.accentGold(context);
+    final l = S.of(context);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(ctx),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 64))
+                .animate()
+                .scale(begin: const Offset(0.3, 0.3), end: const Offset(1.0, 1.0),
+                    duration: 600.ms, curve: Curves.elasticOut),
+            const SizedBox(height: 16),
+            Text(title,
+                style: AppTheme.display(22, color: accent),
+                textAlign: TextAlign.center)
+                .animate().fadeIn(delay: 300.ms),
+            const SizedBox(height: 12),
+            Text(body,
+                style: AppTheme.serif(14, color: AppTheme.textColor(ctx)),
+                textAlign: TextAlign.center)
+                .animate().fadeIn(delay: 500.ms),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _shareMilestone(title, body, emoji);
+                  },
+                  icon: Icon(Icons.share, color: accent, size: 18),
+                  label: Text(l.milestoneShare,
+                      style: AppTheme.serif(13, color: accent)),
+                ),
+                const SizedBox(width: 16),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('OK', style: TextStyle(color: AppTheme.mutedColor(ctx))),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Share a milestone achievement as text.
+  void _shareMilestone(String title, String body, String emoji) {
+    final text = '$emoji $title\n$body\n\n— Daily Account';
+    SharePlus.instance.share(ShareParams(text: text));
   }
 
   /// Push today's completion % , streak, and discipline flags to the Android home widget.
@@ -480,6 +605,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       await HomeWidget.updateWidget(androidName: 'DisciplineBarWidgetProvider');
       await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
       await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+
+      // Streak-at-risk check (evening only, once per day)
+      final loggedToday = log != null && log.completeness > 0;
+      await NotificationService.instance.checkStreakRisk(
+        streak: streak,
+        loggedToday: loggedToday,
+      );
     } catch (_) {
       // Widget not available — ignore
     }

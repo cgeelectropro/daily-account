@@ -2401,6 +2401,120 @@ abstract class S {
   /// **'Save'**
   String get saveGoals;
 
+  /// No description provided for @weeklyChallenge.
+  ///
+  /// In en, this message translates to:
+  /// **'This Week\'s Challenge'**
+  String get weeklyChallenge;
+
+  /// No description provided for @challengeWeakDiscipline.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on {discipline} — your weakest area this week'**
+  String challengeWeakDiscipline(String discipline);
+
+  /// No description provided for @challengePrayerDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Pray every day this week — even 5 minutes counts'**
+  String get challengePrayerDaily;
+
+  /// No description provided for @challengeBibleDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Read at least 1 Bible chapter every day'**
+  String get challengeBibleDaily;
+
+  /// No description provided for @challengeEvangelism.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the gospel with 3 people this week'**
+  String get challengeEvangelism;
+
+  /// No description provided for @challengeStreak7.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep logging daily to reach a 7-day streak!'**
+  String get challengeStreak7;
+
+  /// No description provided for @challengeStreak30.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re on fire! Push for a 30-day streak!'**
+  String get challengeStreak30;
+
+  /// No description provided for @challengePerfectWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost there — log every day for a perfect week!'**
+  String get challengePerfectWeek;
+
+  /// No description provided for @milestoneStreak7.
+  ///
+  /// In en, this message translates to:
+  /// **'7-Day Streak!'**
+  String get milestoneStreak7;
+
+  /// No description provided for @milestoneStreak7Body.
+  ///
+  /// In en, this message translates to:
+  /// **'A full week of faithfulness. Keep going!'**
+  String get milestoneStreak7Body;
+
+  /// No description provided for @milestoneStreak30.
+  ///
+  /// In en, this message translates to:
+  /// **'30-Day Streak!'**
+  String get milestoneStreak30;
+
+  /// No description provided for @milestoneStreak30Body.
+  ///
+  /// In en, this message translates to:
+  /// **'A month of daily discipline. You are building something lasting.'**
+  String get milestoneStreak30Body;
+
+  /// No description provided for @milestoneStreak100.
+  ///
+  /// In en, this message translates to:
+  /// **'100-Day Streak!'**
+  String get milestoneStreak100;
+
+  /// No description provided for @milestoneStreak100Body.
+  ///
+  /// In en, this message translates to:
+  /// **'100 days of walking with God. What a testimony!'**
+  String get milestoneStreak100Body;
+
+  /// No description provided for @milestonePerfectWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Perfect Week!'**
+  String get milestonePerfectWeek;
+
+  /// No description provided for @milestonePerfectWeekBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day accounted for. Well done, faithful servant.'**
+  String get milestonePerfectWeekBody;
+
+  /// No description provided for @milestoneBibleMarathon.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible Marathon!'**
+  String get milestoneBibleMarathon;
+
+  /// No description provided for @milestoneBibleMarathonBody.
+  ///
+  /// In en, this message translates to:
+  /// **'20+ chapters this week. The Word is alive in you.'**
+  String get milestoneBibleMarathonBody;
+
+  /// No description provided for @milestoneShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share Achievement'**
+  String get milestoneShare;
+
   /// No description provided for @voiceNote.
   ///
   /// In en, this message translates to:

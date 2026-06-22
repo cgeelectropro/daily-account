@@ -1323,6 +1323,71 @@ class SEn extends S {
   String get saveGoals => 'Save';
 
   @override
+  String get weeklyChallenge => 'This Week\'s Challenge';
+
+  @override
+  String challengeWeakDiscipline(String discipline) {
+    return 'Focus on $discipline — your weakest area this week';
+  }
+
+  @override
+  String get challengePrayerDaily =>
+      'Pray every day this week — even 5 minutes counts';
+
+  @override
+  String get challengeBibleDaily => 'Read at least 1 Bible chapter every day';
+
+  @override
+  String get challengeEvangelism => 'Share the gospel with 3 people this week';
+
+  @override
+  String get challengeStreak7 => 'Keep logging daily to reach a 7-day streak!';
+
+  @override
+  String get challengeStreak30 => 'You\'re on fire! Push for a 30-day streak!';
+
+  @override
+  String get challengePerfectWeek =>
+      'Almost there — log every day for a perfect week!';
+
+  @override
+  String get milestoneStreak7 => '7-Day Streak!';
+
+  @override
+  String get milestoneStreak7Body => 'A full week of faithfulness. Keep going!';
+
+  @override
+  String get milestoneStreak30 => '30-Day Streak!';
+
+  @override
+  String get milestoneStreak30Body =>
+      'A month of daily discipline. You are building something lasting.';
+
+  @override
+  String get milestoneStreak100 => '100-Day Streak!';
+
+  @override
+  String get milestoneStreak100Body =>
+      '100 days of walking with God. What a testimony!';
+
+  @override
+  String get milestonePerfectWeek => 'Perfect Week!';
+
+  @override
+  String get milestonePerfectWeekBody =>
+      'Every day accounted for. Well done, faithful servant.';
+
+  @override
+  String get milestoneBibleMarathon => 'Bible Marathon!';
+
+  @override
+  String get milestoneBibleMarathonBody =>
+      '20+ chapters this week. The Word is alive in you.';
+
+  @override
+  String get milestoneShare => 'Share Achievement';
+
+  @override
   String get voiceNote => 'Voice note';
 
   @override

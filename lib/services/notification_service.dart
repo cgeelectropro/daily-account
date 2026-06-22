@@ -18,8 +18,11 @@ import 'storage_service.dart';
 ///   13 = Daily follow-up #3 (90 min after primary)
 ///   21 = Sunday follow-up #1
 ///   22 = Sunday follow-up #2
+///   30 = Mid-week nudge (Wednesday)
+///   40 = Saturday summary
+///   50 = Test notification
 ///   99 = Snooze notification
-///  100 = Test notification
+///  110–120 = Per-discipline reminders
 class NotificationService {
   static final NotificationService instance = NotificationService._();
   NotificationService._();
@@ -32,8 +35,8 @@ class NotificationService {
   /// Snooze notification ID
   static const _snoozeId = 99;
 
-  /// Test notification ID
-  static const _testId = 100;
+  /// Test notification ID (must not collide with _disciplineBaseId range 110–120)
+  static const _testId = 50;
 
   /// High-importance channel — sound, vibration, LED, heads-up display.
   /// Includes a "Snooze 15 min" action button.
@@ -79,11 +82,17 @@ class NotificationService {
   /// Stopwatch notification ID — ongoing while a timer runs.
   static const stopwatchNotifId = 200;
 
-  /// Per-discipline reminder IDs (100–110).
-  static const _disciplineBaseId = 100;
+  /// Per-discipline reminder IDs (110–120).
+  static const _disciplineBaseId = 110;
 
   /// Saturday summary notification ID.
   static const _saturdaySummaryId = 40;
+
+  /// Streak-at-risk notification ID.
+  static const _streakRiskId = 60;
+
+  /// Milestone celebration notification ID.
+  static const _milestoneId = 61;
 
   // ── Initialization ────────────────────────────────────────
 
@@ -156,15 +165,18 @@ class NotificationService {
     _ready = true;
 
     // Schedule defaults on first launch
-    _scheduleDefaultsIfNeeded();
+    rescheduleAll();
   }
 
-  /// Re-schedule all reminders on every app launch.
+  /// Re-schedule all reminders. Safe to call repeatedly.
   ///
   /// This is critical because Android can silently drop scheduled alarms
   /// after app updates, battery optimization, or reboots. Cheap to call
   /// and guarantees notifications stay alive.
-  Future<void> _scheduleDefaultsIfNeeded() async {
+  ///
+  /// Called automatically on init(), and should also be called when the
+  /// app returns to the foreground (AppLifecycleState.resumed).
+  Future<void> rescheduleAll() async {
     final s = StorageService.instance;
     final enabled = await s.getSetting('notificationsEnabled', fallback: '');
 
@@ -668,7 +680,10 @@ class NotificationService {
       ),
     );
 
-    final status = isPaused ? (pausedLabel ?? 'Paused') : elapsed;
+    // When running, the Android chronometer handles the live time display
+    // in the notification's `when` field — use a static body to avoid a
+    // stale elapsed string that freezes when the Dart isolate is suspended.
+    final status = isPaused ? (pausedLabel ?? 'Paused — $elapsed') : 'In progress';
     await _plugin.show(
       stopwatchNotifId,
       '$activityIcon $activityLabel',
@@ -745,5 +760,62 @@ class NotificationService {
   ({int hour, int minute}) _addMinutesToTime(int hour, int minute, int addMinutes) {
     final total = hour * 60 + minute + addMinutes;
     return (hour: (total ~/ 60) % 24, minute: total % 60);
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  STREAK-AT-RISK NOTIFICATION
+  // ═════════════════════════════════════════════════════════════
+
+  /// Check if the user's streak is at risk and fire a notification.
+  /// Call this from app lifecycle (evening check) or widget update.
+  /// Only fires once per day and only in the evening (after 8 PM).
+  Future<void> checkStreakRisk({
+    required int streak,
+    required bool loggedToday,
+    String? title,
+    String? body,
+  }) async {
+    if (!_ready) await init();
+    if (streak <= 0 || loggedToday) return;
+
+    // Only fire in the evening (8 PM – midnight)
+    final now = DateTime.now();
+    if (now.hour < 20) return;
+
+    // Don't fire if already fired today
+    final lastFired = await StorageService.instance.getSetting('streakRiskLastDate', fallback: '');
+    final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    if (lastFired == todayKey) return;
+
+    await StorageService.instance.setSetting('streakRiskLastDate', todayKey);
+
+    final t = title ?? "Your $streak-day streak is at risk!";
+    final b = body ?? "You haven't logged today — don't let your streak break. Open Daily Account now.";
+
+    await _plugin.show(
+      _streakRiskId,
+      t,
+      b,
+      _alarmDetails,
+    );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  MILESTONE CELEBRATION NOTIFICATION
+  // ═════════════════════════════════════════════════════════════
+
+  /// Fire a celebration notification when the user hits a milestone.
+  Future<void> showMilestoneNotification({
+    required String title,
+    required String body,
+  }) async {
+    if (!_ready) await init();
+
+    await _plugin.show(
+      _milestoneId,
+      title,
+      body,
+      _alarmDetails,
+    );
   }
 }

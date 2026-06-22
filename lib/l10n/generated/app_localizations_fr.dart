@@ -1330,6 +1330,76 @@ class SFr extends S {
   String get saveGoals => 'Enregistrer';
 
   @override
+  String get weeklyChallenge => 'Défi de la semaine';
+
+  @override
+  String challengeWeakDiscipline(String discipline) {
+    return 'Concentrez-vous sur $discipline — votre point faible cette semaine';
+  }
+
+  @override
+  String get challengePrayerDaily =>
+      'Priez chaque jour cette semaine — même 5 minutes comptent';
+
+  @override
+  String get challengeBibleDaily =>
+      'Lisez au moins 1 chapitre biblique chaque jour';
+
+  @override
+  String get challengeEvangelism =>
+      'Partagez l’évangile avec 3 personnes cette semaine';
+
+  @override
+  String get challengeStreak7 =>
+      'Continuez à journaliser pour atteindre 7 jours consécutifs !';
+
+  @override
+  String get challengeStreak30 =>
+      'Vous êtes en feu ! Visez 30 jours consécutifs !';
+
+  @override
+  String get challengePerfectWeek =>
+      'Presque ! Journalisez chaque jour pour une semaine parfaite !';
+
+  @override
+  String get milestoneStreak7 => '7 jours consécutifs !';
+
+  @override
+  String get milestoneStreak7Body =>
+      'Une semaine complète de fidélité. Continuez !';
+
+  @override
+  String get milestoneStreak30 => '30 jours consécutifs !';
+
+  @override
+  String get milestoneStreak30Body =>
+      'Un mois de discipline quotidienne. Vous construisez quelque chose de durable.';
+
+  @override
+  String get milestoneStreak100 => '100 jours consécutifs !';
+
+  @override
+  String get milestoneStreak100Body =>
+      '100 jours de marche avec Dieu. Quel témoignage !';
+
+  @override
+  String get milestonePerfectWeek => 'Semaine parfaite !';
+
+  @override
+  String get milestonePerfectWeekBody =>
+      'Chaque jour comptabilisé. Bien fait, serviteur fidèle.';
+
+  @override
+  String get milestoneBibleMarathon => 'Marathon biblique !';
+
+  @override
+  String get milestoneBibleMarathonBody =>
+      '20+ chapitres cette semaine. La Parole est vivante en vous.';
+
+  @override
+  String get milestoneShare => 'Partager la réussite';
+
+  @override
   String get voiceNote => 'Note vocale';
 
   @override
