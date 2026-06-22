@@ -44,10 +44,12 @@
     </LinearLayout>
 
     <!-- Gold divider -->
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="@drawable/widget_gold_divider" />
+        android:src="@drawable/widget_gold_divider"
+        android:scaleType="fitXY"
+        android:contentDescription="" />
 
     <!-- ═══ MIDDLE ZONE: Discipline Row + Progress ═══ -->
     <LinearLayout
@@ -230,12 +232,14 @@
     </LinearLayout>
 
     <!-- Gold divider -->
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginStart="10dp"
         android:layout_marginEnd="10dp"
-        android:background="@drawable/widget_gold_divider" />
+        android:src="@drawable/widget_gold_divider"
+        android:scaleType="fitXY"
+        android:contentDescription="" />
 
     <!-- ═══ BOTTOM ZONE: Timer / Actions (adaptive) ═══ -->
 
@@ -284,9 +288,10 @@
                 android:textSize="11sp"
                 android:textStyle="bold" />
 
-            <View
+            <ImageView
                 android:layout_width="6dp"
-                android:layout_height="0dp" />
+                android:layout_height="0dp"
+                android:contentDescription="" />
 
             <TextView
                 android:id="@+id/altar_btn_open_log"
@@ -330,7 +335,7 @@
             android:textColor="#D4AF64"
             android:textSize="11sp" />
 
-        <View android:layout_width="4dp" android:layout_height="0dp" />
+        <ImageView android:layout_width="4dp" android:layout_height="0dp" android:contentDescription="" />
 
         <TextView
             android:id="@+id/altar_pick_bible"
@@ -345,7 +350,7 @@
             android:textColor="#D4AF64"
             android:textSize="11sp" />
 
-        <View android:layout_width="4dp" android:layout_height="0dp" />
+        <ImageView android:layout_width="4dp" android:layout_height="0dp" android:contentDescription="" />
 
         <TextView
             android:id="@+id/altar_pick_literature"

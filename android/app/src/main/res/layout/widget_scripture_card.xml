@@ -48,13 +48,15 @@
         android:layout_marginBottom="8dp" />
 
     <!-- Gold divider -->
-    <View
+    <ImageView
         android:id="@+id/scripture_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_above="@+id/scripture_label"
         android:layout_marginBottom="4dp"
-        android:background="@drawable/widget_gold_divider" />
+        android:src="@drawable/widget_gold_divider"
+        android:scaleType="fitXY"
+        android:contentDescription="" />
 
     <!-- Label: "Daily Verse" or "Proclamation" -->
     <TextView

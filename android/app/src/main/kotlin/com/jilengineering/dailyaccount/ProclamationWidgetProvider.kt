@@ -18,32 +18,37 @@ class ProclamationWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         appWidgetIds.forEach { widgetId ->
-            val views = RemoteViews(context.packageName, R.layout.widget_proclamation)
-            val locale = WidgetHelper.getLocale(widgetData)
+            try {
+                val views = RemoteViews(context.packageName, R.layout.widget_proclamation)
+                val locale = WidgetHelper.getLocale(widgetData)
 
-            // Counter value
-            val count = widgetData.getString("proclamation_count", "0") ?: "0"
-            views.setTextViewText(R.id.proclamation_count, count)
+                // Counter value
+                val count = widgetData.getString("proclamation_count", "0") ?: "0"
+                views.setTextViewText(R.id.proclamation_count, count)
 
-            // Localized text
-            views.setTextViewText(R.id.proclamation_text,
-                WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamation_text))
-            views.setTextViewText(R.id.proclamation_label,
-                WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamations_today).uppercase())
+                // Localized text
+                views.setTextViewText(R.id.proclamation_text,
+                    WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamation_text))
+                views.setTextViewText(R.id.proclamation_label,
+                    WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamations_today).uppercase())
 
-            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
 
-            // Tap → increment
-            val incrementIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                data = Uri.parse("dailyaccount://proclamation/increment")
+                // Tap -> increment
+                val incrementIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
+                    data = Uri.parse("dailyaccount://proclamation/increment")
+                }
+                val incrementPending = PendingIntent.getActivity(
+                    context, 400, incrementIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.proclamation_container, incrementPending)
+
+                appWidgetManager.updateAppWidget(widgetId, views)
+            } catch (e: Exception) {
+                val fallback = RemoteViews(context.packageName, R.layout.widget_proclamation)
+                appWidgetManager.updateAppWidget(widgetId, fallback)
             }
-            val incrementPending = PendingIntent.getActivity(
-                context, 400, incrementIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.proclamation_container, incrementPending)
-
-            appWidgetManager.updateAppWidget(widgetId, views)
         }
     }
 }
