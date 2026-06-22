@@ -2317,6 +2317,42 @@ abstract class S {
   /// **'Set targets for the week'**
   String get weeklyGoalsDesc;
 
+  /// No description provided for @dailyGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Goals'**
+  String get dailyGoals;
+
+  /// No description provided for @dailyGoalsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set targets for each day'**
+  String get dailyGoalsDesc;
+
+  /// No description provided for @goalFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get goalFrequency;
+
+  /// No description provided for @daily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get daily;
+
+  /// No description provided for @weekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weekly;
+
+  /// No description provided for @enterGoalValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter value'**
+  String get enterGoalValue;
+
   /// No description provided for @goalBibleChapters.
   ///
   /// In en, this message translates to:

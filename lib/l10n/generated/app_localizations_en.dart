@@ -1279,6 +1279,24 @@ class SEn extends S {
   String get weeklyGoalsDesc => 'Set targets for the week';
 
   @override
+  String get dailyGoals => 'Daily Goals';
+
+  @override
+  String get dailyGoalsDesc => 'Set targets for each day';
+
+  @override
+  String get goalFrequency => 'Frequency';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get enterGoalValue => 'Enter value';
+
+  @override
   String get goalBibleChapters => 'Bible chapters';
 
   @override

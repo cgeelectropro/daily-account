@@ -27,7 +27,7 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _tab = 0;
   DateTime _selected = DateTime.now();
   /// The Monday anchor of the currently viewed week.
@@ -40,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _weekMonday = _mondayOf(DateTime.now());
     _loadWeekCompletion();
     _updateHomeWidget();
@@ -54,9 +55,20 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _widgetClickSub?.cancel();
     TimerService.instance.removeListener(_onTimerTick);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-schedule notifications on every foreground return.
+      // Android can silently drop alarms after Doze, battery optimization,
+      // or OEM power management — re-scheduling guarantees they stay alive.
+      NotificationService.instance.rescheduleAll();
+    }
   }
 
   void _onTimerTick() {
@@ -454,9 +466,13 @@ class _HomeShellState extends State<HomeShell> {
       final daysThisWeek = await _countDaysThisWeek();
       await HomeWidget.saveWidgetData('days_this_week', '$daysThisWeek');
 
-      // Widget locale
-      final widgetLocale = await StorageService.instance.getSetting('appLocale',
-          fallback: 'en');
+      // Widget locale — use 'language' key (set by main.dart), falling back to 'appLocale'
+      var widgetLocale = await StorageService.instance.getSetting('language',
+          fallback: '');
+      if (widgetLocale.isEmpty) {
+        widgetLocale = await StorageService.instance.getSetting('appLocale',
+            fallback: 'en');
+      }
       await HomeWidget.saveWidgetData('widget_locale', widgetLocale);
 
       // Update ALL widget providers

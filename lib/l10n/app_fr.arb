@@ -10,7 +10,6 @@
   "tabReport": "Rapport",
   "tabSettings": "Param\u00e8tres",
 
-  "completedLabel": "Compl\u00e9t\u00e9",
   "markComplete": "Marquer le Jour Complet",
   "markedComplete": "Compl\u00e9t\u00e9",
 
@@ -584,6 +583,12 @@
 
   "weeklyGoals": "Objectifs hebdomadaires",
   "weeklyGoalsDesc": "D\u00e9finissez vos cibles pour la semaine",
+  "dailyGoals": "Objectifs quotidiens",
+  "dailyGoalsDesc": "D\u00e9finissez vos cibles pour chaque jour",
+  "goalFrequency": "Fr\u00e9quence",
+  "daily": "Quotidien",
+  "weekly": "Hebdomadaire",
+  "enterGoalValue": "Entrer la valeur",
   "goalBibleChapters": "Chapitres bibliques",
   "goalPrayerMinutes": "Pri\u00e8re (minutes)",
   "goalEvangelismContacts": "Contacts d'\u00e9vang\u00e9lisation",

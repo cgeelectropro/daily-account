@@ -10,7 +10,8 @@ class WeekStats {
   int totalBibleChapters;
   int totalEvangelismContacts;
   int litItems;
-  WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems);
+  int totalPrayerMinutes;
+  WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems, this.totalPrayerMinutes);
 }
 
 class MonthStats {
@@ -82,14 +83,43 @@ class ReportService {
     final dates = weekDates(ref);
     final logs = await StorageService.instance
         .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
-    int days = 0, chapters = 0, contacts = 0, lit = 0;
+    int days = 0, chapters = 0, contacts = 0, lit = 0, prayerMins = 0;
     for (final l in logs) {
       if (l.completed) days++;
       chapters += int.tryParse(l.bibleChapters) ?? 0;
       contacts += int.tryParse(l.evangelismContacts) ?? 0;
       lit += l.literature.where((e) => e.title.isNotEmpty).length;
+      prayerMins += _parseDurationMinutes(l.prayerAloneDuration);
+      prayerMins += _parseDurationMinutes(l.prayerOthersDuration);
     }
-    return WeekStats(days, chapters, contacts, lit);
+    return WeekStats(days, chapters, contacts, lit, prayerMins);
+  }
+
+  /// Best-effort parse of duration strings like "45m", "1h 30m", "30 minutes", "1h15m".
+  static int _parseDurationMinutes(String s) {
+    if (s.isEmpty || s == '\u2713') return 0;
+    // Try "Xh Ym" or "XhYm"
+    final hm = RegExp(r'(\d+)\s*h\s*(\d+)\s*m');
+    final hmMatch = hm.firstMatch(s);
+    if (hmMatch != null) {
+      return int.parse(hmMatch.group(1)!) * 60 + int.parse(hmMatch.group(2)!);
+    }
+    // Try "Xh" only
+    final hOnly = RegExp(r'(\d+)\s*h');
+    final hMatch = hOnly.firstMatch(s);
+    if (hMatch != null) return int.parse(hMatch.group(1)!) * 60;
+    // Try "Xm" or "X minutes" or "X min"
+    final mOnly = RegExp(r'(\d+)\s*m');
+    final mMatch = mOnly.firstMatch(s);
+    if (mMatch != null) return int.parse(mMatch.group(1)!);
+    // Try "Xs" (seconds only, from timer)
+    final sOnly = RegExp(r'^(\d+)\s*s$');
+    final sMatch = sOnly.firstMatch(s);
+    if (sMatch != null) return (int.parse(sMatch.group(1)!) / 60).ceil();
+    // Try bare number (assume minutes)
+    final n = int.tryParse(s.trim());
+    if (n != null) return n;
+    return 0;
   }
 
   /// Current consecutive-day streak ending today.

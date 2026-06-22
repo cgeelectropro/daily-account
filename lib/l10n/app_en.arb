@@ -583,6 +583,12 @@
 
   "weeklyGoals": "Weekly Goals",
   "weeklyGoalsDesc": "Set targets for the week",
+  "dailyGoals": "Daily Goals",
+  "dailyGoalsDesc": "Set targets for each day",
+  "goalFrequency": "Frequency",
+  "daily": "Daily",
+  "weekly": "Weekly",
+  "enterGoalValue": "Enter value",
   "goalBibleChapters": "Bible chapters",
   "goalPrayerMinutes": "Prayer (minutes)",
   "goalEvangelismContacts": "Evangelism contacts",

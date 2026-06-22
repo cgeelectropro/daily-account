@@ -1286,6 +1286,24 @@ class SFr extends S {
   String get weeklyGoalsDesc => 'Définissez vos cibles pour la semaine';
 
   @override
+  String get dailyGoals => 'Objectifs quotidiens';
+
+  @override
+  String get dailyGoalsDesc => 'Définissez vos cibles pour chaque jour';
+
+  @override
+  String get goalFrequency => 'Fréquence';
+
+  @override
+  String get daily => 'Quotidien';
+
+  @override
+  String get weekly => 'Hebdomadaire';
+
+  @override
+  String get enterGoalValue => 'Entrer la valeur';
+
+  @override
   String get goalBibleChapters => 'Chapitres bibliques';
 
   @override

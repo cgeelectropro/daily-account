@@ -43,8 +43,9 @@ class _ReportScreenState extends State<ReportScreen> {
   // Trend data
   TrendData? _trend;
 
-  // Weekly goals
+  // Goals
   Map<String, int> _goals = {};
+  String _goalFrequency = 'weekly';
 
   // Badges
   List<(String, String, bool)> _badges = []; // (emoji, label, earned)
@@ -99,6 +100,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _loadGoals() async {
     final s = StorageService.instance;
+    _goalFrequency = await s.getSetting('goalFrequency', fallback: 'weekly');
     _goals = {
       'bibleChapters': int.tryParse(await s.getSetting('goalBibleChapters', fallback: '0')) ?? 0,
       'prayerMinutes': int.tryParse(await s.getSetting('goalPrayerMinutes', fallback: '0')) ?? 0,
@@ -563,15 +565,22 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Widget _buildGoalsCard(S l, Color accent) {
     final s = _stats!;
+    final isDaily = _goalFrequency == 'daily';
+    // For daily goals, multiply target by days logged (or 7 for weekly view)
+    // so progress compares actual totals against proportional targets
+    final days = s.daysLogged > 0 ? s.daysLogged : 1;
+
     final items = <(String, String, int, int)>[]; // (icon, label, current, target)
     final gb = _goals['bibleChapters'] ?? 0;
-    if (gb > 0) items.add(('\uD83D\uDCD6', l.goalBibleChapters, s.totalBibleChapters, gb));
+    if (gb > 0) items.add(('\uD83D\uDCD6', l.goalBibleChapters, s.totalBibleChapters, isDaily ? gb * days : gb));
     final gp = _goals['prayerMinutes'] ?? 0;
-    if (gp > 0) items.add(('\uD83D\uDE4F', l.goalPrayerMinutes, s.daysLogged * 30, gp)); // estimate 30 min/day logged
+    if (gp > 0) items.add(('\uD83D\uDE4F', l.goalPrayerMinutes, s.totalPrayerMinutes, isDaily ? gp * days : gp));
     final ge = _goals['evangelismContacts'] ?? 0;
-    if (ge > 0) items.add(('\uD83D\uDCE2', l.goalEvangelismContacts, s.totalEvangelismContacts, ge));
+    if (ge > 0) items.add(('\uD83D\uDCE2', l.goalEvangelismContacts, s.totalEvangelismContacts, isDaily ? ge * days : ge));
     final gl = _goals['literatureItems'] ?? 0;
-    if (gl > 0) items.add(('\uD83D\uDCDA', l.goalLiteratureItems, s.litItems, gl));
+    if (gl > 0) items.add(('\uD83D\uDCDA', l.goalLiteratureItems, s.litItems, isDaily ? gl * days : gl));
+
+    final title = isDaily ? l.dailyGoals : l.weeklyGoals;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -587,7 +596,7 @@ class _ReportScreenState extends State<ReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l.weeklyGoals.toUpperCase(),
+            Text(title.toUpperCase(),
                 style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
             const SizedBox(height: 12),
             ...items.map((item) => _goalProgressRow(item.$1, item.$2, item.$3, item.$4, accent)),
