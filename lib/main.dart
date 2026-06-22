@@ -5,18 +5,33 @@ import 'theme/app_theme.dart';
 import 'screens/lock_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/backup_service.dart';
+import 'services/background_timer_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/timer_service.dart';
+import 'widgets/timer_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await NotificationService.instance.init();
+  await BackgroundTimerService.instance.init();
   await TimerService.instance.init();
   // Silent auto-backup on every app start (skips if < 6 hours since last)
   BackupService.instance.autoBackup();
   runApp(const DailyAccountApp());
+}
+
+/// Entry point for the floating timer overlay (runs in a separate isolate).
+@pragma("vm:entry-point")
+void overlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TimerOverlay(),
+    ),
+  );
 }
 
 class DailyAccountApp extends StatefulWidget {

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_timer.dart';
 import '../models/daily_log.dart';
+import 'background_timer_service.dart';
 import 'notification_service.dart';
 import 'storage_service.dart';
 
@@ -13,6 +16,8 @@ import 'storage_service.dart';
 /// - Only one timer can be running at a time (auto-pauses the previous).
 /// - State is persisted to SharedPreferences so timers survive app restarts.
 /// - When a timer is stopped, its duration is written to today's DailyLog.
+/// - On Android, a foreground service keeps the timer alive in the background.
+/// - An optional floating overlay shows the timer over other apps.
 class TimerService extends ChangeNotifier {
   static final TimerService instance = TimerService._();
   TimerService._();
@@ -67,8 +72,14 @@ class TimerService extends ChangeNotifier {
     NotificationService.instance.onTimerAction = _handleNotifAction;
 
     _ensureTicker();
-    // Restore stopwatch notification if a timer was running
+    // Restore stopwatch notification + foreground service if a timer was running
     _updateStopwatchNotification();
+    final running = activeKey;
+    if (running != null) {
+      final session = _sessions[running]!;
+      _startForegroundService(running, session);
+      _showOverlay(running, session);
+    }
     notifyListeners();
   }
 
@@ -110,6 +121,8 @@ class TimerService extends ChangeNotifier {
     _ensureTicker();
     _persist();
     _updateStopwatchNotification();
+    _startForegroundService(key, session);
+    _showOverlay(key, session);
     notifyListeners();
   }
 
@@ -128,6 +141,8 @@ class TimerService extends ChangeNotifier {
     session.paused = true;
     _persist();
     _updateStopwatchNotification();
+    _pauseForegroundService(key, session);
+    _updateOverlay(key, session, paused: true);
     notifyListeners();
   }
 
@@ -148,6 +163,8 @@ class TimerService extends ChangeNotifier {
     _sessions.remove(key);
     _persist();
     _updateStopwatchNotification();
+    _stopForegroundService();
+    _closeOverlay();
     notifyListeners();
   }
 
@@ -175,12 +192,97 @@ class TimerService extends ChangeNotifier {
     return total;
   }
 
+  // ── Foreground service helpers ─────────────────────────────
+
+  String _resolveLabel(TimerKey key) =>
+      timerLabelResolver?.call(key) ??
+      (key.isBuiltIn ? key.builtIn!.shortCode : '');
+
+  String _resolveIcon(TimerKey key) =>
+      timerIconResolver?.call(key) ??
+      (key.isBuiltIn ? key.builtIn!.icon : '\u2728');
+
+  void _startForegroundService(TimerKey key, TimerSession session) {
+    if (!Platform.isAndroid) return;
+    BackgroundTimerService.instance.startForegroundTimer(
+      label: _resolveLabel(key),
+      icon: _resolveIcon(key),
+      elapsedMs: session.currentElapsed.inMilliseconds,
+    );
+  }
+
+  void _pauseForegroundService(TimerKey key, TimerSession session) {
+    if (!Platform.isAndroid) return;
+    BackgroundTimerService.instance.pauseForegroundTimer(
+      elapsedMs: session.currentElapsed.inMilliseconds,
+      label: _resolveLabel(key),
+    );
+  }
+
+  void _stopForegroundService() {
+    if (!Platform.isAndroid) return;
+    BackgroundTimerService.instance.stopForegroundTimer();
+  }
+
+  // ── Overlay helpers ───────────────────────────────────────
+
+  bool _overlayActive = false;
+
+  Future<void> _showOverlay(TimerKey key, TimerSession session) async {
+    if (!Platform.isAndroid) return;
+    final granted = await FlutterOverlayWindow.isPermissionGranted();
+    if (!granted) return; // Don't show if permission not granted yet
+
+    if (!_overlayActive) {
+      await FlutterOverlayWindow.showOverlay(
+        height: 80,
+        width: 80,
+        alignment: OverlayAlignment.topRight,
+        enableDrag: true,
+        positionGravity: PositionGravity.auto,
+        overlayTitle: 'Daily Account Timer',
+        overlayContent: 'Timer running',
+        flag: OverlayFlag.defaultFlag,
+      );
+      _overlayActive = true;
+    }
+
+    _sendOverlayData(key, session, paused: false);
+  }
+
+  void _updateOverlay(TimerKey key, TimerSession session, {bool paused = false}) {
+    if (!_overlayActive) return;
+    _sendOverlayData(key, session, paused: paused);
+  }
+
+  void _sendOverlayData(TimerKey key, TimerSession session, {required bool paused}) {
+    FlutterOverlayWindow.shareData({
+      'elapsed': session.stopwatchDisplay,
+      'icon': _resolveIcon(key),
+      'label': _resolveLabel(key),
+      'paused': paused,
+    });
+  }
+
+  void _closeOverlay() {
+    if (!_overlayActive) return;
+    FlutterOverlayWindow.shareData({'action': 'close'});
+    _overlayActive = false;
+  }
+
   // ── Internal ──────────────────────────────────────────────
 
   void _ensureTicker() {
     if (activeKey != null && _ticker == null) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        _updateStopwatchNotification();
+        // Push live elapsed time to the overlay (it doesn't have a native
+        // chronometer). The Android notification is NOT re-posted here —
+        // its chronometer counts natively even when the isolate sleeps.
+        final key = activeKey;
+        if (key != null && _overlayActive) {
+          final session = _sessions[key];
+          if (session != null) _sendOverlayData(key, session, paused: false);
+        }
         notifyListeners();
       });
     } else if (activeKey == null) {
