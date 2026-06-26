@@ -47,6 +47,9 @@ class _LogScreenState extends State<LogScreen> {
   Duration _recordDuration = Duration.zero;
   Timer? _recordTimer;
 
+  // Debounce for auto-persist
+  Timer? _persistDebounce;
+
   @override
   void initState() {
     super.initState();
@@ -351,6 +354,11 @@ class _LogScreenState extends State<LogScreen> {
 
   @override
   void dispose() {
+    // Flush any pending debounced save before disposing
+    if (_persistDebounce?.isActive ?? false) {
+      _persistDebounce!.cancel();
+      StorageService.instance.saveLog(_log);
+    }
     _recordTimer?.cancel();
     _recorder.dispose();
     _player.dispose();
@@ -358,8 +366,11 @@ class _LogScreenState extends State<LogScreen> {
   }
 
   void _persist() {
-    StorageService.instance.saveLog(_log);
-    widget.onChanged();
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 500), () {
+      StorageService.instance.saveLog(_log);
+      widget.onChanged();
+    });
   }
 
   // ── Voice Note ──────────────────────────────────────────────
@@ -456,6 +467,11 @@ class _LogScreenState extends State<LogScreen> {
     setState(() {
       _log.bibleReference = prev.bibleReference;
       _log.bibleChapters = prev.bibleChapters;
+      _log.bibleSessions = prev.bibleSessions.map((s) => BibleReadingEntry(
+        startBook: s.startBook, startChapter: s.startChapter,
+        endBook: s.endBook, endChapter: s.endChapter,
+        chaptersRead: s.chaptersRead,
+      )).toList();
       _log.literature = prev.literature.map((e) => LiteratureEntry(title: e.title, amount: e.amount, unit: e.unit)).toList();
       _log.ddegScripture = prev.ddegScripture;
       _log.ddegTime = prev.ddegTime;
@@ -583,26 +599,33 @@ class _LogScreenState extends State<LogScreen> {
           ),
         const SizedBox(height: 10),
 
-        // Bible
+        // Bible (multi-session with auto-calculate)
         SectionCard(
           icon: '\u{1F4D6}',
           title: t.sectionBible,
-          initiallyExpanded: _log.bibleReference.isNotEmpty || _log.bibleChapters.isNotEmpty,
+          initiallyExpanded: _log.bibleSessions.any((s) => s.isNotEmpty) ||
+              _log.bibleReference.isNotEmpty || _log.bibleChapters.isNotEmpty,
           children: [
-            GoldField(
-              label: t.bibleRefLabel,
-              hint: t.bibleRefHint,
-              value: _log.bibleReference,
-              suggestions: bibleBookNames,
-              onChanged: (v) { _log.bibleReference = v; _persist(); },
-            ),
-            GoldField(
-              label: t.bibleChaptersLabel,
-              hint: t.bibleChaptersHint,
-              value: _log.bibleChapters,
-              keyboardType: TextInputType.number,
-              onChanged: (v) { _log.bibleChapters = v; _persist(); },
-            ),
+            // Structured sessions
+            ..._bibleSessionWidgets(t, bibleBookNames),
+            // Legacy fields (shown only if old data exists without sessions)
+            if (_log.bibleReference.isNotEmpty && _log.bibleSessions.every((s) => s.isEmpty)) ...[
+              const SizedBox(height: 8),
+              GoldField(
+                label: t.bibleRefLabel,
+                hint: t.bibleRefHint,
+                value: _log.bibleReference,
+                suggestions: bibleBookNames,
+                onChanged: (v) { _log.bibleReference = v; _persist(); },
+              ),
+              GoldField(
+                label: t.bibleChaptersLabel,
+                hint: t.bibleChaptersHint,
+                value: _log.bibleChapters,
+                keyboardType: TextInputType.number,
+                onChanged: (v) { _log.bibleChapters = v; _persist(); },
+              ),
+            ],
           ],
         ).animate().fadeIn(delay: 80.ms),
 
@@ -691,9 +714,9 @@ class _LogScreenState extends State<LogScreen> {
               suggestions: bibleBookNames,
               onChanged: (v) { _log.ddegScripture = v; _persist(); },
             ),
-            GoldField(
+            DurationQuickPick(
               label: t.ddegTimeLabel,
-              hint: t.ddegTimeHint,
+              customLabel: t.durationCustom,
               value: _log.ddegTime,
               onChanged: (v) { _log.ddegTime = v; _persist(); },
             ),
@@ -713,9 +736,9 @@ class _LogScreenState extends State<LogScreen> {
           title: t.sectionPrayerAlone,
           initiallyExpanded: _log.prayerAloneDuration.isNotEmpty || _log.prayerAloneNotes.isNotEmpty,
           children: [
-            GoldField(
+            DurationQuickPick(
               label: t.durationLabel,
-              hint: t.durationHint,
+              customLabel: t.durationCustom,
               value: _log.prayerAloneDuration,
               onChanged: (v) { _log.prayerAloneDuration = v; _persist(); },
             ),
@@ -735,9 +758,9 @@ class _LogScreenState extends State<LogScreen> {
           title: t.sectionPrayerOthers,
           initiallyExpanded: _log.prayerOthersDuration.isNotEmpty || _log.prayerOthersContext.isNotEmpty,
           children: [
-            GoldField(
+            DurationQuickPick(
               label: t.durationLabel,
-              hint: t.durationHint,
+              customLabel: t.durationCustom,
               value: _log.prayerOthersDuration,
               onChanged: (v) { _log.prayerOthersDuration = v; _persist(); },
             ),
@@ -1008,9 +1031,9 @@ class _LogScreenState extends State<LogScreen> {
               value: _log.discipleshipTopic,
               onChanged: (v) { _log.discipleshipTopic = v; _persist(); },
             ),
-            GoldField(
+            DurationQuickPick(
               label: t.discipleshipDurationLabel,
-              hint: t.discipleshipDurationHint,
+              customLabel: t.durationCustom,
               value: _log.discipleshipDuration,
               onChanged: (v) { _log.discipleshipDuration = v; _persist(); },
             ),
@@ -1030,9 +1053,9 @@ class _LogScreenState extends State<LogScreen> {
               keyboardType: TextInputType.number,
               onChanged: (v) { _log.proclamationCount = v; _persist(); },
             ),
-            GoldField(
+            DurationQuickPick(
               label: t.proclamationDurationLabel,
-              hint: t.proclamationDurationHint,
+              customLabel: t.durationCustom,
               value: _log.proclamationDuration,
               onChanged: (v) { _log.proclamationDuration = v; _persist(); },
             ),
@@ -1274,7 +1297,7 @@ class _LogScreenState extends State<LogScreen> {
   void _showMissingDisciplines(S t) {
     final accent = AppTheme.accentGold(context);
     final disciplines = <(String, String, bool)>[
-      ('\uD83D\uDCD6', t.sectionBible, _log.bibleReference.isNotEmpty || _log.bibleChapters.isNotEmpty),
+      ('\uD83D\uDCD6', t.sectionBible, _log.bibleReference.isNotEmpty || _log.bibleChapters.isNotEmpty || _log.bibleSessions.any((s) => s.isNotEmpty)),
       ('\uD83D\uDCDA', t.sectionLiterature, _log.literature.any((l) => l.title.isNotEmpty)),
       ('\uD83D\uDD25', t.sectionDDEG, _log.ddegScripture.isNotEmpty || _log.ddegNotes.isNotEmpty),
       ('\uD83D\uDE4F', t.sectionPrayerAlone, _log.prayerAloneDuration.isNotEmpty),
@@ -1570,7 +1593,7 @@ class _LogScreenState extends State<LogScreen> {
     String? focusTip;
     if (_log.prayerAloneDuration.isEmpty && _log.prayerOthersDuration.isEmpty) {
       focusTip = t.reflectionPrayerFocus;
-    } else if (_log.bibleReference.isEmpty && _log.bibleChapters.isEmpty) {
+    } else if (_log.bibleReference.isEmpty && _log.bibleChapters.isEmpty && _log.bibleSessions.every((s) => s.isEmpty)) {
       focusTip = t.reflectionBibleFocus;
     } else if (_log.evangelismContacts.isEmpty) {
       focusTip = t.reflectionEvangelismFocus;
@@ -1615,6 +1638,209 @@ class _LogScreenState extends State<LogScreen> {
         ),
       ).animate().fadeIn(delay: 540.ms),
     );
+  }
+
+  // ── Bible reading sessions (multi-session with auto-calculate) ──
+
+  /// Ensure at least one session exists for UI rendering.
+  void _ensureBibleSession() {
+    if (_log.bibleSessions.isEmpty) {
+      _log.bibleSessions = [BibleReadingEntry()];
+    }
+  }
+
+  /// Recalculate a session and sync legacy fields for backward compat.
+  void _recalcSession(BibleReadingEntry session) {
+    session.recalculate();
+    // Sync legacy fields so reports/widgets still work
+    final locale = Localizations.localeOf(context).languageCode;
+    _log.bibleChapters = '${_log.totalBibleChapters}';
+    _log.bibleReference = _log.combinedBibleReference(locale);
+    _persist();
+  }
+
+  /// Resolve a user-typed book name (possibly localized) to the English canonical name.
+  String _resolveBookName(String typed) {
+    final book = BibleBooks.findBook(typed);
+    return book?.nameEn ?? typed;
+  }
+
+  /// Get the localized display name for a canonical English book name.
+  String _localizedBookName(String canonicalName) {
+    if (canonicalName.isEmpty) return '';
+    final book = BibleBooks.findBook(canonicalName);
+    if (book == null) return canonicalName;
+    final locale = Localizations.localeOf(context).languageCode;
+    return locale.startsWith('fr') ? book.nameFr : book.nameEn;
+  }
+
+  List<Widget> _bibleSessionWidgets(S t, List<String> bibleBookNames) {
+    _ensureBibleSession();
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = textCol.withValues(alpha: 0.5);
+
+    return [
+      ..._log.bibleSessions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final session = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── FROM row ──
+              Text(t.bibleSessionFrom.toUpperCase(),
+                  style: AppTheme.label(10, color: mutedCol)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: GoldField(
+                      label: t.bibleSessionBook,
+                      hint: '',
+                      value: _localizedBookName(session.startBook),
+                      suggestions: bibleBookNames,
+                      onChanged: (v) {
+                        session.startBook = _resolveBookName(v);
+                        // Auto-fill end book with same book for convenience
+                        if (session.endBook.isEmpty) {
+                          session.endBook = session.startBook;
+                        }
+                        _recalcSession(session);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: GoldField(
+                      label: t.bibleSessionChapter,
+                      hint: '1',
+                      value: session.startChapter > 0 ? '${session.startChapter}' : '',
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) {
+                        session.startChapter = int.tryParse(v) ?? 0;
+                        // If single-chapter entry, sync end chapter
+                        if (session.endChapter < 1) {
+                          session.endChapter = session.startChapter;
+                        }
+                        _recalcSession(session);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // ── TO row ──
+              Text(t.bibleSessionTo.toUpperCase(),
+                  style: AppTheme.label(10, color: mutedCol)),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: GoldField(
+                      label: t.bibleSessionBook,
+                      hint: '',
+                      value: _localizedBookName(session.endBook),
+                      suggestions: bibleBookNames,
+                      onChanged: (v) {
+                        session.endBook = _resolveBookName(v);
+                        _recalcSession(session);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 1,
+                    child: GoldField(
+                      label: t.bibleSessionChapter,
+                      hint: '1',
+                      value: session.endChapter > 0 ? '${session.endChapter}' : '',
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) {
+                        session.endChapter = int.tryParse(v) ?? 0;
+                        _recalcSession(session);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              // ── Auto-calculated result ──
+              if (session.chaptersRead > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppTheme.green.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      t.bibleSessionChaptersResult(session.chaptersRead),
+                      style: AppTheme.serif(13, color: AppTheme.green),
+                    ),
+                  ),
+                ),
+              // ── Remove button ──
+              if (_log.bibleSessions.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.bibleSessions.removeAt(i));
+                      _recalcSession(_log.bibleSessions.isNotEmpty
+                          ? _log.bibleSessions.first
+                          : BibleReadingEntry());
+                    },
+                    icon: const Icon(Icons.remove_circle_outline, size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession, style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      // ── Total chapters badge (when multiple sessions) ──
+      if (_log.bibleSessions.where((s) => s.chaptersRead > 0).length > 1)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${t.bibleChaptersLabel}: ${_log.totalSessionChapters}',
+              style: AppTheme.serif(13, color: accent),
+            ),
+          ),
+        ),
+      // ── Add session button ──
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _log.bibleSessions.add(BibleReadingEntry()));
+          },
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addReadingSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
   }
 
   Widget _unitDropdown(LiteratureEntry lit) {

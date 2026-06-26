@@ -86,7 +86,7 @@ class ReportService {
     int days = 0, chapters = 0, contacts = 0, lit = 0, prayerMins = 0;
     for (final l in logs) {
       if (l.completed) days++;
-      chapters += int.tryParse(l.bibleChapters) ?? 0;
+      chapters += l.totalBibleChapters;
       contacts += int.tryParse(l.evangelismContacts) ?? 0;
       lit += l.literature.where((e) => e.title.isNotEmpty).length;
       prayerMins += _parseDurationMinutes(l.prayerAloneDuration);
@@ -153,7 +153,7 @@ class ReportService {
   ];
 
   static List<bool> _disciplineChecks(DailyLog l) => [
-    l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty,
+    l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty || l.bibleSessions.any((s) => s.isNotEmpty),
     l.literature.any((e) => e.title.isNotEmpty),
     l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
     l.prayerAloneDuration.isNotEmpty,
@@ -257,7 +257,7 @@ class ReportService {
     double totalCompletion = 0;
     for (final l in logs) {
       if (l.completed) days++;
-      chapters += int.tryParse(l.bibleChapters) ?? 0;
+      chapters += l.totalBibleChapters;
       contacts += int.tryParse(l.evangelismContacts) ?? 0;
       lit += l.literature.where((e) => e.title.isNotEmpty).length;
       totalCompletion += l.completeness;
@@ -320,8 +320,9 @@ class ReportService {
       }
 
       // Same detailed output as the weekly full report
-      if (log.bibleReference.isNotEmpty) {
-        buf.writeln('\uD83D\uDCD6 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
+      final bibleRef = log.combinedBibleReference('en');
+      if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
@@ -403,12 +404,13 @@ class ReportService {
         continue;
       }
       activeDays++;
-      totalChapters += int.tryParse(log.bibleChapters) ?? 0;
+      totalChapters += log.totalBibleChapters;
       totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
       totalCompletion += log.completeness;
 
-      if (log.bibleReference.isNotEmpty) {
-        buf.writeln('\uD83D\uDCD6 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
+      final bibleRef = log.combinedBibleReference('en');
+      if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
@@ -498,14 +500,15 @@ class ReportService {
         continue;
       }
       activeDays++;
-      totalChapters += int.tryParse(log.bibleChapters) ?? 0;
+      totalChapters += log.totalBibleChapters;
       totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
       totalCompletion += log.completeness;
 
       // Build a compact one-line summary per day
       final parts = <String>[];
-      if (log.bibleReference.isNotEmpty) {
-        parts.add('\uD83D\uDCD6${log.bibleChapters.isNotEmpty ? log.bibleChapters : ""}ch');
+      if (log.bibleReference.isNotEmpty || log.bibleSessions.any((s) => s.isNotEmpty)) {
+        final ch = log.totalBibleChapters;
+        parts.add('\uD83D\uDCD6${ch > 0 ? "$ch" : ""}ch');
       }
       if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) parts.add('\uD83D\uDD25${l.ddegShort}');
       if (log.prayerAloneDuration.isNotEmpty) parts.add('\uD83D\uDE4F${log.prayerAloneDuration}');

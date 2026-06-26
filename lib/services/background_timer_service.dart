@@ -39,40 +39,45 @@ class BackgroundTimerService {
       return;
     }
 
-    // Create the notification channel up-front so the service can use it.
-    final plugin = FlutterLocalNotificationsPlugin();
-    final android = plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (android != null) {
-      await android.createNotificationChannel(
-        const AndroidNotificationChannel(
-          kTimerChannelId,
-          kTimerChannelName,
-          description: 'Shows while a spiritual activity timer is running',
-          importance: Importance.low,
-          playSound: false,
-          enableVibration: false,
+    try {
+      // Create the notification channel up-front so the service can use it.
+      final plugin = FlutterLocalNotificationsPlugin();
+      final android = plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (android != null) {
+        await android.createNotificationChannel(
+          const AndroidNotificationChannel(
+            kTimerChannelId,
+            kTimerChannelName,
+            description: 'Shows while a spiritual activity timer is running',
+            importance: Importance.low,
+            playSound: false,
+            enableVibration: false,
+          ),
+        );
+      }
+
+      await _service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: _onStart,
+          autoStart: false, // only start when a timer starts
+          autoStartOnBoot: false,
+          isForegroundMode: true,
+          notificationChannelId: kTimerChannelId,
+          initialNotificationTitle: 'Daily Account',
+          initialNotificationContent: 'Timer running…',
+          foregroundServiceNotificationId: kTimerNotifId,
+          foregroundServiceTypes: [AndroidForegroundType.specialUse],
+        ),
+        iosConfiguration: IosConfiguration(
+          autoStart: false,
+          onForeground: _onStart,
         ),
       );
+    } catch (_) {
+      // Background service configuration failed — timer will work
+      // without foreground service (just won't survive backgrounding)
     }
-
-    await _service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: _onStart,
-        autoStart: false, // only start when a timer starts
-        autoStartOnBoot: false,
-        isForegroundMode: true,
-        notificationChannelId: kTimerChannelId,
-        initialNotificationTitle: 'Daily Account',
-        initialNotificationContent: 'Timer running…',
-        foregroundServiceNotificationId: kTimerNotifId,
-        foregroundServiceTypes: [AndroidForegroundType.specialUse],
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: false,
-        onForeground: _onStart,
-      ),
-    );
 
     _configured = true;
   }
@@ -84,35 +89,43 @@ class BackgroundTimerService {
     required int elapsedMs,
   }) async {
     if (!Platform.isAndroid) return;
-    await init();
+    try {
+      await init();
 
-    final running = await _service.isRunning();
-    if (!running) {
-      await _service.startService();
-      // Small delay so the service isolate is ready to receive events.
-      await Future.delayed(const Duration(milliseconds: 300));
+      final running = await _service.isRunning();
+      if (!running) {
+        await _service.startService();
+        // Small delay so the service isolate is ready to receive events.
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
+      _service.invoke('startTimer', {
+        'label': label,
+        'icon': icon,
+        'elapsedMs': elapsedMs,
+      });
+    } catch (_) {
+      // Service failed to start — timer still works in the UI
     }
-
-    _service.invoke('startTimer', {
-      'label': label,
-      'icon': icon,
-      'elapsedMs': elapsedMs,
-    });
   }
 
   /// Notify the service that the timer is paused.
   void pauseForegroundTimer({required int elapsedMs, required String label}) {
     if (!Platform.isAndroid) return;
-    _service.invoke('pauseTimer', {
-      'elapsedMs': elapsedMs,
-      'label': label,
-    });
+    try {
+      _service.invoke('pauseTimer', {
+        'elapsedMs': elapsedMs,
+        'label': label,
+      });
+    } catch (_) {}
   }
 
   /// Stop the foreground service.
   void stopForegroundTimer() {
     if (!Platform.isAndroid) return;
-    _service.invoke('stopTimer');
+    try {
+      _service.invoke('stopTimer');
+    } catch (_) {}
   }
 
   /// Stream of tick events from the background isolate.

@@ -18,6 +18,15 @@
   "bibleRefHint": "ex. Jean 3 ; Romains 8",
   "bibleChaptersLabel": "Nombre de Chapitres",
   "bibleChaptersHint": "ex. 3",
+  "bibleSessionFrom": "De",
+  "bibleSessionTo": "\u00c0",
+  "bibleSessionBook": "Livre",
+  "bibleSessionChapter": "Ch.",
+  "bibleSessionChaptersResult": "= {count} chapitre(s)",
+  "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
+  "addReadingSession": "Ajouter une session de lecture",
+  "removeSession": "Supprimer",
+  "durationCustom": "Personnalis\u00e9",
 
   "sectionLiterature": "Litt\u00e9rature Chr\u00e9tienne",
   "bookTitleLabel": "Titre du Livre",
@@ -662,5 +671,24 @@
 
   "saturdaySummaryTitle": "Votre semaine jusqu'ici",
   "saturdaySummaryBody": "{days}/7 jours enregistr\u00e9s, {chapters} chapitres lus, {contacts} contacts \u00e9vang\u00e9lis\u00e9s. Terminez en beaut\u00e9 demain !",
-  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } }
+  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } },
+
+  "cloudBackupSection": "Sauvegarde Cloud",
+  "cloudBackupDescription": "Connectez-vous avec votre compte Google pour sauvegarder toutes vos donn\u00e9es sur Google Drive. Restaurez-les sur n'importe quel appareil.",
+  "signInWithGoogle": "Se connecter avec Google",
+  "signedInAs": "Connect\u00e9 en tant que {email}",
+  "@signedInAs": { "placeholders": { "email": { "type": "String" } } },
+  "lastCloudBackup": "Derni\u00e8re sauvegarde : {date}",
+  "@lastCloudBackup": { "placeholders": { "date": { "type": "String" } } },
+  "backupToDrive": "Sauvegarder sur Google Drive",
+  "restoreFromDrive": "Restaurer depuis Google Drive",
+  "signOut": "Se d\u00e9connecter",
+  "cloudBackupSuccess": "Sauvegard\u00e9 sur Google Drive !",
+  "cloudBackupFailed": "\u00c9chec de la sauvegarde cloud. V\u00e9rifiez votre connexion.",
+  "cloudRestoreSuccess": "Donn\u00e9es restaur\u00e9es depuis Google Drive !",
+  "cloudRestoreFailed": "\u00c9chec de la restauration. V\u00e9rifiez votre connexion.",
+  "cloudRestoreConfirmTitle": "Restaurer depuis le cloud ?",
+  "cloudRestoreConfirmBody": "Ceci remplacera toutes les donn\u00e9es locales par la sauvegarde cloud. \u00cates-vous s\u00fbr ?",
+  "cloudNoBackupFound": "Aucune sauvegarde trouv\u00e9e sur votre Google Drive.",
+  "cloudSignInFailed": "\u00c9chec de la connexion Google. Veuillez r\u00e9essayer."
 }

@@ -47,4 +47,5 @@ app.*.map.json
 # Release signing (NEVER commit these)
 android/key.properties
 android/app/app-release.jks
+android/app/google-services.json
 *.jks

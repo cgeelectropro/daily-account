@@ -1,4 +1,6 @@
 import 'dart:ui' show Color;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -38,46 +40,89 @@ class NotificationService {
   /// Test notification ID (must not collide with _disciplineBaseId range 110–120)
   static const _testId = 50;
 
-  /// High-importance channel — sound, vibration, LED, heads-up display.
-  /// Includes a "Snooze 15 min" action button.
-  static const _alarmChannel = AndroidNotificationDetails(
-    'daily_account_alarm',
-    'Daily Account Reminders',
-    channelDescription: 'Alarm-style reminders to record your walk with God',
-    importance: Importance.max,
-    priority: Priority.max,
-    playSound: true,
-    enableVibration: true,
-    enableLights: true,
-    ledColor: Color(0xFFD4AF64), // gold
-    ledOnMs: 1000,
-    ledOffMs: 500,
-    // Don't use fullScreenIntent — restricted on Android 14+ and
-    // causes silent suppression on some OEMs for non-alarm apps.
-    fullScreenIntent: false,
-    category: AndroidNotificationCategory.reminder,
-    visibility: NotificationVisibility.public,
-    autoCancel: true,
-    ongoing: false,
-    actions: <AndroidNotificationAction>[
-      AndroidNotificationAction(
-        'snooze_15',
-        'Snooze 15 min',
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
-    ],
-  );
+  /// Available notification sounds. Keys are the raw resource file names
+  /// (without extension). Users pick from these in Settings.
+  static const notificationSounds = <String, String>{
+    'sound_bell_notification': 'Bell Notification',
+    'sound_happy_bells': 'Happy Bells',
+    'sound_happy_alert': 'Happy Alert',
+    'sound_uplifting_bells': 'Uplifting Bells',
+    'sound_melodic_bell': 'Melodic Bell',
+    'sound_service_bell': 'Service Bell',
+    'sound_bright_bells': 'Bright Bells',
+    'sound_clean_ding': 'Clean Ding',
+  };
 
-  static const _alarmDetails = NotificationDetails(
-    android: _alarmChannel,
-    iOS: DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    ),
-  );
+  /// Currently selected sound resource name. Loaded from settings.
+  String _selectedSound = 'sound_happy_bells';
+
+  /// Get the current sound selection key.
+  String get selectedSound => _selectedSound;
+
+  /// Set the notification sound and persist the choice.
+  Future<void> setNotificationSound(String soundKey) async {
+    _selectedSound = soundKey;
+    await StorageService.instance.setSetting('notifSound', soundKey);
+    // Recreate the channel with the new sound — requires a new channel ID
+    // because Android caches channel settings permanently.
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      await androidImpl.createNotificationChannel(
+        AndroidNotificationChannel(
+          'daily_account_alarm_$soundKey',
+          'Daily Account Reminders',
+          description: 'Alarm-style reminders to record your walk with God',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFFD4AF64),
+          sound: RawResourceAndroidNotificationSound(soundKey),
+        ),
+      );
+    }
+  }
+
+  /// Build alarm notification details using the user's selected sound.
+  NotificationDetails get _alarmDetails {
+    final channelId = 'daily_account_alarm_$_selectedSound';
+    return NotificationDetails(
+      android: AndroidNotificationDetails(
+        channelId,
+        'Daily Account Reminders',
+        channelDescription: 'Alarm-style reminders to record your walk with God',
+        importance: Importance.max,
+        priority: Priority.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound(_selectedSound),
+        enableVibration: true,
+        enableLights: true,
+        ledColor: const Color(0xFFD4AF64), // gold
+        ledOnMs: 1000,
+        ledOffMs: 500,
+        fullScreenIntent: false,
+        category: AndroidNotificationCategory.reminder,
+        visibility: NotificationVisibility.public,
+        autoCancel: true,
+        ongoing: false,
+        actions: const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'snooze_15',
+            'Snooze 15 min',
+            showsUserInterface: false,
+            cancelNotification: true,
+          ),
+        ],
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
+    );
+  }
 
   /// Stopwatch notification ID — ongoing while a timer runs.
   static const stopwatchNotifId = 200;
@@ -96,6 +141,23 @@ class NotificationService {
 
   // ── Initialization ────────────────────────────────────────
 
+  /// Whether notification permission was granted.
+  bool _notifPermissionGranted = false;
+
+  /// Whether exact alarm permission was granted.
+  bool _exactAlarmGranted = false;
+
+  /// Whether battery optimization exemption was granted.
+  bool _batteryOptExempt = false;
+
+  /// Diagnostic info for the settings screen.
+  Map<String, bool> get diagnostics => {
+    'notificationPermission': _notifPermissionGranted,
+    'exactAlarmPermission': _exactAlarmGranted,
+    'batteryOptExempt': _batteryOptExempt,
+    'initialized': _ready,
+  };
+
   Future<void> init() async {
     if (_ready) return;
     tzdata.initializeTimeZones();
@@ -109,6 +171,10 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('Africa/Lagos'));
     }
 
+    // Load user's sound preference before creating channels
+    _selectedSound = await StorageService.instance
+        .getSetting('notifSound', fallback: 'sound_happy_bells');
+
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -120,30 +186,33 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
-    // Android 13+ runtime permission
+    // Android-specific setup
     final androidImpl = _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl != null) {
-      // Request notification permission (Android 13+)
+      // ── 1. Request notification permission (Android 13+) ──
       final notifGranted = await androidImpl.requestNotificationsPermission();
-      if (notifGranted != true) {
-        // User denied notification permission — notifications won't work.
-        // We still mark ready so the app doesn't crash, but log the issue.
+      _notifPermissionGranted = notifGranted == true;
+      if (!_notifPermissionGranted) {
+        debugPrint('[NotificationService] Notification permission DENIED');
         _ready = true;
         return;
       }
 
-      // Create notification channels explicitly
+      // ── 2. Create notification channels ──
+      // Each sound choice gets its own channel because Android caches
+      // channel settings permanently — changing code has no effect.
       await androidImpl.createNotificationChannel(
-        const AndroidNotificationChannel(
-          'daily_account_alarm',
+        AndroidNotificationChannel(
+          'daily_account_alarm_$_selectedSound',
           'Daily Account Reminders',
           description: 'Alarm-style reminders to record your walk with God',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
           enableLights: true,
-          ledColor: Color(0xFFD4AF64),
+          ledColor: const Color(0xFFD4AF64),
+          sound: RawResourceAndroidNotificationSound(_selectedSound),
         ),
       );
       await androidImpl.createNotificationChannel(
@@ -156,16 +225,70 @@ class NotificationService {
           enableVibration: false,
         ),
       );
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'daily_account_discipline_v2',
+          'Discipline Reminders',
+          description: 'Gentle reminders for specific disciplines',
+          importance: Importance.defaultImportance,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
 
-      // Request exact alarm permission (Android 12+)
-      // If denied, _safeZonedSchedule will fall back to inexact alarms.
-      await androidImpl.requestExactAlarmsPermission();
+      // ── 3. Request exact alarm permission (Android 12+) ──
+      final exactResult = await androidImpl.requestExactAlarmsPermission();
+      _exactAlarmGranted = exactResult == true;
+      if (!_exactAlarmGranted) {
+        debugPrint('[NotificationService] Exact alarm permission DENIED — will use inexact');
+      }
+
+      // ── 4. Check battery optimization status ──
+      _batteryOptExempt = await _checkBatteryOptimization();
     }
 
     _ready = true;
 
     // Schedule defaults on first launch
     rescheduleAll();
+  }
+
+  /// Play a preview of a notification sound (for the settings sound picker).
+  Future<void> previewSound(String soundKey) async {
+    if (!_ready) return;
+    // Create the channel for this sound so Android knows about it
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      await androidImpl.createNotificationChannel(
+        AndroidNotificationChannel(
+          'daily_account_alarm_$soundKey',
+          'Daily Account Reminders',
+          description: 'Alarm-style reminders to record your walk with God',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+          enableLights: true,
+          ledColor: const Color(0xFFD4AF64),
+          sound: RawResourceAndroidNotificationSound(soundKey),
+        ),
+      );
+    }
+    await _plugin.show(
+      _testId,
+      '\uD83D\uDD14 ${notificationSounds[soundKey] ?? soundKey}',
+      'This is how your reminders will sound.',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_account_alarm_$soundKey',
+          'Daily Account Reminders',
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound(soundKey),
+        ),
+      ),
+    );
   }
 
   /// Re-schedule all reminders. Safe to call repeatedly.
@@ -177,6 +300,10 @@ class NotificationService {
   /// Called automatically on init(), and should also be called when the
   /// app returns to the foreground (AppLifecycleState.resumed).
   Future<void> rescheduleAll() async {
+    // Reset diagnostic counters for this run
+    _scheduledCount = 0;
+    _failedCount = 0;
+
     final s = StorageService.instance;
     final enabled = await s.getSetting('notificationsEnabled', fallback: '');
 
@@ -297,6 +424,13 @@ class NotificationService {
   //  SAFE SCHEDULING — falls back to inexact if exact denied
   // ═════════════════════════════════════════════════════════════
 
+  /// Count of successfully scheduled notifications (for diagnostics).
+  int _scheduledCount = 0;
+  int _failedCount = 0;
+
+  /// Diagnostic: how many notifications were scheduled vs failed.
+  (int scheduled, int failed) get scheduleStats => (_scheduledCount, _failedCount);
+
   /// Wraps zonedSchedule with automatic fallback from exact → inexact alarms.
   /// This prevents silent failures on Android 12+ when SCHEDULE_EXACT_ALARM
   /// permission is denied.
@@ -321,7 +455,10 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
-    } catch (_) {
+      _scheduledCount++;
+      debugPrint('[NotificationService] Scheduled #$id (exact) at $scheduledDate');
+    } catch (e) {
+      debugPrint('[NotificationService] Exact alarm #$id failed: $e — trying inexact');
       // Exact alarm denied or failed — fall back to inexact
       try {
         await _plugin.zonedSchedule(
@@ -335,9 +472,11 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
-      } catch (_) {
-        // Even inexact failed — silently ignore
-        // (notification permission likely denied entirely)
+        _scheduledCount++;
+        debugPrint('[NotificationService] Scheduled #$id (inexact) at $scheduledDate');
+      } catch (e2) {
+        _failedCount++;
+        debugPrint('[NotificationService] FAILED to schedule #$id entirely: $e2');
       }
     }
   }
@@ -560,10 +699,10 @@ class NotificationService {
     }
   }
 
-  /// Gentle notification style (lower importance, no alarm sound).
+  /// Gentle notification style (lower importance, default sound).
   NotificationDetails get _gentleDetails => NotificationDetails(
     android: AndroidNotificationDetails(
-      'daily_account_discipline',
+      'daily_account_discipline_v2',
       'Discipline Reminders',
       channelDescription: 'Gentle reminders for specific disciplines',
       importance: Importance.defaultImportance,
@@ -817,5 +956,46 @@ class NotificationService {
       body,
       _alarmDetails,
     );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  BATTERY OPTIMIZATION (Android)
+  // ═════════════════════════════════════════════════════════════
+
+  static const _batteryChannel = MethodChannel('com.jilengineering.dailyaccount/battery');
+
+  /// Check if the app is exempt from battery optimization.
+  /// Returns true if exempt (good) or if not on Android.
+  Future<bool> _checkBatteryOptimization() async {
+    try {
+      final result = await _batteryChannel.invokeMethod<bool>('isBatteryOptimizationDisabled');
+      return result ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Request the system to disable battery optimization for this app.
+  /// Shows Android's native "Allow app to always run?" dialog.
+  /// Returns the updated exemption status after the request.
+  Future<bool> requestBatteryOptimizationExemption() async {
+    try {
+      await _batteryChannel.invokeMethod('requestDisableBatteryOptimization');
+      // Re-check after a short delay (the dialog is async)
+      await Future.delayed(const Duration(seconds: 1));
+      _batteryOptExempt = await _checkBatteryOptimization();
+      return _batteryOptExempt;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Open the system battery optimization settings page (list of all apps).
+  Future<void> openBatteryOptimizationSettings() async {
+    try {
+      await _batteryChannel.invokeMethod('openBatteryOptimizationSettings');
+    } catch (_) {
+      debugPrint('[NotificationService] Failed to open battery settings');
+    }
   }
 }

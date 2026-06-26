@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Google Sign-In: web client ID for OAuth (required by google_sign_in plugin) -->
+    <string name="default_web_client_id">21627369169-lhcggublufnihf88484fjig772qp9maq.apps.googleusercontent.com</string>
+
     <!-- Legacy (keep) -->
     <string name="widget_description">Your spiritual dashboard — disciplines, timer, streak &amp; daily scripture at a glance</string>
 

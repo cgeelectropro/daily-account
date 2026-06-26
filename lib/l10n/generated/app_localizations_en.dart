@@ -55,6 +55,32 @@ class SEn extends S {
   String get bibleChaptersHint => 'e.g. 3';
 
   @override
+  String get bibleSessionFrom => 'From';
+
+  @override
+  String get bibleSessionTo => 'To';
+
+  @override
+  String get bibleSessionBook => 'Book';
+
+  @override
+  String get bibleSessionChapter => 'Ch.';
+
+  @override
+  String bibleSessionChaptersResult(int count) {
+    return '= $count chapter(s)';
+  }
+
+  @override
+  String get addReadingSession => 'Add reading session';
+
+  @override
+  String get removeSession => 'Remove';
+
+  @override
+  String get durationCustom => 'Custom';
+
+  @override
   String get sectionLiterature => 'Christian Literature';
 
   @override
@@ -1495,4 +1521,58 @@ class SEn extends S {
   String saturdaySummaryBody(int days, int chapters, int contacts) {
     return '$days/7 days logged, $chapters chapters read, $contacts contacts evangelized. Finish strong tomorrow!';
   }
+
+  @override
+  String get cloudBackupSection => 'Cloud Backup';
+
+  @override
+  String get cloudBackupDescription =>
+      'Sign in with your Google account to back up all your data to Google Drive. Restore it on any device.';
+
+  @override
+  String get signInWithGoogle => 'Sign in with Google';
+
+  @override
+  String signedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String lastCloudBackup(String date) {
+    return 'Last backup: $date';
+  }
+
+  @override
+  String get backupToDrive => 'Back up to Google Drive';
+
+  @override
+  String get restoreFromDrive => 'Restore from Google Drive';
+
+  @override
+  String get signOut => 'Sign out';
+
+  @override
+  String get cloudBackupSuccess => 'Backed up to Google Drive!';
+
+  @override
+  String get cloudBackupFailed => 'Cloud backup failed. Check your connection.';
+
+  @override
+  String get cloudRestoreSuccess => 'Data restored from Google Drive!';
+
+  @override
+  String get cloudRestoreFailed => 'Restore failed. Check your connection.';
+
+  @override
+  String get cloudRestoreConfirmTitle => 'Restore from Cloud?';
+
+  @override
+  String get cloudRestoreConfirmBody =>
+      'This will replace all local data with the cloud backup. Are you sure?';
+
+  @override
+  String get cloudNoBackupFound => 'No backup found on your Google Drive.';
+
+  @override
+  String get cloudSignInFailed => 'Google sign-in failed. Please try again.';
 }

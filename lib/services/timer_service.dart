@@ -204,24 +204,32 @@ class TimerService extends ChangeNotifier {
 
   void _startForegroundService(TimerKey key, TimerSession session) {
     if (!Platform.isAndroid) return;
-    BackgroundTimerService.instance.startForegroundTimer(
-      label: _resolveLabel(key),
-      icon: _resolveIcon(key),
-      elapsedMs: session.currentElapsed.inMilliseconds,
-    );
+    try {
+      BackgroundTimerService.instance.startForegroundTimer(
+        label: _resolveLabel(key),
+        icon: _resolveIcon(key),
+        elapsedMs: session.currentElapsed.inMilliseconds,
+      );
+    } catch (_) {
+      // Foreground service failed — timer still works without it
+    }
   }
 
   void _pauseForegroundService(TimerKey key, TimerSession session) {
     if (!Platform.isAndroid) return;
-    BackgroundTimerService.instance.pauseForegroundTimer(
-      elapsedMs: session.currentElapsed.inMilliseconds,
-      label: _resolveLabel(key),
-    );
+    try {
+      BackgroundTimerService.instance.pauseForegroundTimer(
+        elapsedMs: session.currentElapsed.inMilliseconds,
+        label: _resolveLabel(key),
+      );
+    } catch (_) {}
   }
 
   void _stopForegroundService() {
     if (!Platform.isAndroid) return;
-    BackgroundTimerService.instance.stopForegroundTimer();
+    try {
+      BackgroundTimerService.instance.stopForegroundTimer();
+    } catch (_) {}
   }
 
   // ── Overlay helpers ───────────────────────────────────────
@@ -230,43 +238,53 @@ class TimerService extends ChangeNotifier {
 
   Future<void> _showOverlay(TimerKey key, TimerSession session) async {
     if (!Platform.isAndroid) return;
-    final granted = await FlutterOverlayWindow.isPermissionGranted();
-    if (!granted) return; // Don't show if permission not granted yet
+    try {
+      final granted = await FlutterOverlayWindow.isPermissionGranted();
+      if (!granted) return;
 
-    if (!_overlayActive) {
-      await FlutterOverlayWindow.showOverlay(
-        height: 80,
-        width: 80,
-        alignment: OverlayAlignment.topRight,
-        enableDrag: true,
-        positionGravity: PositionGravity.auto,
-        overlayTitle: 'Daily Account Timer',
-        overlayContent: 'Timer running',
-        flag: OverlayFlag.defaultFlag,
-      );
-      _overlayActive = true;
+      if (!_overlayActive) {
+        await FlutterOverlayWindow.showOverlay(
+          height: 80,
+          width: 80,
+          alignment: OverlayAlignment.topRight,
+          enableDrag: true,
+          positionGravity: PositionGravity.auto,
+          overlayTitle: 'Daily Account Timer',
+          overlayContent: 'Timer running',
+          flag: OverlayFlag.defaultFlag,
+        );
+        _overlayActive = true;
+      }
+
+      _sendOverlayData(key, session, paused: false);
+    } catch (_) {
+      // Overlay failed — timer still works without it
     }
-
-    _sendOverlayData(key, session, paused: false);
   }
 
   void _updateOverlay(TimerKey key, TimerSession session, {bool paused = false}) {
     if (!_overlayActive) return;
-    _sendOverlayData(key, session, paused: paused);
+    try {
+      _sendOverlayData(key, session, paused: paused);
+    } catch (_) {}
   }
 
   void _sendOverlayData(TimerKey key, TimerSession session, {required bool paused}) {
-    FlutterOverlayWindow.shareData({
-      'elapsed': session.stopwatchDisplay,
-      'icon': _resolveIcon(key),
-      'label': _resolveLabel(key),
-      'paused': paused,
-    });
+    try {
+      FlutterOverlayWindow.shareData({
+        'elapsed': session.stopwatchDisplay,
+        'icon': _resolveIcon(key),
+        'label': _resolveLabel(key),
+        'paused': paused,
+      });
+    } catch (_) {}
   }
 
   void _closeOverlay() {
     if (!_overlayActive) return;
-    FlutterOverlayWindow.shareData({'action': 'close'});
+    try {
+      FlutterOverlayWindow.shareData({'action': 'close'});
+    } catch (_) {}
     _overlayActive = false;
   }
 

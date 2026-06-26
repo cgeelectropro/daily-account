@@ -187,6 +187,54 @@ abstract class S {
   /// **'e.g. 3'**
   String get bibleChaptersHint;
 
+  /// No description provided for @bibleSessionFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get bibleSessionFrom;
+
+  /// No description provided for @bibleSessionTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get bibleSessionTo;
+
+  /// No description provided for @bibleSessionBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get bibleSessionBook;
+
+  /// No description provided for @bibleSessionChapter.
+  ///
+  /// In en, this message translates to:
+  /// **'Ch.'**
+  String get bibleSessionChapter;
+
+  /// No description provided for @bibleSessionChaptersResult.
+  ///
+  /// In en, this message translates to:
+  /// **'= {count} chapter(s)'**
+  String bibleSessionChaptersResult(int count);
+
+  /// No description provided for @addReadingSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Add reading session'**
+  String get addReadingSession;
+
+  /// No description provided for @removeSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeSession;
+
+  /// No description provided for @durationCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get durationCustom;
+
   /// No description provided for @sectionLiterature.
   ///
   /// In en, this message translates to:
@@ -2712,6 +2760,102 @@ abstract class S {
   /// In en, this message translates to:
   /// **'{days}/7 days logged, {chapters} chapters read, {contacts} contacts evangelized. Finish strong tomorrow!'**
   String saturdaySummaryBody(int days, int chapters, int contacts);
+
+  /// No description provided for @cloudBackupSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud Backup'**
+  String get cloudBackupSection;
+
+  /// No description provided for @cloudBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your Google account to back up all your data to Google Drive. Restore it on any device.'**
+  String get cloudBackupDescription;
+
+  /// No description provided for @signInWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get signInWithGoogle;
+
+  /// No description provided for @signedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {email}'**
+  String signedInAs(String email);
+
+  /// No description provided for @lastCloudBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup: {date}'**
+  String lastCloudBackup(String date);
+
+  /// No description provided for @backupToDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up to Google Drive'**
+  String get backupToDrive;
+
+  /// No description provided for @restoreFromDrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Google Drive'**
+  String get restoreFromDrive;
+
+  /// No description provided for @signOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get signOut;
+
+  /// No description provided for @cloudBackupSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backed up to Google Drive!'**
+  String get cloudBackupSuccess;
+
+  /// No description provided for @cloudBackupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup failed. Check your connection.'**
+  String get cloudBackupFailed;
+
+  /// No description provided for @cloudRestoreSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Data restored from Google Drive!'**
+  String get cloudRestoreSuccess;
+
+  /// No description provided for @cloudRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed. Check your connection.'**
+  String get cloudRestoreFailed;
+
+  /// No description provided for @cloudRestoreConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from Cloud?'**
+  String get cloudRestoreConfirmTitle;
+
+  /// No description provided for @cloudRestoreConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This will replace all local data with the cloud backup. Are you sure?'**
+  String get cloudRestoreConfirmBody;
+
+  /// No description provided for @cloudNoBackupFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup found on your Google Drive.'**
+  String get cloudNoBackupFound;
+
+  /// No description provided for @cloudSignInFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Google sign-in failed. Please try again.'**
+  String get cloudSignInFailed;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

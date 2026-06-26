@@ -55,6 +55,32 @@ class SFr extends S {
   String get bibleChaptersHint => 'ex. 3';
 
   @override
+  String get bibleSessionFrom => 'De';
+
+  @override
+  String get bibleSessionTo => 'À';
+
+  @override
+  String get bibleSessionBook => 'Livre';
+
+  @override
+  String get bibleSessionChapter => 'Ch.';
+
+  @override
+  String bibleSessionChaptersResult(int count) {
+    return '= $count chapitre(s)';
+  }
+
+  @override
+  String get addReadingSession => 'Ajouter une session de lecture';
+
+  @override
+  String get removeSession => 'Supprimer';
+
+  @override
+  String get durationCustom => 'Personnalisé';
+
+  @override
   String get sectionLiterature => 'Littérature Chrétienne';
 
   @override
@@ -1508,4 +1534,62 @@ class SFr extends S {
   String saturdaySummaryBody(int days, int chapters, int contacts) {
     return '$days/7 jours enregistrés, $chapters chapitres lus, $contacts contacts évangélisés. Terminez en beauté demain !';
   }
+
+  @override
+  String get cloudBackupSection => 'Sauvegarde Cloud';
+
+  @override
+  String get cloudBackupDescription =>
+      'Connectez-vous avec votre compte Google pour sauvegarder toutes vos données sur Google Drive. Restaurez-les sur n\'importe quel appareil.';
+
+  @override
+  String get signInWithGoogle => 'Se connecter avec Google';
+
+  @override
+  String signedInAs(String email) {
+    return 'Connecté en tant que $email';
+  }
+
+  @override
+  String lastCloudBackup(String date) {
+    return 'Dernière sauvegarde : $date';
+  }
+
+  @override
+  String get backupToDrive => 'Sauvegarder sur Google Drive';
+
+  @override
+  String get restoreFromDrive => 'Restaurer depuis Google Drive';
+
+  @override
+  String get signOut => 'Se déconnecter';
+
+  @override
+  String get cloudBackupSuccess => 'Sauvegardé sur Google Drive !';
+
+  @override
+  String get cloudBackupFailed =>
+      'Échec de la sauvegarde cloud. Vérifiez votre connexion.';
+
+  @override
+  String get cloudRestoreSuccess => 'Données restaurées depuis Google Drive !';
+
+  @override
+  String get cloudRestoreFailed =>
+      'Échec de la restauration. Vérifiez votre connexion.';
+
+  @override
+  String get cloudRestoreConfirmTitle => 'Restaurer depuis le cloud ?';
+
+  @override
+  String get cloudRestoreConfirmBody =>
+      'Ceci remplacera toutes les données locales par la sauvegarde cloud. Êtes-vous sûr ?';
+
+  @override
+  String get cloudNoBackupFound =>
+      'Aucune sauvegarde trouvée sur votre Google Drive.';
+
+  @override
+  String get cloudSignInFailed =>
+      'Échec de la connexion Google. Veuillez réessayer.';
 }

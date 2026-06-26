@@ -1,11 +1,8 @@
 package com.jilengineering.dailyaccount
 
 import android.appwidget.AppWidgetManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
 
@@ -36,14 +33,7 @@ class ScriptureWidgetProvider : HomeWidgetProvider() {
                 }
 
                 // Tap -> open app to log
-                val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-                val openIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                    data = Uri.parse("dailyaccount://open/log")
-                }
-                val pendingIntent = PendingIntent.getActivity(
-                    context, 100, openIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+                val pendingIntent = WidgetHelper.widgetPendingIntent(context, 100, "dailyaccount://open/log")
                 views.setOnClickPendingIntent(R.id.scripture_container, pendingIntent)
 
                 appWidgetManager.updateAppWidget(widgetId, views)

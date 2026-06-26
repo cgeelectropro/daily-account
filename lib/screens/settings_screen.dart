@@ -5,6 +5,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
 import 'package:local_auth/local_auth.dart';
 import '../services/backup_service.dart';
+import '../services/cloud_sync_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -31,9 +32,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricsAvailable = false;
   int _dailyFollowUps = 3; // default aggressive: 3 follow-ups
   int _sundayFollowUps = 2; // default aggressive: 2 follow-ups
+  String _selectedSound = 'sound_happy_bells';
   bool _loading = true;
   String _version = '';
   String _reportLanguage = ''; // empty = same as app
+
+  // Cloud sync
+  bool _cloudSignedIn = false;
+  String _cloudEmail = '';
+  String _cloudLastBackup = '';
+  bool _cloudBusy = false;
 
   // Goals
   String _goalFrequency = 'weekly'; // 'weekly' or 'daily'
@@ -80,6 +88,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
     _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
     _sundayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    _selectedSound = await s.getSetting('notifSound', fallback: 'sound_happy_bells');
     try {
       final auth = LocalAuthentication();
       _biometricsAvailable = await auth.canCheckBiometrics || await auth.isDeviceSupported();
@@ -113,6 +122,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     }
+    // Load cloud sync state
+    final cloud = CloudSyncService.instance;
+    _cloudSignedIn = cloud.isSignedIn;
+    _cloudEmail = cloud.currentUser?.email ?? '';
+    _cloudLastBackup = await s.getSetting('cloudLastBackupDate', fallback: '');
+
     if (mounted) setState(() => _loading = false);
   }
 
@@ -173,18 +188,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _saveReminders() async {
+  Future<void> _saveReminders({bool showToast = true}) async {
     final l = S.of(context);
-    // Email validation
-    if (_email.isNotEmpty && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(_email)) {
-      _toast(l.invalidEmail);
-      return;
-    }
-    // WhatsApp validation
-    if (_whatsapp.isNotEmpty && !RegExp(r'^\d{10,15}$').hasMatch(_whatsapp)) {
-      _toast(l.invalidWhatsapp);
-      return;
-    }
     final s = StorageService.instance;
     await s.setSetting('dailyHour', '${_dailyTime.hour}');
     await s.setSetting('dailyMin', '${_dailyTime.minute}');
@@ -195,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _scheduleAllNotifications();
     }
     if (!mounted) return;
-    _toast(l.remindersSaved);
+    if (showToast) _toast(l.remindersSaved);
   }
 
   // ── Auto-send ──────────────────────────────────────────────
@@ -513,6 +518,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) _toast(success ? l.importSuccess : l.importFailed);
   }
 
+  // ── Cloud Sync ─────────────────────────────────────────────
+
+  Future<void> _cloudSignIn() async {
+    final l = S.of(context);
+    setState(() => _cloudBusy = true);
+    final ok = await CloudSyncService.instance.signIn();
+    if (!mounted) return;
+    if (ok) {
+      setState(() {
+        _cloudSignedIn = true;
+        _cloudEmail = CloudSyncService.instance.currentUser?.email ?? '';
+        _cloudBusy = false;
+      });
+    } else {
+      setState(() => _cloudBusy = false);
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudSignInFailed} $detail');
+    }
+  }
+
+  Future<void> _cloudSignOut() async {
+    await CloudSyncService.instance.signOut();
+    if (!mounted) return;
+    setState(() {
+      _cloudSignedIn = false;
+      _cloudEmail = '';
+      _cloudLastBackup = '';
+    });
+  }
+
+  Future<void> _cloudBackup() async {
+    final l = S.of(context);
+    setState(() => _cloudBusy = true);
+    final ok = await CloudSyncService.instance.backupToDrive();
+    if (!mounted) return;
+    setState(() => _cloudBusy = false);
+    if (ok) {
+      final now = DateTime.now().toIso8601String();
+      setState(() => _cloudLastBackup = now);
+      _toast(l.cloudBackupSuccess);
+    } else {
+      _toast(l.cloudBackupFailed);
+    }
+  }
+
+  Future<void> _cloudRestore() async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.cloudRestoreConfirmTitle, style: AppTheme.display(18, color: accent)),
+        content: Text(l.cloudRestoreConfirmBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.restoreButton, style: TextStyle(color: accent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _cloudBusy = true);
+    final data = await CloudSyncService.instance.downloadFromDrive();
+    if (!mounted) return;
+    if (data == null) {
+      setState(() => _cloudBusy = false);
+      _toast(l.cloudNoBackupFound);
+      return;
+    }
+    final ok = await BackupService.instance.importData(data, merge: false);
+    if (!mounted) return;
+    setState(() => _cloudBusy = false);
+    _toast(ok ? l.cloudRestoreSuccess : l.cloudRestoreFailed);
+  }
+
   // ── Reset ──────────────────────────────────────────────────
 
   Future<void> _resetAll() async {
@@ -584,10 +670,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onTap: () async {
           DailyAccountApp.setLocale(context, Locale(code));
           await StorageService.instance.setSetting('appLocale', code);
-          await HomeWidget.saveWidgetData('widget_locale', code);
-          await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
-          await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
-          await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+          try {
+            await HomeWidget.saveWidgetData('widget_locale', code);
+            await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
+            await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
+            await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+          } catch (_) {}
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -655,6 +743,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (picked != null) {
       setState(() => daily ? _dailyTime = picked : _sundayTime = picked);
+      // Auto-save and schedule immediately so the user doesn't have to tap Save
+      await _saveReminders(showToast: false);
     }
   }
 
@@ -838,7 +928,162 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            // ── Notification sound picker ──
+            Text('NOTIFICATION SOUND',
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            ...NotificationService.notificationSounds.entries.map((entry) {
+              final selected = _selectedSound == entry.key;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: GestureDetector(
+                  onTap: () async {
+                    setState(() => _selectedSound = entry.key);
+                    await NotificationService.instance.setNotificationSound(entry.key);
+                    await NotificationService.instance.previewSound(entry.key);
+                    await _saveReminders(showToast: false);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? accent.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected
+                            ? accent
+                            : accent.withValues(alpha: 0.15),
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: selected ? accent : mutedCol,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '\uD83D\uDD14 ${entry.value}',
+                          style: AppTheme.serif(13, color: selected ? textCol : mutedCol),
+                        ),
+                        const Spacer(),
+                        if (selected)
+                          Text('Playing', style: AppTheme.label(10, color: accent)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 14),
+            // ── Notification health check ──
+            Builder(builder: (_) {
+              final diag = NotificationService.instance.diagnostics;
+              final stats = NotificationService.instance.scheduleStats;
+              final allGood = diag.values.every((v) => v);
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: (allGood ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: (allGood ? Colors.green : Colors.orange).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(allGood ? '\u2705' : '\u26A0\uFE0F', style: const TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Text(
+                          allGood ? 'Notifications healthy' : 'Notification issues detected',
+                          style: AppTheme.serif(13, color: textCol),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    _diagRow('Permission granted', diag['notificationPermission'] ?? false),
+                    _diagRow('Exact alarms', diag['exactAlarmPermission'] ?? false),
+                    Row(
+                      children: [
+                        Expanded(child: _diagRow('Battery optimized', diag['batteryOptExempt'] ?? false)),
+                        if (!(diag['batteryOptExempt'] ?? false))
+                          GestureDetector(
+                            onTap: () async {
+                              await NotificationService.instance.requestBatteryOptimizationExemption();
+                              if (mounted) setState(() {});
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                              ),
+                              child: Text('Fix', style: AppTheme.label(10, color: Colors.orange)),
+                            ),
+                          ),
+                      ],
+                    ),
+                    Text(
+                      'Scheduled: ${stats.$1} | Failed: ${stats.$2}',
+                      style: AppTheme.label(10, color: mutedCol),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              final ok = await NotificationService.instance.testNotification();
+                              if (mounted) _toast(ok ? 'Test notification sent!' : 'Failed to send test notification');
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: accent.withValues(alpha: 0.4)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('Test notification', style: AppTheme.label(11, color: accent)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              await NotificationService.instance.rescheduleAll();
+                              if (mounted) {
+                                setState(() {});
+                                _toast('All notifications rescheduled');
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: accent.withValues(alpha: 0.4)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('Reschedule all', style: AppTheme.label(11, color: accent)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 14),
             _timeRow(l.dailyReminder, _dailyTime, () => _pickTime(true)),
             const SizedBox(height: 8),
             // Daily follow-ups slider
@@ -850,6 +1095,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) async {
                 setState(() => _dailyFollowUps = v);
                 await StorageService.instance.setSetting('dailyFollowUps', '$v');
+                await _saveReminders(showToast: false);
               },
             ),
             const SizedBox(height: 12),
@@ -864,6 +1110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (v) async {
                 setState(() => _sundayFollowUps = v);
                 await StorageService.instance.setSetting('sundayFollowUps', '$v');
+                await _saveReminders(showToast: false);
               },
             ),
             const SizedBox(height: 8),
@@ -931,6 +1178,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _reportLanguageCard('Français', 'fr', accent, textCol),
             ],
           ),
+        ]),
+
+        // ── Cloud Backup ──
+        SectionCard(icon: '☁️', title: l.cloudBackupSection, children: [
+          if (!_cloudSignedIn) ...[
+            Text(l.cloudBackupDescription, style: AppTheme.serif(12, color: mutedCol)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudSignIn,
+                icon: _cloudBusy
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                    : const Icon(Icons.login, color: AppTheme.bg0),
+                label: Text(l.signInWithGoogle, style: const TextStyle(color: AppTheme.bg0)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  disabledBackgroundColor: accent.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Signed-in status bar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.cloud_done, color: AppTheme.green, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(l.signedInAs(_cloudEmail), style: AppTheme.serif(12, color: AppTheme.green))),
+                    ],
+                  ),
+                  if (_cloudLastBackup.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      l.lastCloudBackup(_cloudLastBackup.substring(0, 16).replaceFirst('T', ' ')),
+                      style: AppTheme.serif(11, color: mutedCol),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudBackup,
+                icon: _cloudBusy
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                    : Icon(Icons.cloud_upload, color: accent),
+                label: Text(l.backupToDrive, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudRestore,
+                icon: Icon(Icons.cloud_download, color: accent),
+                label: Text(l.restoreFromDrive, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _cloudBusy ? null : _cloudSignOut,
+                child: Text(l.signOut, style: AppTheme.serif(12, color: mutedCol)),
+              ),
+            ),
+          ],
         ]),
 
         // ── Backup ──
@@ -1028,11 +1356,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Column(
             children: [
-              Text('✝️', style: TextStyle(fontSize: 28, color: accent)),
+              Image.asset('assets/cmfilogo.png', width: 55, height: 55),
               const SizedBox(height: 8),
               Text(l.appTitle, style: AppTheme.display(18, color: accent)),
               const SizedBox(height: 4),
               Text(l.appVersion(_version), style: AppTheme.serif(12, color: mutedCol)),
+              const SizedBox(height: 4),
+              Text('CMFI', style: AppTheme.label(10, color: accent.withValues(alpha: 0.7))),
               const SizedBox(height: 12),
               Text(l.aboutDescription, textAlign: TextAlign.center, style: AppTheme.serif(13, color: textCol)),
               const SizedBox(height: 8),
@@ -1147,6 +1477,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _diagRow(String label, bool ok) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(ok ? Icons.check_circle : Icons.cancel,
+              size: 14, color: ok ? Colors.green : Colors.orange),
+          const SizedBox(width: 6),
+          Text(label, style: AppTheme.label(11, color: AppTheme.mutedColor(context))),
+        ],
       ),
     );
   }

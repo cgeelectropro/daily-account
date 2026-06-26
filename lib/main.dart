@@ -6,6 +6,7 @@ import 'screens/lock_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/backup_service.dart';
 import 'services/background_timer_service.dart';
+import 'services/cloud_sync_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/timer_service.dart';
@@ -14,11 +15,13 @@ import 'widgets/timer_overlay.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await NotificationService.instance.init();
-  await BackgroundTimerService.instance.init();
-  await TimerService.instance.init();
+  try { await NotificationService.instance.init(); } catch (_) {}
+  try { await BackgroundTimerService.instance.init(); } catch (_) {}
+  try { await TimerService.instance.init(); } catch (_) {}
   // Silent auto-backup on every app start (skips if < 6 hours since last)
   BackupService.instance.autoBackup();
+  // Restore Google sign-in session (fire-and-forget)
+  CloudSyncService.instance.silentSignIn();
   runApp(const DailyAccountApp());
 }
 

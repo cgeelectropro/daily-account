@@ -1,9 +1,14 @@
-// android/app/src/main/kotlin/com/example/daily_account/WidgetHelper.kt
+// android/app/src/main/kotlin/com/jilengineering/dailyaccount/WidgetHelper.kt
 package com.jilengineering.dailyaccount
 
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.content.res.Configuration
+import android.net.Uri
+import android.os.Build
 import org.json.JSONArray
 import java.util.Calendar
 import java.util.Locale
@@ -140,5 +145,76 @@ object WidgetHelper {
         pct >= 50 -> GOLD
         pct > 0   -> GOLD_SOFT
         else      -> CLAY
+    }
+
+    /**
+     * Create a PendingIntent that routes through home_widget's click handler.
+     * This ensures HomeWidget.widgetClicked stream receives the URI on the Flutter side.
+     * NOTE: This launches the app — use [widgetBroadcastIntent] for in-widget actions.
+     *
+     * @param requestCode unique per-button code to avoid PendingIntent deduplication
+     * @param uri the deep link URI (e.g. "dailyaccount://toggle/bible")
+     */
+    fun widgetPendingIntent(context: Context, requestCode: Int, uri: String): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = "es.antonborri.home_widget.action.LAUNCH"
+            data = Uri.parse(uri)
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getActivity(context, requestCode, intent, flags)
+    }
+
+    // ── Broadcast-based widget actions (no app launch) ──
+
+    const val ACTION_WIDGET_ACTION = "com.jilengineering.dailyaccount.WIDGET_ACTION"
+    const val EXTRA_ACTION_TYPE = "action_type"
+    const val EXTRA_ACTION_DATA = "action_data"
+
+    /**
+     * Create a PendingIntent that sends a broadcast to a widget provider.
+     * The widget handles the action in onReceive — the app does NOT open.
+     *
+     * @param receiverClass the widget provider class (e.g. ProclamationWidgetProvider::class.java)
+     * @param requestCode unique code to avoid PendingIntent deduplication
+     * @param actionType identifier like "increment" or "toggle"
+     * @param actionData extra data like discipline key
+     */
+    fun widgetBroadcastIntent(
+        context: Context,
+        receiverClass: Class<*>,
+        requestCode: Int,
+        actionType: String,
+        actionData: String = ""
+    ): PendingIntent {
+        val intent = Intent(context, receiverClass).apply {
+            action = ACTION_WIDGET_ACTION
+            putExtra(EXTRA_ACTION_TYPE, actionType)
+            putExtra(EXTRA_ACTION_DATA, actionData)
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return PendingIntent.getBroadcast(context, requestCode, intent, flags)
+    }
+
+    /**
+     * Get the home_widget SharedPreferences (same store Flutter reads/writes).
+     */
+    fun getWidgetPrefs(context: Context): SharedPreferences {
+        return context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+    }
+
+    /**
+     * Force-update all instances of a widget provider class.
+     */
+    fun updateAllWidgets(context: Context, providerClass: Class<*>) {
+        val manager = AppWidgetManager.getInstance(context)
+        val component = android.content.ComponentName(context, providerClass)
+        val ids = manager.getAppWidgetIds(component)
+        if (ids.isNotEmpty()) {
+            val intent = Intent(context, providerClass).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+            }
+            context.sendBroadcast(intent)
+        }
     }
 }

@@ -18,6 +18,15 @@
   "bibleRefHint": "e.g. John 3; Romans 8",
   "bibleChaptersLabel": "Number of Chapters",
   "bibleChaptersHint": "e.g. 3",
+  "bibleSessionFrom": "From",
+  "bibleSessionTo": "To",
+  "bibleSessionBook": "Book",
+  "bibleSessionChapter": "Ch.",
+  "bibleSessionChaptersResult": "= {count} chapter(s)",
+  "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
+  "addReadingSession": "Add reading session",
+  "removeSession": "Remove",
+  "durationCustom": "Custom",
 
   "sectionLiterature": "Christian Literature",
   "bookTitleLabel": "Book Title",
@@ -662,5 +671,24 @@
 
   "saturdaySummaryTitle": "Your week so far",
   "saturdaySummaryBody": "{days}/7 days logged, {chapters} chapters read, {contacts} contacts evangelized. Finish strong tomorrow!",
-  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } }
+  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } },
+
+  "cloudBackupSection": "Cloud Backup",
+  "cloudBackupDescription": "Sign in with your Google account to back up all your data to Google Drive. Restore it on any device.",
+  "signInWithGoogle": "Sign in with Google",
+  "signedInAs": "Signed in as {email}",
+  "@signedInAs": { "placeholders": { "email": { "type": "String" } } },
+  "lastCloudBackup": "Last backup: {date}",
+  "@lastCloudBackup": { "placeholders": { "date": { "type": "String" } } },
+  "backupToDrive": "Back up to Google Drive",
+  "restoreFromDrive": "Restore from Google Drive",
+  "signOut": "Sign out",
+  "cloudBackupSuccess": "Backed up to Google Drive!",
+  "cloudBackupFailed": "Cloud backup failed. Check your connection.",
+  "cloudRestoreSuccess": "Data restored from Google Drive!",
+  "cloudRestoreFailed": "Restore failed. Check your connection.",
+  "cloudRestoreConfirmTitle": "Restore from Cloud?",
+  "cloudRestoreConfirmBody": "This will replace all local data with the cloud backup. Are you sure?",
+  "cloudNoBackupFound": "No backup found on your Google Drive.",
+  "cloudSignInFailed": "Google sign-in failed. Please try again."
 }

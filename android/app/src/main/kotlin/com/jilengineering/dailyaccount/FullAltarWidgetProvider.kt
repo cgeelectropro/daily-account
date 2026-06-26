@@ -1,17 +1,63 @@
 package com.jilengineering.dailyaccount
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetProvider
 
 class FullAltarWidgetProvider : HomeWidgetProvider() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == WidgetHelper.ACTION_WIDGET_ACTION) {
+            val actionType = intent.getStringExtra(WidgetHelper.EXTRA_ACTION_TYPE) ?: ""
+            val actionData = intent.getStringExtra(WidgetHelper.EXTRA_ACTION_DATA) ?: ""
+            when (actionType) {
+                "toggle" -> if (actionData.isNotEmpty()) {
+                    toggleDiscipline(context, actionData)
+                    return
+                }
+            }
+        }
+        super.onReceive(context, intent)
+    }
+
+    /**
+     * Toggle a discipline directly in SharedPreferences and refresh.
+     */
+    private fun toggleDiscipline(context: Context, disciplineKey: String) {
+        val prefs = WidgetHelper.getWidgetPrefs(context)
+        val prefsKey = when (disciplineKey) {
+            "bible" -> "d_bible"
+            "literature" -> "d_lit"
+            "ddeg" -> "d_ddeg"
+            "prayerAlone" -> "d_prayer"
+            "evangelism" -> "d_evangelism"
+            else -> return
+        }
+        val current = prefs.getString(prefsKey, "0") ?: "0"
+        val newValue = if (current == "1") "0" else "1"
+        prefs.edit().putString(prefsKey, newValue).apply()
+
+        // Update completion percentage
+        recalculateCompletion(prefs)
+
+        // Refresh both widget types
+        WidgetHelper.updateAllWidgets(context, FullAltarWidgetProvider::class.java)
+        WidgetHelper.updateAllWidgets(context, DisciplineBarWidgetProvider::class.java)
+    }
+
+    private fun recalculateCompletion(prefs: SharedPreferences) {
+        var done = 0
+        for (key in WidgetHelper.DISC_KEYS_PREFS) {
+            if (prefs.getString(key, "0") == "1") done++
+        }
+        val pct = (done * 100) / WidgetHelper.DISC_KEYS_PREFS.size
+        prefs.edit().putString("completion", "$pct").apply()
+    }
 
     override fun onUpdate(
         context: Context,
@@ -32,7 +78,6 @@ class FullAltarWidgetProvider : HomeWidgetProvider() {
             try {
                 val views = RemoteViews(context.packageName, R.layout.widget_full_altar)
                 val locale = WidgetHelper.getLocale(widgetData)
-                val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
 
                 // ── TOP ZONE: Scripture ──
                 val (scriptureText, scriptureRef, _) =
@@ -64,25 +109,19 @@ class FullAltarWidgetProvider : HomeWidgetProvider() {
                     )
                     views.setTextColor(viewId, if (done) WidgetHelper.WHITE else WidgetHelper.CLAY)
 
-                    // Quick-toggle
-                    val toggleIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                        data = Uri.parse("dailyaccount://toggle/${WidgetHelper.DISC_KEYS_TOGGLE[i]}")
-                    }
-                    val togglePending = PendingIntent.getActivity(
-                        context, 300 + i, toggleIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    // Quick-toggle via broadcast — does NOT open the app
+                    val togglePending = WidgetHelper.widgetBroadcastIntent(
+                        context,
+                        FullAltarWidgetProvider::class.java,
+                        300 + i,
+                        "toggle",
+                        WidgetHelper.DISC_KEYS_TOGGLE[i]
                     )
                     views.setOnClickPendingIntent(viewId, togglePending)
                 }
 
                 // Ring -> open app
-                val openLogIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                    data = Uri.parse("dailyaccount://open/log")
-                }
-                val openLogPending = PendingIntent.getActivity(
-                    context, 310, openLogIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
+                val openLogPending = WidgetHelper.widgetPendingIntent(context, 310, "dailyaccount://open/log")
                 views.setOnClickPendingIntent(R.id.altar_ring_area, openLogPending)
 
                 // ── BOTTOM ZONE: Timer (adaptive) ──
@@ -109,25 +148,13 @@ class FullAltarWidgetProvider : HomeWidgetProvider() {
                         views.setTextColor(R.id.altar_timer_dot, WidgetHelper.CLAY)
                     }
 
-                    // Pause/Resume button
-                    val pauseIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                        data = Uri.parse("dailyaccount://timer/pause")
-                    }
-                    val pausePending = PendingIntent.getActivity(
-                        context, 320, pauseIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
+                    // Pause/Resume button — these still need the app for timer control
+                    val pausePending = WidgetHelper.widgetPendingIntent(context, 320, "dailyaccount://timer/pause")
                     views.setOnClickPendingIntent(R.id.altar_btn_pause, pausePending)
                     views.setTextViewText(R.id.altar_btn_pause, if (timerPaused) "\u25B6" else "\u23F8")
 
                     // Stop button
-                    val stopIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                        data = Uri.parse("dailyaccount://timer/stop")
-                    }
-                    val stopPending = PendingIntent.getActivity(
-                        context, 321, stopIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
+                    val stopPending = WidgetHelper.widgetPendingIntent(context, 321, "dailyaccount://timer/stop")
                     views.setOnClickPendingIntent(R.id.altar_btn_stop, stopPending)
 
                 } else if (showPicker) {
@@ -155,12 +182,9 @@ class FullAltarWidgetProvider : HomeWidgetProvider() {
                         R.id.altar_pick_literature
                     )
                     for (i in pickerIds.indices) {
-                        val startIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                            data = Uri.parse("dailyaccount://timer/start/${timerDisciplines[i]}")
-                        }
-                        val startPending = PendingIntent.getActivity(
-                            context, 330 + i, startIntent,
-                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        val startPending = WidgetHelper.widgetPendingIntent(
+                            context, 330 + i,
+                            "dailyaccount://timer/start/${timerDisciplines[i]}"
                         )
                         views.setOnClickPendingIntent(pickerIds[i], startPending)
                     }
@@ -189,13 +213,7 @@ class FullAltarWidgetProvider : HomeWidgetProvider() {
                         WidgetHelper.getLocalizedString(context, locale, R.string.widget_open_log)
                     )
 
-                    val pickerIntent = (launchIntent?.clone() as? Intent ?: Intent()).apply {
-                        data = Uri.parse("dailyaccount://timer/picker")
-                    }
-                    val pickerPending = PendingIntent.getActivity(
-                        context, 340, pickerIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
+                    val pickerPending = WidgetHelper.widgetPendingIntent(context, 340, "dailyaccount://timer/picker")
                     views.setOnClickPendingIntent(R.id.altar_btn_start_timer, pickerPending)
 
                     views.setOnClickPendingIntent(R.id.altar_btn_open_log, openLogPending)

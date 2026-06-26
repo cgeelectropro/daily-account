@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/bible_books.dart';
 
 /// A single literature entry — a disciple may read from several books a day.
 class LiteratureEntry {
@@ -17,6 +18,77 @@ class LiteratureEntry {
       );
 }
 
+/// A single Bible reading session — start and end reference with auto-calculated chapters.
+class BibleReadingEntry {
+  String startBook;    // English canonical name (e.g. "Genesis")
+  int startChapter;
+  String endBook;      // English canonical name (empty = same as startBook)
+  int endChapter;
+  int chaptersRead;    // auto-calculated
+
+  BibleReadingEntry({
+    this.startBook = '',
+    this.startChapter = 0,
+    this.endBook = '',
+    this.endChapter = 0,
+    this.chaptersRead = 0,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'startBook': startBook,
+    'startChapter': startChapter,
+    'endBook': endBook,
+    'endChapter': endChapter,
+    'chaptersRead': chaptersRead,
+  };
+
+  factory BibleReadingEntry.fromMap(Map<String, dynamic> m) => BibleReadingEntry(
+    startBook: m['startBook'] ?? '',
+    startChapter: m['startChapter'] ?? 0,
+    endBook: m['endBook'] ?? '',
+    endChapter: m['endChapter'] ?? 0,
+    chaptersRead: m['chaptersRead'] ?? 0,
+  );
+
+  /// Recalculate chaptersRead from start/end references.
+  void recalculate() {
+    if (startBook.isEmpty || startChapter < 1) {
+      chaptersRead = 0;
+      return;
+    }
+    final effectiveEndBook = endBook.isEmpty ? startBook : endBook;
+    final effectiveEndChapter = endChapter < 1 ? startChapter : endChapter;
+    final startRef = '$startBook $startChapter';
+    final endRef = '$effectiveEndBook $effectiveEndChapter';
+    chaptersRead = BibleBooks.calculateChapters(startRef, endRef) ?? 1;
+  }
+
+  /// Localized display string (e.g. "Genèse 1 – Exode 3" in French).
+  String localizedDisplay(String locale) {
+    if (startBook.isEmpty) return '';
+    final sb = BibleBooks.findBook(startBook);
+    if (sb == null) return '$startBook $startChapter';
+    final startName = locale.startsWith('fr') ? sb.nameFr : sb.nameEn;
+    final start = '$startName $startChapter';
+
+    final effectiveEndBook = endBook.isEmpty ? startBook : endBook;
+    final effectiveEndChapter = endChapter < 1 ? startChapter : endChapter;
+
+    if (effectiveEndBook == startBook && effectiveEndChapter == startChapter) {
+      return start;
+    }
+
+    final eb = BibleBooks.findBook(effectiveEndBook);
+    if (eb == null) return start;
+    final endName = locale.startsWith('fr') ? eb.nameFr : eb.nameEn;
+    final end = '$endName $effectiveEndChapter';
+    return '$start \u2013 $end';
+  }
+
+  bool get isEmpty => startBook.isEmpty;
+  bool get isNotEmpty => startBook.isNotEmpty;
+}
+
 /// The complete daily account for a single date.
 class DailyLog {
   String dateKey; // yyyy-MM-dd  (primary key)
@@ -24,6 +96,9 @@ class DailyLog {
   // Bible
   String bibleReference;
   String bibleChapters;
+
+  // Bible reading sessions (structured — replaces free-text for new entries)
+  List<BibleReadingEntry> bibleSessions;
 
   // Literature (multiple)
   List<LiteratureEntry> literature;
@@ -85,6 +160,7 @@ class DailyLog {
     required this.dateKey,
     this.bibleReference = '',
     this.bibleChapters = '',
+    List<BibleReadingEntry>? bibleSessions,
     List<LiteratureEntry>? literature,
     this.ddegScripture = '',
     this.ddegTime = '',
@@ -116,13 +192,14 @@ class DailyLog {
     this.voiceNotePath = '',
     this.aiReflection = '',
     this.completed = false,
-  }) : literature = literature ?? [LiteratureEntry()];
+  }) : bibleSessions = bibleSessions ?? [],
+       literature = literature ?? [LiteratureEntry()];
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
   /// Based on 10 core CMFI disciplines ("Other" is optional, not counted).
   double get completeness {
     final checks = <bool>[
-      bibleReference.isNotEmpty || bibleChapters.isNotEmpty,
+      bibleReference.isNotEmpty || bibleChapters.isNotEmpty || bibleSessions.any((s) => s.isNotEmpty),
       literature.any((l) => l.title.isNotEmpty),
       ddegScripture.isNotEmpty || ddegNotes.isNotEmpty,
       prayerAloneDuration.isNotEmpty,
@@ -142,6 +219,7 @@ class DailyLog {
         'dateKey': dateKey,
         'bibleReference': bibleReference,
         'bibleChapters': bibleChapters,
+        'bibleSessions': jsonEncode(bibleSessions.map((s) => s.toMap()).toList()),
         'literature': jsonEncode(literature.map((l) => l.toMap()).toList()),
         'ddegScripture': ddegScripture,
         'ddegTime': ddegTime,
@@ -175,6 +253,25 @@ class DailyLog {
         'completed': completed ? 1 : 0,
       };
 
+  /// Total chapters from structured sessions.
+  int get totalSessionChapters =>
+      bibleSessions.fold(0, (sum, s) => sum + s.chaptersRead);
+
+  /// Total bible chapters: sessions + legacy field.
+  int get totalBibleChapters =>
+      totalSessionChapters + (int.tryParse(bibleChapters) ?? 0);
+
+  /// Combined reference display for reports.
+  String combinedBibleReference(String locale) {
+    final parts = <String>[];
+    for (final s in bibleSessions) {
+      final display = s.localizedDisplay(locale);
+      if (display.isNotEmpty) parts.add(display);
+    }
+    if (parts.isEmpty && bibleReference.isNotEmpty) parts.add(bibleReference);
+    return parts.join('; ');
+  }
+
   factory DailyLog.fromMap(Map<String, dynamic> m) {
     List<LiteratureEntry> lit = [LiteratureEntry()];
     try {
@@ -186,10 +283,20 @@ class DailyLog {
       }
     } catch (_) {}
 
+    List<BibleReadingEntry> sessions = [];
+    try {
+      final rawSessions = m['bibleSessions'];
+      if (rawSessions != null && rawSessions.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawSessions) as List;
+        sessions = decoded.map((e) => BibleReadingEntry.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+    } catch (_) {}
+
     return DailyLog(
       dateKey: m['dateKey'],
       bibleReference: m['bibleReference'] ?? '',
       bibleChapters: m['bibleChapters'] ?? '',
+      bibleSessions: sessions,
       literature: lit,
       ddegScripture: m['ddegScripture'] ?? '',
       ddegTime: m['ddegTime'] ?? '',

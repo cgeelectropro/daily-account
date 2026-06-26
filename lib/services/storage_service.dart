@@ -27,7 +27,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -64,7 +64,8 @@ class StorageService {
             evangelismNewBelievers TEXT DEFAULT '',
             evangelismBeingDiscipled TEXT DEFAULT '',
             evangelismFollowUpNotes TEXT DEFAULT '',
-            voiceNotePath TEXT DEFAULT ''
+            voiceNotePath TEXT DEFAULT '',
+            bibleSessions TEXT DEFAULT ''
           )
         ''');
         await _createSavedReportsTable(db);
@@ -72,38 +73,74 @@ class StorageService {
         await _createFastingPeriodsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          final newCols = [
-            'fastingType', 'fastingDuration', 'fastingPrayerFocus',
-            'givingType', 'givingAmount', 'givingPurpose',
-            'churchType', 'churchNotes',
-            'discipleshipWho', 'discipleshipTopic', 'discipleshipDuration',
-          ];
-          for (final col in newCols) {
-            await db.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+        await db.transaction((txn) async {
+          if (oldVersion < 2) {
+            final newCols = [
+              'fastingType', 'fastingDuration', 'fastingPrayerFocus',
+              'givingType', 'givingAmount', 'givingPurpose',
+              'churchType', 'churchNotes',
+              'discipleshipWho', 'discipleshipTopic', 'discipleshipDuration',
+            ];
+            for (final col in newCols) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
           }
-        }
-        if (oldVersion < 3) {
-          await _createSavedReportsTable(db);
-        }
-        if (oldVersion < 4) {
-          await db.execute("ALTER TABLE logs ADD COLUMN proclamationCount TEXT DEFAULT ''");
-          await db.execute("ALTER TABLE logs ADD COLUMN proclamationDuration TEXT DEFAULT ''");
-        }
-        if (oldVersion < 5) {
-          await _createPrayerRequestsTable(db);
-        }
-        if (oldVersion < 6) {
-          for (final col in ['evangelismNewBelievers', 'evangelismBeingDiscipled', 'evangelismFollowUpNotes']) {
-            await db.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+          if (oldVersion < 3) {
+            await txn.execute('''
+              CREATE TABLE IF NOT EXISTS saved_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                weekStart TEXT,
+                weekEnd TEXT,
+                fullReport TEXT,
+                compactReport TEXT,
+                generatedAt TEXT,
+                sentVia TEXT DEFAULT '',
+                sentAt TEXT DEFAULT ''
+              )
+            ''');
           }
-        }
-        if (oldVersion < 7) {
-          await db.execute("ALTER TABLE logs ADD COLUMN voiceNotePath TEXT DEFAULT ''");
-        }
-        if (oldVersion < 8) {
-          await _createFastingPeriodsTable(db);
-        }
+          if (oldVersion < 4) {
+            await txn.execute("ALTER TABLE logs ADD COLUMN proclamationCount TEXT DEFAULT ''");
+            await txn.execute("ALTER TABLE logs ADD COLUMN proclamationDuration TEXT DEFAULT ''");
+          }
+          if (oldVersion < 5) {
+            await txn.execute('''
+              CREATE TABLE IF NOT EXISTS prayer_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                description TEXT DEFAULT '',
+                category TEXT DEFAULT 'personal',
+                createdAt TEXT,
+                answeredAt TEXT DEFAULT '',
+                answerNote TEXT DEFAULT '',
+                isAnswered INTEGER DEFAULT 0
+              )
+            ''');
+          }
+          if (oldVersion < 6) {
+            for (final col in ['evangelismNewBelievers', 'evangelismBeingDiscipled', 'evangelismFollowUpNotes']) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
+          }
+          if (oldVersion < 7) {
+            await txn.execute("ALTER TABLE logs ADD COLUMN voiceNotePath TEXT DEFAULT ''");
+          }
+          if (oldVersion < 8) {
+            await txn.execute('''
+              CREATE TABLE IF NOT EXISTS fasting_periods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                startDate TEXT,
+                endDate TEXT,
+                type TEXT,
+                prayerFocus TEXT DEFAULT '',
+                completed INTEGER DEFAULT 0
+              )
+            ''');
+          }
+          if (oldVersion < 9) {
+            await txn.execute("ALTER TABLE logs ADD COLUMN bibleSessions TEXT DEFAULT ''");
+          }
+        });
       },
     );
   }

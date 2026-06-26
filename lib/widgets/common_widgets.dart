@@ -334,3 +334,160 @@ class _GoldFieldAutocompleteState extends State<_GoldFieldAutocomplete> {
     );
   }
 }
+
+/// A duration field with quick-select chips and optional custom text entry.
+/// Writes values like "15 minutes", "30 minutes", etc.
+class DurationQuickPick extends StatefulWidget {
+  final String label;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String customLabel;
+  final List<int> presets;
+
+  const DurationQuickPick({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.customLabel = '...',
+    this.presets = const [15, 30, 45, 60, 90],
+  });
+
+  @override
+  State<DurationQuickPick> createState() => _DurationQuickPickState();
+}
+
+class _DurationQuickPickState extends State<DurationQuickPick> {
+  bool _showCustom = false;
+  late TextEditingController _customController;
+
+  @override
+  void initState() {
+    super.initState();
+    _customController = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(DurationQuickPick old) {
+    super.didUpdateWidget(old);
+    if (old.value != widget.value && widget.value != _customController.text) {
+      _customController.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _customController.dispose();
+    super.dispose();
+  }
+
+  /// Try to extract minutes from stored value like "30 minutes", "30", "45 min"
+  int? _parseMinutes(String s) {
+    if (s.isEmpty) return null;
+    final match = RegExp(r'^(\d+)').firstMatch(s.trim());
+    if (match == null) return null;
+    return int.tryParse(match.group(1)!);
+  }
+
+  String _chipLabel(int mins) {
+    if (mins >= 60 && mins % 60 == 0) return '${mins ~/ 60}h';
+    if (mins > 60) return '${mins ~/ 60}h${mins % 60}m';
+    return '${mins}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+    final textCol = AppTheme.textColor(context);
+    final currentMinutes = _parseMinutes(widget.value);
+    final isPreset = widget.presets.contains(currentMinutes);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.label.toUpperCase(),
+            style: AppTheme.label(11, color: accent.withValues(alpha: 0.7)),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              ...widget.presets.map((mins) {
+                final isSelected = currentMinutes == mins && !_showCustom;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _showCustom = false);
+                    widget.onChanged('$mins minutes');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? accent.withValues(alpha: 0.2)
+                          : (dark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.04)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? accent : accent.withValues(alpha: 0.2),
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      _chipLabel(mins),
+                      style: AppTheme.serif(13, color: isSelected ? accent : textCol),
+                    ),
+                  ),
+                );
+              }),
+              // Custom chip
+              GestureDetector(
+                onTap: () => setState(() => _showCustom = true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: (_showCustom || (!isPreset && widget.value.isNotEmpty))
+                        ? accent.withValues(alpha: 0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: accent.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    widget.customLabel,
+                    style: AppTheme.serif(13, color: accent),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_showCustom || (!isPreset && widget.value.isNotEmpty))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextFormField(
+                controller: _customController,
+                onChanged: widget.onChanged,
+                style: AppTheme.serif(15, color: textCol),
+                decoration: InputDecoration(
+                  hintText: 'e.g. 2 hours',
+                  hintStyle: AppTheme.serif(14, color: textCol.withValues(alpha: 0.3)),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3)),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: accent),
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

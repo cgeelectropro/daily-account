@@ -44,6 +44,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _weekMonday = _mondayOf(DateTime.now());
+    _syncWidgetChangesToDb();
     _loadWeekCompletion();
     _updateHomeWidget();
     _checkPendingReport();
@@ -66,10 +67,71 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Sync any changes made by widget broadcasts (toggles, proclamation++)
+      // back into the SQLite log before refreshing the UI.
+      _syncWidgetChangesToDb();
       // Re-schedule notifications on every foreground return.
       // Android can silently drop alarms after Doze, battery optimization,
       // or OEM power management — re-scheduling guarantees they stay alive.
       NotificationService.instance.rescheduleAll();
+    }
+  }
+
+  /// Sync widget-side changes back to the SQLite database.
+  ///
+  /// When widgets handle actions via broadcast (toggle disciplines,
+  /// increment proclamation), they write directly to SharedPreferences
+  /// but can't update SQLite. This method reads the widget prefs and
+  /// merges any changes into today's DailyLog.
+  Future<void> _syncWidgetChangesToDb() async {
+    try {
+      final key = _key(DateTime.now());
+      final storage = StorageService.instance;
+      final existing = await storage.getLog(key);
+      final log = existing ?? DailyLog(dateKey: key);
+      bool changed = false;
+
+      // Sync proclamation count
+      final widgetProcCount = await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0';
+      final widgetCount = int.tryParse(widgetProcCount) ?? 0;
+      final dbCount = int.tryParse(log.proclamationCount) ?? 0;
+      if (widgetCount > dbCount) {
+        log.proclamationCount = '$widgetCount';
+        changed = true;
+      }
+
+      // Sync discipline toggles
+      final toggleMap = {
+        'd_bible': () => log.bibleReference,
+        'd_lit': () => log.literature.any((l) => l.title.isNotEmpty) ? '1' : '',
+        'd_ddeg': () => log.ddegScripture,
+        'd_prayer': () => log.prayerAloneDuration,
+        'd_evangelism': () => log.evangelismContacts,
+      };
+      final setters = <String, void Function(bool)>{
+        'd_bible': (on) => log.bibleReference = on ? '\u2713' : '',
+        'd_lit': (on) => log.literature = on ? [LiteratureEntry(title: '\u2713')] : [LiteratureEntry()],
+        'd_ddeg': (on) => log.ddegScripture = on ? '\u2713' : '',
+        'd_prayer': (on) => log.prayerAloneDuration = on ? '\u2713' : '',
+        'd_evangelism': (on) => log.evangelismContacts = on ? '1' : '',
+      };
+
+      for (final entry in toggleMap.entries) {
+        final widgetVal = await HomeWidget.getWidgetData<String>(entry.key) ?? '0';
+        final widgetOn = widgetVal == '1';
+        final dbOn = entry.value().isNotEmpty;
+        if (widgetOn != dbOn) {
+          setters[entry.key]!(widgetOn);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        await storage.saveLog(log);
+        _onDataChanged();
+      }
+    } catch (_) {
+      // Never crash from widget sync
     }
   }
 
@@ -90,30 +152,34 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     });
   }
 
-  void _processWidgetUri(Uri uri) {
-    switch (uri.host) {
-      case 'toggle':
-        if (uri.pathSegments.isNotEmpty) {
-          _toggleDisciplineFromWidget(uri.pathSegments.first);
-        }
-      case 'timer':
-        if (uri.pathSegments.isNotEmpty) {
-          _handleTimerFromWidget(uri.pathSegments);
-        }
-      case 'proclamation':
-        if (uri.pathSegments.isNotEmpty &&
-            uri.pathSegments.first == 'increment') {
-          _incrementProclamationFromWidget();
-        }
-      case 'open':
-        if (uri.pathSegments.isNotEmpty) {
-          switch (uri.pathSegments.first) {
-            case 'log':
-              setState(() => _tab = 1);
-            case 'proclamation':
-              setState(() => _tab = 1); // Open to log (proclamation is in log)
+  Future<void> _processWidgetUri(Uri uri) async {
+    try {
+      switch (uri.host) {
+        case 'toggle':
+          if (uri.pathSegments.isNotEmpty) {
+            await _toggleDisciplineFromWidget(uri.pathSegments.first);
           }
-        }
+        case 'timer':
+          if (uri.pathSegments.isNotEmpty) {
+            await _handleTimerFromWidget(uri.pathSegments);
+          }
+        case 'proclamation':
+          if (uri.pathSegments.isNotEmpty &&
+              uri.pathSegments.first == 'increment') {
+            await _incrementProclamationFromWidget();
+          }
+        case 'open':
+          if (uri.pathSegments.isNotEmpty) {
+            switch (uri.pathSegments.first) {
+              case 'log':
+                setState(() => _tab = 1);
+              case 'proclamation':
+                setState(() => _tab = 1);
+            }
+          }
+      }
+    } catch (_) {
+      // Never crash from widget URI processing
     }
   }
 
@@ -372,7 +438,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void _onDataChanged() {
     _loadWeekCompletion();
     _updateHomeWidget();
-    _checkMilestones();
+    try { _checkMilestones(); } catch (_) {}
     setState(() => _reportKey++);
   }
 
@@ -511,7 +577,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       await HomeWidget.saveWidgetData('streak', '$streak days');
 
       // Individual discipline flags (1 = done, 0 = not done)
-      final hasBible = log != null && (log.bibleReference.isNotEmpty || log.bibleChapters.isNotEmpty);
+      final hasBible = log != null && (log.bibleReference.isNotEmpty || log.bibleChapters.isNotEmpty || log.bibleSessions.any((s) => s.isNotEmpty));
       final hasLit = log != null && log.literature.any((l) => l.title.isNotEmpty);
       final hasDdeg = log != null && (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty);
       final hasPrayer = log != null && (log.prayerAloneDuration.isNotEmpty || log.prayerOthersDuration.isNotEmpty);
@@ -756,7 +822,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           Expanded(
             child: Column(
               children: [
-                const Text('\u2720', style: TextStyle(fontSize: 26, color: AppTheme.gold)),
+                Image.asset('assets/cmfilogo.png', width: 45, height: 45),
                 const SizedBox(height: 4),
                 Text(S.of(context).appTitle, style: AppTheme.display(22, color: accent)),
                 Text(S.of(context).tagline,

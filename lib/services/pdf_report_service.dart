@@ -398,8 +398,9 @@ class PdfReportService {
   List<pw.Widget> _dayDetailRows(DailyLog log) {
     final rows = <pw.Widget>[];
 
-    if (log.bibleReference.isNotEmpty) {
-      rows.add(_detailRow('Bible', '${log.bibleReference} (${log.bibleChapters.isNotEmpty ? log.bibleChapters : "0"} ch.)'));
+    final bibleRef = log.combinedBibleReference('en');
+    if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
+      rows.add(_detailRow('Bible', '${bibleRef.isNotEmpty ? bibleRef : log.bibleReference} (${log.totalBibleChapters} ch.)'));
     }
     for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
       rows.add(_detailRow('Literature', '"${lit.title}" — ${lit.amount} ${lit.unit}'));
