@@ -7,6 +7,11 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Required for flutter_local_notifications to show notifications in foreground
+    if #available(iOS 10.0, *) {
+      UNUserNotificationCenter.current().delegate = self
+    }
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

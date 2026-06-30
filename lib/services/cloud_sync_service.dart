@@ -19,8 +19,6 @@ class CloudSyncService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: [drive.DriveApi.driveAppdataScope],
-    serverClientId:
-        '21627369169-lhcggublufnihf88484fjig772qp9maq.apps.googleusercontent.com',
   );
 
   GoogleSignInAccount? _currentUser;
