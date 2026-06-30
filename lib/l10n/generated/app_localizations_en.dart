@@ -162,16 +162,16 @@ class SEn extends S {
   String get sectionEvangelism => 'Evangelism';
 
   @override
-  String get evangelismContactsLabel => 'Number of Contacts';
+  String get evangelismContactsLabel => 'Gospel tracts distributed';
 
   @override
-  String get evangelismContactsHint => 'e.g. 2';
+  String get evangelismContactsHint => 'e.g. 5';
 
   @override
-  String get evangelismOutcomeLabel => 'Outcome / Response';
+  String get evangelismOutcomeLabel => 'People reached by the gospel';
 
   @override
-  String get evangelismOutcomeHint => 'e.g. One received the gospel';
+  String get evangelismOutcomeHint => 'e.g. 3';
 
   @override
   String get evangelismNotesLabel => 'Notes / Follow-up';
@@ -1256,11 +1256,11 @@ class SEn extends S {
   String get evangelismFollowUp => 'Follow-up';
 
   @override
-  String get evangelismNewBelievers => 'New believers';
+  String get evangelismNewBelievers => 'Those who accepted Jesus';
 
   @override
   String get evangelismNewBelieversHint =>
-      'Number of people who accepted Christ';
+      'Number who accepted Christ in their hearts';
 
   @override
   String get evangelismBeingDiscipled => 'Being discipled';

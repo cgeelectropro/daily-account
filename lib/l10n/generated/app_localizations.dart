@@ -400,25 +400,25 @@ abstract class S {
   /// No description provided for @evangelismContactsLabel.
   ///
   /// In en, this message translates to:
-  /// **'Number of Contacts'**
+  /// **'Gospel tracts distributed'**
   String get evangelismContactsLabel;
 
   /// No description provided for @evangelismContactsHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. 2'**
+  /// **'e.g. 5'**
   String get evangelismContactsHint;
 
   /// No description provided for @evangelismOutcomeLabel.
   ///
   /// In en, this message translates to:
-  /// **'Outcome / Response'**
+  /// **'People reached by the gospel'**
   String get evangelismOutcomeLabel;
 
   /// No description provided for @evangelismOutcomeHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. One received the gospel'**
+  /// **'e.g. 3'**
   String get evangelismOutcomeHint;
 
   /// No description provided for @evangelismNotesLabel.
@@ -2272,13 +2272,13 @@ abstract class S {
   /// No description provided for @evangelismNewBelievers.
   ///
   /// In en, this message translates to:
-  /// **'New believers'**
+  /// **'Those who accepted Jesus'**
   String get evangelismNewBelievers;
 
   /// No description provided for @evangelismNewBelieversHint.
   ///
   /// In en, this message translates to:
-  /// **'Number of people who accepted Christ'**
+  /// **'Number who accepted Christ in their hearts'**
   String get evangelismNewBelieversHint;
 
   /// No description provided for @evangelismBeingDiscipled.

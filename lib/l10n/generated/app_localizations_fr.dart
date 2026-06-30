@@ -165,16 +165,16 @@ class SFr extends S {
   String get sectionEvangelism => 'Évangélisation';
 
   @override
-  String get evangelismContactsLabel => 'Nombre de Contacts';
+  String get evangelismContactsLabel => 'Tracts d\'évangile distribués';
 
   @override
-  String get evangelismContactsHint => 'ex. 2';
+  String get evangelismContactsHint => 'ex. 5';
 
   @override
-  String get evangelismOutcomeLabel => 'Résultat / Réponse';
+  String get evangelismOutcomeLabel => 'Personnes atteintes par l\'évangile';
 
   @override
-  String get evangelismOutcomeHint => 'ex. Un a reçu l’Évangile';
+  String get evangelismOutcomeHint => 'ex. 3';
 
   @override
   String get evangelismNotesLabel => 'Notes / Suivi';
@@ -1262,11 +1262,11 @@ class SFr extends S {
   String get evangelismFollowUp => 'Suivi';
 
   @override
-  String get evangelismNewBelievers => 'Nouveaux croyants';
+  String get evangelismNewBelievers => 'Ceux qui ont accepté Jésus';
 
   @override
   String get evangelismNewBelieversHint =>
-      'Nombre de personnes qui ont accepté Christ';
+      'Nombre de personnes qui ont accepté Christ dans leur cœur';
 
   @override
   String get evangelismBeingDiscipled => 'En cours de formation';

@@ -59,10 +59,10 @@
   "prayerOthersContextHint": "ex. Groupe de cellule, r\u00e9union de pri\u00e8re",
 
   "sectionEvangelism": "\u00c9vang\u00e9lisation",
-  "evangelismContactsLabel": "Nombre de Contacts",
-  "evangelismContactsHint": "ex. 2",
-  "evangelismOutcomeLabel": "R\u00e9sultat / R\u00e9ponse",
-  "evangelismOutcomeHint": "ex. Un a re\u00e7u l\u2019\u00c9vangile",
+  "evangelismContactsLabel": "Tracts d'évangile distribués",
+  "evangelismContactsHint": "ex. 5",
+  "evangelismOutcomeLabel": "Personnes atteintes par l'évangile",
+  "evangelismOutcomeHint": "ex. 3",
   "evangelismNotesLabel": "Notes / Suivi",
   "evangelismNotesHint": "Noms, conversations, prochaines \u00e9tapes...",
 
@@ -573,8 +573,8 @@
   "@reflectionStreakEncouragement": { "placeholders": { "days": { "type": "int" } } },
 
   "evangelismFollowUp": "Suivi",
-  "evangelismNewBelievers": "Nouveaux croyants",
-  "evangelismNewBelieversHint": "Nombre de personnes qui ont accept\u00e9 Christ",
+  "evangelismNewBelievers": "Ceux qui ont accepté Jésus",
+  "evangelismNewBelieversHint": "Nombre de personnes qui ont accepté Christ dans leur cœur",
   "evangelismBeingDiscipled": "En cours de formation",
   "evangelismBeingDiscipledHint": "Nombre en formation de disciple",
   "evangelismFollowUpNotes": "Notes de suivi",

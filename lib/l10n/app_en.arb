@@ -59,10 +59,10 @@
   "prayerOthersContextHint": "e.g. Cell group, prayer meeting",
 
   "sectionEvangelism": "Evangelism",
-  "evangelismContactsLabel": "Number of Contacts",
-  "evangelismContactsHint": "e.g. 2",
-  "evangelismOutcomeLabel": "Outcome / Response",
-  "evangelismOutcomeHint": "e.g. One received the gospel",
+  "evangelismContactsLabel": "Gospel tracts distributed",
+  "evangelismContactsHint": "e.g. 5",
+  "evangelismOutcomeLabel": "People reached by the gospel",
+  "evangelismOutcomeHint": "e.g. 3",
   "evangelismNotesLabel": "Notes / Follow-up",
   "evangelismNotesHint": "Names, conversations, next steps...",
 
@@ -573,8 +573,8 @@
   "@reflectionStreakEncouragement": { "placeholders": { "days": { "type": "int" } } },
 
   "evangelismFollowUp": "Follow-up",
-  "evangelismNewBelievers": "New believers",
-  "evangelismNewBelieversHint": "Number of people who accepted Christ",
+  "evangelismNewBelievers": "Those who accepted Jesus",
+  "evangelismNewBelieversHint": "Number who accepted Christ in their hearts",
   "evangelismBeingDiscipled": "Being discipled",
   "evangelismBeingDiscipledHint": "Number now in discipleship",
   "evangelismFollowUpNotes": "Follow-up notes",

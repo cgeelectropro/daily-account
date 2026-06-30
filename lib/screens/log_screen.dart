@@ -790,6 +790,7 @@ class _LogScreenState extends State<LogScreen> {
               label: t.evangelismOutcomeLabel,
               hint: t.evangelismOutcomeHint,
               value: _log.evangelismOutcome,
+              keyboardType: TextInputType.number,
               onChanged: (v) { _log.evangelismOutcome = v; _persist(); },
             ),
             GoldField(
