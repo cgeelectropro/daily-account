@@ -83,9 +83,16 @@ jobs:
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign --no-tree-shake-icons
 
-      - name: Upload iOS build artifact
+      - name: Create unsigned IPA
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r -9 DailyAccount-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-ios
-          path: build/ios/iphoneos/Runner.app
+          name: release-ipa
+          path: build/ios/ipa/DailyAccount-unsigned.ipa
           retention-days: 30
