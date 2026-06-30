@@ -559,7 +559,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _cloudLastBackup = now);
       _toast(l.cloudBackupSuccess);
     } else {
-      _toast(l.cloudBackupFailed);
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudBackupFailed} $detail');
     }
   }
 
@@ -590,7 +591,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     if (data == null) {
       setState(() => _cloudBusy = false);
-      _toast(l.cloudNoBackupFound);
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudNoBackupFound} $detail');
       return;
     }
     final ok = await BackupService.instance.importData(data, merge: false);
@@ -1035,6 +1037,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       'Scheduled: ${stats.$1} | Failed: ${stats.$2}',
                       style: AppTheme.label(10, color: mutedCol),
+                    ),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () async {
+                        final pending = await NotificationService.instance.getPendingNotifications();
+                        if (!mounted) return;
+                        final names = {
+                          1: 'Daily reminder',
+                          2: 'Sunday send',
+                          3: 'Auto-send',
+                          11: 'Daily follow-up 1',
+                          12: 'Daily follow-up 2',
+                          13: 'Daily follow-up 3',
+                          21: 'Sunday follow-up 1',
+                          22: 'Sunday follow-up 2',
+                          30: 'Mid-week nudge',
+                          40: 'Saturday summary',
+                        };
+                        final lines = pending.map((n) {
+                          final label = names[n.id] ?? (n.id >= 110 && n.id <= 120
+                              ? 'Discipline ${n.id - 110}'
+                              : '#${n.id}');
+                          return '$label (${n.id})';
+                        }).toList()
+                          ..sort();
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: AppTheme.surfaceColor(context),
+                            title: Text('${pending.length} pending notifications',
+                                style: AppTheme.display(16, color: accent)),
+                            content: SingleChildScrollView(
+                              child: Text(
+                                lines.isEmpty ? 'None scheduled' : lines.join('\n'),
+                                style: AppTheme.serif(13, color: textCol),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: Text('OK', style: TextStyle(color: accent)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Tap to see pending notifications',
+                        style: AppTheme.label(10, color: accent.withValues(alpha: 0.7)),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(

@@ -112,7 +112,8 @@ class BackupService {
       final customActivities = await storage.getCustomActivities();
 
       // Nothing at all to back up
-      if (logs.isEmpty && prayerRequests.isEmpty && reports.isEmpty) {
+      if (logs.isEmpty && prayerRequests.isEmpty && reports.isEmpty
+          && fastingPeriods.isEmpty && customActivities.isEmpty) {
         return null;
       }
 

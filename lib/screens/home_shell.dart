@@ -52,6 +52,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     _checkAutoSend();
     _scheduleSaturdaySummary();
     _handleWidgetClicks();
+    // Navigate to report tab when tapping a report notification
+    NotificationService.instance.onNotificationTap = (payload) {
+      if (payload == 'navigate_report' && mounted) {
+        setState(() => _tab = 1);
+      }
+    };
     // Update widget on timer ticks
     TimerService.instance.addListener(_onTimerTick);
   }
@@ -60,6 +66,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _widgetClickSub?.cancel();
+    NotificationService.instance.onNotificationTap = null;
     TimerService.instance.removeListener(_onTimerTick);
     super.dispose();
   }
@@ -74,6 +81,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // Android can silently drop alarms after Doze, battery optimization,
       // or OEM power management — re-scheduling guarantees they stay alive.
       NotificationService.instance.rescheduleAll();
+      // Re-check auto-send on resume — handles the case where the user
+      // had the app in background past the auto-send time on Sunday.
+      _checkAutoSend();
     }
   }
 

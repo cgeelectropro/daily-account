@@ -249,8 +249,9 @@ class NotificationService {
 
     _ready = true;
 
-    // Schedule defaults on first launch
-    rescheduleAll();
+    // Schedule defaults on first launch (must be awaited to prevent
+    // race conditions with callers that schedule immediately after init)
+    await rescheduleAll();
   }
 
   /// Play a preview of a notification sound (for the settings sound picker).
@@ -397,13 +398,25 @@ class NotificationService {
   /// Set this from TimerService so notification actions can control the timer.
   void Function(String action)? onTimerAction;
 
+  /// Callback for handling notification tap navigation.
+  /// Set this from HomeShell so tapping a report notification navigates to the report tab.
+  void Function(String payload)? onNotificationTap;
+
   void _onNotificationResponse(NotificationResponse response) {
+    // Handle action button taps (snooze, timer controls)
     switch (response.actionId) {
       case 'snooze_15':
         _scheduleSnooze();
+        return;
       case 'timer_pause':
       case 'timer_stop':
         onTimerAction?.call(response.actionId!);
+        return;
+    }
+    // Handle notification body tap — check payload for navigation
+    final payload = response.payload;
+    if (payload != null && payload.isNotEmpty) {
+      onNotificationTap?.call(payload);
     }
   }
 
@@ -441,6 +454,7 @@ class NotificationService {
     tz.TZDateTime scheduledDate,
     NotificationDetails details, {
     DateTimeComponents? matchDateTimeComponents,
+    String? payload,
   }) async {
     try {
       // Try exact alarm first
@@ -454,6 +468,7 @@ class NotificationService {
         matchDateTimeComponents: matchDateTimeComponents,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        payload: payload,
       );
       _scheduledCount++;
       debugPrint('[NotificationService] Scheduled #$id (exact) at $scheduledDate');
@@ -471,6 +486,7 @@ class NotificationService {
           matchDateTimeComponents: matchDateTimeComponents,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
+          payload: payload,
         );
         _scheduledCount++;
         debugPrint('[NotificationService] Scheduled #$id (inexact) at $scheduledDate');
@@ -595,6 +611,7 @@ class NotificationService {
       _nextInstanceOfSunday(hour, minute),
       _alarmDetails,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      payload: 'navigate_report',
     );
 
     // Follow-up #1 — 30 minutes later
@@ -638,6 +655,7 @@ class NotificationService {
       _nextInstanceOfSunday(hour, minute),
       _alarmDetails,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      payload: 'navigate_report',
     );
   }
 

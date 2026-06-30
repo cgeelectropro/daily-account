@@ -75,19 +75,28 @@ class CloudSyncService {
 
   /// Get an authenticated Drive API client.
   Future<drive.DriveApi?> _getDriveApi() async {
-    if (_currentUser == null) return null;
+    if (_currentUser == null) {
+      lastError = 'Not signed in';
+      return null;
+    }
     try {
       final headers = await _currentUser!.authHeaders;
       final client = _GoogleAuthClient(headers);
       return drive.DriveApi(client);
-    } catch (_) {
+    } catch (e) {
+      dev.log('CloudSync: auth headers failed, trying silent refresh: $e', name: 'CloudSync');
       // Auth might have expired — try silent refresh
       if (await silentSignIn()) {
         try {
           final headers = await _currentUser!.authHeaders;
           final client = _GoogleAuthClient(headers);
           return drive.DriveApi(client);
-        } catch (_) {}
+        } catch (e2) {
+          lastError = 'Auth refresh failed: $e2';
+          dev.log('CloudSync: auth refresh also failed: $e2', name: 'CloudSync');
+        }
+      } else {
+        lastError = 'Session expired — please sign in again';
       }
       return null;
     }
@@ -96,14 +105,21 @@ class CloudSyncService {
   /// Upload a full backup to Google Drive's App Data folder.
   /// Returns true on success.
   Future<bool> backupToDrive() async {
-    if (!isSignedIn) return false;
+    lastError = null;
+    if (!isSignedIn) {
+      lastError = 'Not signed in';
+      return false;
+    }
     try {
       final driveApi = await _getDriveApi();
-      if (driveApi == null) return false;
+      if (driveApi == null) return false; // lastError already set by _getDriveApi
 
       // Build comprehensive backup data
       final data = await BackupService.instance.buildFullBackupData();
-      if (data == null) return false;
+      if (data == null) {
+        lastError = 'No data to back up';
+        return false;
+      }
 
       final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
       final bytes = utf8.encode(jsonStr);
@@ -140,7 +156,9 @@ class CloudSyncService {
         DateTime.now().toIso8601String(),
       );
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      lastError = 'Backup failed: $e';
+      dev.log('CloudSync: backupToDrive error: $e\n$st', name: 'CloudSync');
       return false;
     }
   }
@@ -148,13 +166,20 @@ class CloudSyncService {
   /// Download backup data from Google Drive.
   /// Returns the parsed JSON map, or null if no backup exists or on error.
   Future<Map<String, dynamic>?> downloadFromDrive() async {
-    if (!isSignedIn) return null;
+    lastError = null;
+    if (!isSignedIn) {
+      lastError = 'Not signed in';
+      return null;
+    }
     try {
       final driveApi = await _getDriveApi();
-      if (driveApi == null) return null;
+      if (driveApi == null) return null; // lastError already set
 
       final fileId = await _findBackupFileId(driveApi);
-      if (fileId == null) return null;
+      if (fileId == null) {
+        lastError = 'No backup found on Google Drive';
+        return null;
+      }
 
       final response = await driveApi.files.get(
         fileId,
@@ -167,7 +192,9 @@ class CloudSyncService {
       }
       final jsonStr = utf8.decode(chunks.expand((c) => c).toList());
       return jsonDecode(jsonStr) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e, st) {
+      lastError = 'Download failed: $e';
+      dev.log('CloudSync: downloadFromDrive error: $e\n$st', name: 'CloudSync');
       return null;
     }
   }
@@ -196,7 +223,8 @@ class CloudSyncService {
 
       if (fileList.files == null || fileList.files!.isEmpty) return null;
       return fileList.files!.first.modifiedTime?.toIso8601String();
-    } catch (_) {
+    } catch (e) {
+      dev.log('CloudSync: getRemoteBackupDate error: $e', name: 'CloudSync');
       return null;
     }
   }
@@ -212,7 +240,9 @@ class CloudSyncService {
       if (fileList.files != null && fileList.files!.isNotEmpty) {
         return fileList.files!.first.id;
       }
-    } catch (_) {}
+    } catch (e) {
+      dev.log('CloudSync: _findBackupFileId error: $e', name: 'CloudSync');
+    }
     return null;
   }
 }
@@ -229,5 +259,11 @@ class _GoogleAuthClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     request.headers.addAll(_headers);
     return _inner.send(request);
+  }
+
+  @override
+  void close() {
+    _inner.close();
+    super.close();
   }
 }
