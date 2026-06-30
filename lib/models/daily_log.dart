@@ -125,6 +125,16 @@ class DailyLog {
   // Other
   String other;
 
+  // ── Time-conscious duration fields ──
+  String bibleDuration;
+  String literatureDuration;
+  String evangelismDuration;
+  String givingDuration;
+  String churchDuration;
+
+  // ── Custom activity log data (JSON) ──
+  Map<String, Map<String, dynamic>> customActivityData;
+
   // ── Fasting ──
   String fastingType;
   String fastingDuration;
@@ -176,6 +186,12 @@ class DailyLog {
     this.evangelismBeingDiscipled = '',
     this.evangelismFollowUpNotes = '',
     this.other = '',
+    this.bibleDuration = '',
+    this.literatureDuration = '',
+    this.evangelismDuration = '',
+    this.givingDuration = '',
+    this.churchDuration = '',
+    Map<String, Map<String, dynamic>>? customActivityData,
     this.fastingType = '',
     this.fastingDuration = '',
     this.fastingPrayerFocus = '',
@@ -193,7 +209,8 @@ class DailyLog {
     this.aiReflection = '',
     this.completed = false,
   }) : bibleSessions = bibleSessions ?? [],
-       literature = literature ?? [LiteratureEntry()];
+       literature = literature ?? [LiteratureEntry()],
+       customActivityData = customActivityData ?? {};
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
   /// Based on 10 core CMFI disciplines ("Other" is optional, not counted).
@@ -212,7 +229,21 @@ class DailyLog {
       proclamationCount.isNotEmpty,
     ];
     final filled = checks.where((c) => c).length;
-    return filled / 11;
+
+    // Count custom activities that affect completeness
+    // Since DailyLog doesn't hold activity definitions, count based on
+    // customActivityData entries that have a 'countsForCompleteness' flag set to true.
+    int customTotal = 0;
+    int customFilled = 0;
+    for (final entry in customActivityData.values) {
+      if (entry['countsForCompleteness'] == true) {
+        customTotal++;
+        if (entry['done'] == true) customFilled++;
+      }
+    }
+
+    final totalSections = 11 + customTotal;
+    return totalSections > 0 ? (filled + customFilled) / totalSections : 0.0;
   }
 
   Map<String, dynamic> toMap() => {
@@ -235,6 +266,12 @@ class DailyLog {
         'evangelismBeingDiscipled': evangelismBeingDiscipled,
         'evangelismFollowUpNotes': evangelismFollowUpNotes,
         'other': other,
+        'bibleDuration': bibleDuration,
+        'literatureDuration': literatureDuration,
+        'evangelismDuration': evangelismDuration,
+        'givingDuration': givingDuration,
+        'churchDuration': churchDuration,
+        'custom_activity_data': jsonEncode(customActivityData),
         'fastingType': fastingType,
         'fastingDuration': fastingDuration,
         'fastingPrayerFocus': fastingPrayerFocus,
@@ -292,6 +329,16 @@ class DailyLog {
       }
     } catch (_) {}
 
+    Map<String, Map<String, dynamic>> customData = {};
+    try {
+      final rawCustom = m['custom_activity_data'];
+      if (rawCustom != null && rawCustom.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawCustom) as Map<String, dynamic>;
+        customData = decoded.map((k, v) =>
+            MapEntry(k, Map<String, dynamic>.from(v as Map)));
+      }
+    } catch (_) {}
+
     return DailyLog(
       dateKey: m['dateKey'],
       bibleReference: m['bibleReference'] ?? '',
@@ -312,6 +359,12 @@ class DailyLog {
       evangelismBeingDiscipled: m['evangelismBeingDiscipled'] ?? '',
       evangelismFollowUpNotes: m['evangelismFollowUpNotes'] ?? '',
       other: m['other'] ?? '',
+      bibleDuration: m['bibleDuration'] ?? '',
+      literatureDuration: m['literatureDuration'] ?? '',
+      evangelismDuration: m['evangelismDuration'] ?? '',
+      givingDuration: m['givingDuration'] ?? '',
+      churchDuration: m['churchDuration'] ?? '',
+      customActivityData: customData,
       fastingType: m['fastingType'] ?? '',
       fastingDuration: m['fastingDuration'] ?? '',
       fastingPrayerFocus: m['fastingPrayerFocus'] ?? '',

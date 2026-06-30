@@ -482,8 +482,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     icon: iconCtrl.text.trim().isEmpty
                         ? '\u2728'
                         : iconCtrl.text.trim(),
-                    fieldLabels: fieldCtrl.text.trim().isNotEmpty
-                        ? [fieldCtrl.text.trim()]
+                    fields: fieldCtrl.text.trim().isNotEmpty
+                        ? [CustomField(label: fieldCtrl.text.trim())]
                         : [],
                   );
                   await StorageService.instance.addCustomActivity(activity);
@@ -550,9 +550,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final accent = AppTheme.accentGold(context);
     final key = TimerKey.custom(ca.id);
     final controllers = List.generate(
-        ca.fieldLabels.length, (_) => TextEditingController());
+        ca.fields.length, (_) => TextEditingController());
 
-    if (ca.fieldLabels.isEmpty) {
+    if (ca.fields.isEmpty) {
       // No fields — start directly
       TimerService.instance.start(key, fields: {'_customName': ca.name});
       return;
@@ -587,7 +587,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     AppTheme.serif(12, color: AppTheme.mutedColor(context))),
             const SizedBox(height: 16),
             ...List.generate(
-              ca.fieldLabels.length,
+              ca.fields.length,
               (i) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: TextField(
@@ -595,7 +595,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   style: AppTheme.serif(14,
                       color: AppTheme.textColor(context)),
                   decoration: InputDecoration(
-                    labelText: ca.fieldLabels[i],
+                    labelText: ca.fields[i].label,
                     labelStyle: AppTheme.serif(12, color: accent),
                     enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(
@@ -616,7 +616,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   };
                   for (var i = 0; i < controllers.length; i++) {
                     if (controllers[i].text.isNotEmpty) {
-                      fieldMap[ca.fieldLabels[i]] = controllers[i].text;
+                      fieldMap[ca.fields[i].label] = controllers[i].text;
                     }
                   }
                   for (final c in controllers) {

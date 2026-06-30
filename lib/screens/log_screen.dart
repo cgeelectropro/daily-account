@@ -1264,8 +1264,8 @@ class _LogScreenState extends State<LogScreen> {
                     icon: iconCtrl.text.trim().isEmpty
                         ? '\u2728'
                         : iconCtrl.text.trim(),
-                    fieldLabels: fieldCtrl.text.trim().isNotEmpty
-                        ? [fieldCtrl.text.trim()]
+                    fields: fieldCtrl.text.trim().isNotEmpty
+                        ? [CustomField(label: fieldCtrl.text.trim())]
                         : [],
                   );
                   await StorageService.instance.addCustomActivity(activity);

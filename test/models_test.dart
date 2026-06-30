@@ -243,14 +243,18 @@ void main() {
         id: 'abc-123',
         name: 'Worship',
         icon: '🎵',
-        fieldLabels: ['Song', 'Duration'],
+        fields: [
+          CustomField(label: 'Song'),
+          CustomField(label: 'Duration', type: CustomFieldType.duration),
+        ],
       );
       final map = activity.toMap();
       final restored = CustomActivity.fromMap(map);
       expect(restored.id, 'abc-123');
       expect(restored.name, 'Worship');
       expect(restored.icon, '🎵');
-      expect(restored.fieldLabels, ['Song', 'Duration']);
+      expect(restored.fields.map((f) => f.label).toList(), ['Song', 'Duration']);
+      expect(restored.fields[1].type, CustomFieldType.duration);
     });
 
     test('default icon is sparkles', () {
@@ -258,9 +262,9 @@ void main() {
       expect(activity.icon, '\u2728');
     });
 
-    test('default fieldLabels is empty', () {
+    test('default fields is empty', () {
       final activity = CustomActivity(id: '1', name: 'Test');
-      expect(activity.fieldLabels, isEmpty);
+      expect(activity.fields, isEmpty);
     });
 
     test('fromMap with missing icon uses default', () {
@@ -271,13 +275,22 @@ void main() {
       expect(activity.icon, '\u2728');
     });
 
-    test('fromMap with null fieldLabels returns empty list', () {
+    test('fromMap with old fieldLabels format migrates to fields', () {
+      final activity = CustomActivity.fromMap({
+        'id': '1',
+        'name': 'Test',
+        'fieldLabels': ['Alpha', 'Beta'],
+      });
+      expect(activity.fields.map((f) => f.label).toList(), ['Alpha', 'Beta']);
+    });
+
+    test('fromMap with null fieldLabels returns empty fields', () {
       final activity = CustomActivity.fromMap({
         'id': '1',
         'name': 'Test',
         'fieldLabels': null,
       });
-      expect(activity.fieldLabels, isEmpty);
+      expect(activity.fields, isEmpty);
     });
   });
 }

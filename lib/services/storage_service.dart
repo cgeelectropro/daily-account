@@ -27,7 +27,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -65,7 +65,13 @@ class StorageService {
             evangelismBeingDiscipled TEXT DEFAULT '',
             evangelismFollowUpNotes TEXT DEFAULT '',
             voiceNotePath TEXT DEFAULT '',
-            bibleSessions TEXT DEFAULT ''
+            bibleSessions TEXT DEFAULT '',
+            bibleDuration TEXT DEFAULT '',
+            literatureDuration TEXT DEFAULT '',
+            evangelismDuration TEXT DEFAULT '',
+            givingDuration TEXT DEFAULT '',
+            churchDuration TEXT DEFAULT '',
+            custom_activity_data TEXT DEFAULT ''
           )
         ''');
         await _createSavedReportsTable(db);
@@ -139,6 +145,14 @@ class StorageService {
           }
           if (oldVersion < 9) {
             await txn.execute("ALTER TABLE logs ADD COLUMN bibleSessions TEXT DEFAULT ''");
+          }
+          if (oldVersion < 10) {
+            for (final col in [
+              'bibleDuration', 'literatureDuration', 'evangelismDuration',
+              'givingDuration', 'churchDuration', 'custom_activity_data',
+            ]) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
           }
         });
       },
