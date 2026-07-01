@@ -1131,6 +1131,95 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ).animate().fadeIn(delay: 520.ms),
 
+        // Custom activity section cards (one per activity, after the Other section)
+        ..._customActivities.map((activity) {
+          final actData = _log.customActivityData[activity.id] ?? {};
+          final isDone = actData['done'] == true;
+          final fieldValues = Map<String, dynamic>.from(actData['fields'] as Map? ?? {});
+
+          return SectionCard(
+            icon: activity.icon,
+            title: activity.name,
+            initiallyExpanded: isDone || fieldValues.values.any((v) => v.toString().isNotEmpty),
+            trailing: Switch.adaptive(
+              value: isDone,
+              activeTrackColor: AppTheme.accentGold(context),
+              onChanged: (v) {
+                setState(() {
+                  final data = Map<String, dynamic>.from(
+                      _log.customActivityData[activity.id] ?? {});
+                  data['done'] = v;
+                  data['countsForCompleteness'] = activity.countsForCompleteness;
+                  if (!data.containsKey('fields')) data['fields'] = {};
+                  _log.customActivityData[activity.id] = Map<String, dynamic>.from(data);
+                });
+                _persist();
+              },
+            ),
+            children: [
+              ...activity.fields.map((field) {
+                switch (field.type) {
+                  case CustomFieldType.text:
+                    return GoldField(
+                      label: field.label,
+                      value: fieldValues[field.label]?.toString() ?? '',
+                      onChanged: (v) => _updateCustomField(activity.id, field.label, v),
+                    );
+                  case CustomFieldType.number:
+                    return GoldField(
+                      label: field.label,
+                      value: fieldValues[field.label]?.toString() ?? '',
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => _updateCustomField(activity.id, field.label, v),
+                    );
+                  case CustomFieldType.duration:
+                    return GoldField(
+                      label: field.label,
+                      hint: t.durationHint,
+                      value: fieldValues[field.label]?.toString() ?? '',
+                      onChanged: (v) => _updateCustomField(activity.id, field.label, v),
+                    );
+                  case CustomFieldType.yesNo:
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(field.label,
+                              style: AppTheme.serif(14,
+                                  color: AppTheme.textColor(context))),
+                          Switch.adaptive(
+                            value: fieldValues[field.label] == true ||
+                                fieldValues[field.label] == 'true',
+                            activeTrackColor: AppTheme.accentGold(context),
+                            onChanged: (v) =>
+                                _updateCustomField(activity.id, field.label, v),
+                          ),
+                        ],
+                      ),
+                    );
+                  case CustomFieldType.notes:
+                    return GoldField(
+                      label: field.label,
+                      value: fieldValues[field.label]?.toString() ?? '',
+                      maxLines: 3,
+                      onChanged: (v) => _updateCustomField(activity.id, field.label, v),
+                    );
+                }
+              }),
+              // Time-conscious mode: append duration field if the activity has none
+              if (_timeConscious &&
+                  !activity.fields.any((f) => f.type == CustomFieldType.duration))
+                GoldField(
+                  label: t.durationLabel,
+                  hint: t.durationHint,
+                  value: fieldValues['_duration']?.toString() ?? '',
+                  onChanged: (v) => _updateCustomField(activity.id, '_duration', v),
+                ),
+            ],
+          ).animate().fadeIn(delay: 540.ms);
+        }),
+
         const SizedBox(height: 8),
 
         // Voice Note
@@ -1165,6 +1254,19 @@ class _LogScreenState extends State<LogScreen> {
         )).animate().fadeIn(delay: 560.ms),
       ],
     );
+  }
+
+  /// Update a single field inside customActivityData and persist.
+  void _updateCustomField(String activityId, String fieldLabel, dynamic value) {
+    setState(() {
+      final data = Map<String, dynamic>.from(
+          _log.customActivityData[activityId] ?? {});
+      final fields = Map<String, dynamic>.from(data['fields'] as Map? ?? {});
+      fields[fieldLabel] = value;
+      data['fields'] = fields;
+      _log.customActivityData[activityId] = Map<String, dynamic>.from(data);
+    });
+    _persist();
   }
 
   /// A compact row for each custom activity — shows icon, name, and a check toggle.

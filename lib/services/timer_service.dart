@@ -6,6 +6,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_timer.dart';
+import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
 import 'background_timer_service.dart';
 import 'notification_service.dart';
@@ -404,18 +405,37 @@ class TimerService extends ChangeNotifier {
         _mergeLogField(log, entry.key, entry.value);
       }
     } else {
-      // Custom activity — write to "other" field with duration
-      final name = session.fields['_customName'] ?? '';
-      final notes = session.fields.entries
-          .where((e) => !e.key.startsWith('_') && e.value.isNotEmpty)
-          .map((e) => '${e.key}: ${e.value}')
-          .join('; ');
-      final parts = <String>[
-        if (name.isNotEmpty) name,
-        if (notes.isNotEmpty) notes,
-        durationStr,
-      ];
-      log.other = _appendText(log.other, parts.join(' — '));
+      // Custom activity — write to customActivityData
+      final customId = session.key.customId!;
+      final data = Map<String, dynamic>.from(
+          log.customActivityData[customId] ?? {});
+      data['done'] = true;
+      final fields = Map<String, dynamic>.from(data['fields'] as Map? ?? {});
+
+      // Find the first duration-type field in this custom activity, or use '_duration'
+      String durationKey = '_duration';
+      final activities = await StorageService.instance.getCustomActivities();
+      final activity = activities.where((a) => a.id == customId).firstOrNull;
+      if (activity != null) {
+        final durField = activity.fields
+            .where((f) => f.type == CustomFieldType.duration)
+            .firstOrNull;
+        if (durField != null) durationKey = durField.label;
+        data['countsForCompleteness'] = activity.countsForCompleteness;
+      }
+
+      final existing = fields[durationKey]?.toString() ?? '';
+      fields[durationKey] = _accumulateDuration(existing, durationStr);
+
+      // Merge extra pre-start fields
+      for (final entry in session.fields.entries) {
+        if (!entry.key.startsWith('_') && entry.value.isNotEmpty) {
+          fields[entry.key] = entry.value;
+        }
+      }
+
+      data['fields'] = fields;
+      log.customActivityData[customId] = Map<String, dynamic>.from(data);
     }
 
     await storage.saveLog(log);

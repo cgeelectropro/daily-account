@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../models/custom_activity.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -139,6 +140,17 @@ class ReportService {
         log.churchDuration,
       ]) {
         total += _parseDurationMinutes(d);
+      }
+      // Custom activity duration fields
+      for (final actData in log.customActivityData.values) {
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        for (final entry in fields.entries) {
+          if (entry.key == '_duration' ||
+              entry.key.toLowerCase().contains('duration') ||
+              entry.key.toLowerCase().contains('time')) {
+            total += _parseDurationMinutes(entry.value.toString());
+          }
+        }
       }
     }
     return total;
@@ -319,6 +331,10 @@ class ReportService {
     final lastDay = DateTime(year, month + 1, 0);
     final buf = StringBuffer();
 
+    // Load custom activity names once for ID → display label lookup
+    final customActivities = await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
+
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.monthOf(fmtMonth.format(monthDate)));
     buf.writeln('');
@@ -398,6 +414,18 @@ class ReportService {
         buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
       }
       if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
+      // Custom activities
+      for (final entry in log.customActivityData.entries) {
+        final actData = entry.value;
+        if (actData['done'] != true) continue;
+        final label = customNames[entry.key] ?? entry.key;
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        final parts = fields.entries
+            .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buf.writeln('\uD83D\uDCCC $label${parts.isNotEmpty ? ": $parts" : ": \u2713"}');
+      }
       buf.writeln('');
     }
 
@@ -414,6 +442,11 @@ class ReportService {
     final fmtLong = DateFormat('EEEE, MMM d');
     final fmtRange = DateFormat('MMM d');
     final buf = StringBuffer();
+
+    // Load custom activity names once for ID → display label lookup
+    final List<CustomActivity> customActivities =
+        await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
 
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
@@ -488,6 +521,18 @@ class ReportService {
         buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
       }
       if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
+      // Custom activities
+      for (final entry in log.customActivityData.entries) {
+        final actData = entry.value;
+        if (actData['done'] != true) continue;
+        final label = customNames[entry.key] ?? entry.key;
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        final parts = fields.entries
+            .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buf.writeln('\uD83D\uDCCC $label${parts.isNotEmpty ? ": $parts" : ": \u2713"}');
+      }
       buf.writeln('');
     }
 

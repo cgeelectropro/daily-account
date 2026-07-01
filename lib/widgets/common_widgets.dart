@@ -9,12 +9,15 @@ class SectionCard extends StatefulWidget {
   final String title;
   final List<Widget> children;
   final bool initiallyExpanded;
+  /// Optional widget placed at the end of the header row (e.g. a Switch).
+  final Widget? trailing;
   const SectionCard({
     super.key,
     required this.icon,
     required this.title,
     required this.children,
     this.initiallyExpanded = true,
+    this.trailing,
   });
 
   @override
@@ -58,6 +61,7 @@ class _SectionCardState extends State<SectionCard> {
                 Expanded(
                   child: Text(widget.title, style: AppTheme.display(18, color: AppTheme.accentGold(context))),
                 ),
+                if (widget.trailing != null) widget.trailing!,
                 Icon(
                   _expanded ? Icons.expand_less : Icons.expand_more,
                   color: AppTheme.faintColor(context),
