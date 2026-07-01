@@ -1647,4 +1647,18 @@ class SEn extends S {
 
   @override
   String get customActivityMaxFields => 'Maximum 8 fields';
+
+  @override
+  String get cancelTimerTitle => 'Cancel timer?';
+
+  @override
+  String cancelTimerContent(String elapsed, String name) {
+    return 'Discard $elapsed of $name?';
+  }
+
+  @override
+  String get cancelTimerKeep => 'Keep timing';
+
+  @override
+  String get cancelTimerDiscard => 'Discard';
 }

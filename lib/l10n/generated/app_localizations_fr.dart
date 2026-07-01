@@ -1665,4 +1665,18 @@ class SFr extends S {
 
   @override
   String get customActivityMaxFields => 'Maximum 8 champs';
+
+  @override
+  String get cancelTimerTitle => 'Annuler le minuteur ?';
+
+  @override
+  String cancelTimerContent(String elapsed, String name) {
+    return 'Abandonner $elapsed de $name ?';
+  }
+
+  @override
+  String get cancelTimerKeep => 'Continuer';
+
+  @override
+  String get cancelTimerDiscard => 'Abandonner';
 }

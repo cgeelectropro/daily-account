@@ -723,5 +723,15 @@
   "customFieldTypeDuration": "Dur\u00e9e",
   "customFieldTypeYesNo": "Oui/Non",
   "customFieldTypeNotes": "Notes",
-  "customActivityMaxFields": "Maximum 8 champs"
+  "customActivityMaxFields": "Maximum 8 champs",
+  "cancelTimerTitle": "Annuler le minuteur ?",
+  "cancelTimerContent": "Abandonner {elapsed} de {name} ?",
+  "@cancelTimerContent": {
+    "placeholders": {
+      "elapsed": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "cancelTimerKeep": "Continuer",
+  "cancelTimerDiscard": "Abandonner"
 }

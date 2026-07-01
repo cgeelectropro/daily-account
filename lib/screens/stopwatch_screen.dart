@@ -1212,27 +1212,28 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       return;
     }
 
+    final l = S.of(context);
     final elapsed = session.formattedDuration;
     final name = key.isBuiltIn
-        ? key.builtIn!.shortCode
+        ? _label(l, key.builtIn!)
         : (session.fields['_customName'] ?? 'Activity');
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cancel timer?'),
-        content: Text('Discard $elapsed of $name?'),
+        title: Text(l.cancelTimerTitle),
+        content: Text(l.cancelTimerContent(elapsed, name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Keep timing'),
+            child: Text(l.cancelTimerKeep),
           ),
           TextButton(
             onPressed: () {
               ts.cancelTimer(key);
               Navigator.pop(ctx);
             },
-            child: Text('Discard', style: TextStyle(color: AppTheme.rust)),
+            child: Text(l.cancelTimerDiscard, style: const TextStyle(color: AppTheme.rust)),
           ),
         ],
       ),

@@ -2994,6 +2994,30 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Maximum 8 fields'**
   String get customActivityMaxFields;
+
+  /// No description provided for @cancelTimerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel timer?'**
+  String get cancelTimerTitle;
+
+  /// No description provided for @cancelTimerContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard {elapsed} of {name}?'**
+  String cancelTimerContent(String elapsed, String name);
+
+  /// No description provided for @cancelTimerKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep timing'**
+  String get cancelTimerKeep;
+
+  /// No description provided for @cancelTimerDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get cancelTimerDiscard;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

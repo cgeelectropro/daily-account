@@ -723,5 +723,15 @@
   "customFieldTypeDuration": "Duration",
   "customFieldTypeYesNo": "Yes/No",
   "customFieldTypeNotes": "Notes",
-  "customActivityMaxFields": "Maximum 8 fields"
+  "customActivityMaxFields": "Maximum 8 fields",
+  "cancelTimerTitle": "Cancel timer?",
+  "cancelTimerContent": "Discard {elapsed} of {name}?",
+  "@cancelTimerContent": {
+    "placeholders": {
+      "elapsed": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "cancelTimerKeep": "Keep timing",
+  "cancelTimerDiscard": "Discard"
 }
