@@ -142,7 +142,7 @@ class SFr extends S {
   String get durationLabel => 'Durée';
 
   @override
-  String get durationHint => 'ex. 45 minutes';
+  String get durationHint => 'ex. 30 minutes';
 
   @override
   String get prayerAloneNotesLabel =>
@@ -1592,4 +1592,16 @@ class SFr extends S {
   @override
   String get cloudSignInFailed =>
       'Échec de la connexion Google. Veuillez réessayer.';
+
+  @override
+  String get timeConsciousLabel => 'Mode temps conscient';
+
+  @override
+  String get timeConsciousDescription =>
+      'Suivre le temps que vous consacrez à chaque activité spirituelle';
+
+  @override
+  String totalTimeConsecrated(String time) {
+    return 'Temps total consacré : $time';
+  }
 }

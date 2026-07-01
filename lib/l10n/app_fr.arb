@@ -690,5 +690,16 @@
   "cloudRestoreConfirmTitle": "Restaurer depuis le cloud ?",
   "cloudRestoreConfirmBody": "Ceci remplacera toutes les donn\u00e9es locales par la sauvegarde cloud. \u00cates-vous s\u00fbr ?",
   "cloudNoBackupFound": "Aucune sauvegarde trouv\u00e9e sur votre Google Drive.",
-  "cloudSignInFailed": "\u00c9chec de la connexion Google. Veuillez r\u00e9essayer."
+  "cloudSignInFailed": "\u00c9chec de la connexion Google. Veuillez r\u00e9essayer.",
+
+  "timeConsciousLabel": "Mode temps conscient",
+  "timeConsciousDescription": "Suivre le temps que vous consacrez \u00e0 chaque activit\u00e9 spirituelle",
+  "durationLabel": "Dur\u00e9e",
+  "durationHint": "ex. 30 minutes",
+  "totalTimeConsecrated": "Temps total consacr\u00e9 : {time}",
+  "@totalTimeConsecrated": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  }
 }

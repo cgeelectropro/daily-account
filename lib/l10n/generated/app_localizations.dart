@@ -358,7 +358,7 @@ abstract class S {
   /// No description provided for @durationHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. 45 minutes'**
+  /// **'e.g. 30 minutes'**
   String get durationHint;
 
   /// No description provided for @prayerAloneNotesLabel.
@@ -2856,6 +2856,24 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Google sign-in failed. Please try again.'**
   String get cloudSignInFailed;
+
+  /// No description provided for @timeConsciousLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Time-conscious mode'**
+  String get timeConsciousLabel;
+
+  /// No description provided for @timeConsciousDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Track how much time you consecrate to each spiritual activity'**
+  String get timeConsciousDescription;
+
+  /// No description provided for @totalTimeConsecrated.
+  ///
+  /// In en, this message translates to:
+  /// **'Total time consecrated: {time}'**
+  String totalTimeConsecrated(String time);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

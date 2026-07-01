@@ -50,6 +50,9 @@ class _LogScreenState extends State<LogScreen> {
   // Debounce for auto-persist
   Timer? _persistDebounce;
 
+  // Time-conscious mode
+  bool _timeConscious = false;
+
   @override
   void initState() {
     super.initState();
@@ -69,6 +72,7 @@ class _LogScreenState extends State<LogScreen> {
     final isNew = existing == null;
     _log = existing ?? DailyLog(dateKey: _key);
     if (isNew) await _tryAutoFill();
+    _timeConscious = (await StorageService.instance.getSetting('timeConscious', fallback: 'false')) == 'true';
     if (mounted) setState(() => _loading = false);
   }
 
@@ -626,6 +630,13 @@ class _LogScreenState extends State<LogScreen> {
                 onChanged: (v) { _log.bibleChapters = v; _persist(); },
               ),
             ],
+            if (_timeConscious)
+              GoldField(
+                label: t.durationLabel,
+                hint: t.durationHint,
+                value: _log.bibleDuration,
+                onChanged: (v) { _log.bibleDuration = v; _persist(); },
+              ),
           ],
         ).animate().fadeIn(delay: 80.ms),
 
@@ -698,6 +709,13 @@ class _LogScreenState extends State<LogScreen> {
                 label: Text(t.addAnotherBook, style: AppTheme.serif(13, color: AppTheme.accentGold(context))),
               ),
             ),
+            if (_timeConscious)
+              GoldField(
+                label: t.durationLabel,
+                hint: t.durationHint,
+                value: _log.literatureDuration,
+                onChanged: (v) { _log.literatureDuration = v; _persist(); },
+              ),
           ],
         ).animate().fadeIn(delay: 120.ms),
 
@@ -829,6 +847,13 @@ class _LogScreenState extends State<LogScreen> {
               maxLines: 3,
               onChanged: (v) { _log.evangelismFollowUpNotes = v; _persist(); },
             ),
+            if (_timeConscious)
+              GoldField(
+                label: t.durationLabel,
+                hint: t.durationHint,
+                value: _log.evangelismDuration,
+                onChanged: (v) { _log.evangelismDuration = v; _persist(); },
+              ),
           ],
         ).animate().fadeIn(delay: 280.ms),
 
@@ -989,6 +1014,13 @@ class _LogScreenState extends State<LogScreen> {
               value: _log.givingPurpose,
               onChanged: (v) { _log.givingPurpose = v; _persist(); },
             ),
+            if (_timeConscious)
+              GoldField(
+                label: t.durationLabel,
+                hint: t.durationHint,
+                value: _log.givingDuration,
+                onChanged: (v) { _log.givingDuration = v; _persist(); },
+              ),
           ],
         ).animate().fadeIn(delay: 360.ms),
 
@@ -1011,6 +1043,13 @@ class _LogScreenState extends State<LogScreen> {
               maxLines: 3,
               onChanged: (v) { _log.churchNotes = v; _persist(); },
             ),
+            if (_timeConscious)
+              GoldField(
+                label: t.durationLabel,
+                hint: t.durationHint,
+                value: _log.churchDuration,
+                onChanged: (v) { _log.churchDuration = v; _persist(); },
+              ),
           ],
         ).animate().fadeIn(delay: 400.ms),
 

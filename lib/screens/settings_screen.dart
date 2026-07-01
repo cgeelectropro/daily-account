@@ -37,6 +37,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
   String _reportLanguage = ''; // empty = same as app
 
+  // Time-conscious mode
+  bool _timeConscious = false;
+
   // Cloud sync
   bool _cloudSignedIn = false;
   String _cloudEmail = '';
@@ -84,6 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _notificationsEnabled = (await s.getSetting('notificationsEnabled', fallback: 'true')) == 'true';
     _autoSendEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
     _isDark = (await s.getSetting('themeMode', fallback: 'dark')) == 'dark';
+    _timeConscious = (await s.getSetting('timeConscious', fallback: 'false')) == 'true';
     _appLockEnabled = (await s.getSetting('appLockEnabled', fallback: 'false')) == 'true';
     _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
     _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
@@ -872,6 +876,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Text(l.textSizePreview,
                 style: AppTheme.serif(14, color: textCol)),
+          ),
+        ]),
+
+        // ── Time-conscious mode ──
+        SectionCard(icon: '⏱', title: l.timeConsciousLabel, initiallyExpanded: false, children: [
+          _switchRow(l.timeConsciousLabel, _timeConscious, (v) async {
+            setState(() => _timeConscious = v);
+            await StorageService.instance.setSetting('timeConscious', v.toString());
+          }),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              l.timeConsciousDescription,
+              style: AppTheme.serif(11, color: textCol.withValues(alpha: 0.5)),
+            ),
           ),
         ]),
 

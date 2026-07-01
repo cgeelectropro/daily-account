@@ -141,7 +141,7 @@ class SEn extends S {
   String get durationLabel => 'Duration';
 
   @override
-  String get durationHint => 'e.g. 45 minutes';
+  String get durationHint => 'e.g. 30 minutes';
 
   @override
   String get prayerAloneNotesLabel => 'How was your prayer time?';
@@ -1575,4 +1575,16 @@ class SEn extends S {
 
   @override
   String get cloudSignInFailed => 'Google sign-in failed. Please try again.';
+
+  @override
+  String get timeConsciousLabel => 'Time-conscious mode';
+
+  @override
+  String get timeConsciousDescription =>
+      'Track how much time you consecrate to each spiritual activity';
+
+  @override
+  String totalTimeConsecrated(String time) {
+    return 'Total time consecrated: $time';
+  }
 }

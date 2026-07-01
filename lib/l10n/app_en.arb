@@ -690,5 +690,16 @@
   "cloudRestoreConfirmTitle": "Restore from Cloud?",
   "cloudRestoreConfirmBody": "This will replace all local data with the cloud backup. Are you sure?",
   "cloudNoBackupFound": "No backup found on your Google Drive.",
-  "cloudSignInFailed": "Google sign-in failed. Please try again."
+  "cloudSignInFailed": "Google sign-in failed. Please try again.",
+
+  "timeConsciousLabel": "Time-conscious mode",
+  "timeConsciousDescription": "Track how much time you consecrate to each spiritual activity",
+  "durationLabel": "Duration",
+  "durationHint": "e.g. 30 minutes",
+  "totalTimeConsecrated": "Total time consecrated: {time}",
+  "@totalTimeConsecrated": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  }
 }
