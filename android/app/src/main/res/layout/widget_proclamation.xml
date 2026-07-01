@@ -4,89 +4,55 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_altar_bg"
-    android:orientation="horizontal"
-    android:baselineAligned="false">
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp">
 
-    <!-- LEFT: Counter + text (tap to open app) -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="3"
+    <!-- Large counter number (top, full width, very prominent) -->
+    <TextView
+        android:id="@+id/proclamation_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:orientation="vertical"
-        android:padding="10dp">
+        android:text="0"
+        android:textColor="#D4AF64"
+        android:textSize="56sp"
+        android:fontFamily="serif"
+        android:textStyle="bold"
+        android:clickable="true"
+        android:focusable="true" />
 
-        <!-- Large counter number -->
-        <TextView
-            android:id="@+id/proclamation_count"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="0"
-            android:textColor="#D4AF64"
-            android:textSize="40sp"
-            android:fontFamily="serif"
-            android:textStyle="bold"
-            android:clickable="true"
-            android:focusable="true" />
+    <!-- Proclamation label -->
+    <TextView
+        android:id="@+id/proclamation_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="PROCLAMATIONS"
+        android:textColor="#7A6A4A"
+        android:textSize="8sp"
+        android:fontFamily="serif"
+        android:textAllCaps="true"
+        android:letterSpacing="0.12"
+        android:layout_marginBottom="6dp" />
 
-        <!-- Proclamation text -->
-        <TextView
-            android:id="@+id/proclamation_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="JESUS CHRIST IS THE LORD"
-            android:textColor="#A09070"
-            android:textSize="8sp"
-            android:fontFamily="serif"
-            android:textAllCaps="true"
-            android:letterSpacing="0.06"
-            android:maxLines="2"
-            android:layout_marginTop="2dp" />
-
-        <!-- Gold divider -->
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="4dp"
-            android:src="@drawable/widget_gold_divider"
-            android:scaleType="fitXY"
-            android:contentDescription="" />
-
-        <!-- Label -->
-        <TextView
-            android:id="@+id/proclamation_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="PROCLAMATIONS TODAY"
-            android:textColor="#7A6A4A"
-            android:textSize="7sp"
-            android:fontFamily="serif"
-            android:textAllCaps="true"
-            android:letterSpacing="0.12" />
-    </LinearLayout>
-
-    <!-- RIGHT: Large "+" tap zone — easy to hit without looking -->
+    <!-- Centered "+" button -->
     <FrameLayout
         android:id="@+id/proclamation_btn_plus"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Circular gold button centered in the tap zone -->
+        <!-- Circular gold button centered -->
         <TextView
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_gravity="center"
             android:gravity="center"
             android:text="+"
             android:textColor="#D4AF64"
-            android:textSize="30sp"
+            android:textSize="28sp"
             android:textStyle="bold"
             android:background="@drawable/widget_btn_plus_circle" />
     </FrameLayout>

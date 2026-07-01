@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Color;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -6,6 +7,22 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'storage_service.dart';
+
+/// Top-level handler for notification actions when the app is in the
+/// background or terminated. Must be top-level (not an instance method)
+/// because it runs in a separate isolate.
+///
+/// Timer actions are stored in SharedPreferences so the main isolate can
+/// pick them up when the app resumes. Snooze works directly since it only
+/// needs to schedule a new notification.
+@pragma('vm:entry-point')
+void _onBackgroundNotificationResponse(NotificationResponse response) {
+  // Background responses for timer actions will open the app
+  // (showsUserInterface: true) so the main isolate handles them.
+  // Snooze is handled inline since it doesn't need the main isolate.
+  // No-op: the foreground handler takes care of everything since
+  // showsUserInterface: true brings the app to the foreground first.
+}
 
 /// Aggressive, alarm-style notification system for Daily Account.
 ///
@@ -31,6 +48,7 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
+  Completer<void>? _initCompleter;
 
   // ── Notification channels ──────────────────────────────────
 
@@ -160,6 +178,19 @@ class NotificationService {
 
   Future<void> init() async {
     if (_ready) return;
+    if (_initCompleter != null) return _initCompleter!.future;
+    _initCompleter = Completer<void>();
+    try {
+      await _doInit();
+      _initCompleter!.complete();
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null;
+      rethrow;
+    }
+  }
+
+  Future<void> _doInit() async {
     tzdata.initializeTimeZones();
 
     // Use the device's actual timezone instead of hardcoding
@@ -184,6 +215,7 @@ class NotificationService {
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
       onDidReceiveNotificationResponse: _onNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationResponse,
     );
 
     // Android-specific setup

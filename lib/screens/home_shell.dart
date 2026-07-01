@@ -619,9 +619,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       await HomeWidget.saveWidgetData('done_count', '$doneCount');
 
       // Proclamation count (numeric for counter widget)
-      final procCount = log?.proclamationCount ?? '0';
-      await HomeWidget.saveWidgetData('proclamation_count',
-          procCount.isNotEmpty ? procCount : '0');
+      // Use the MAX of DB and widget values to prevent overwriting
+      // increments made from the widget that haven't synced yet.
+      final dbProcCount = int.tryParse(log?.proclamationCount ?? '0') ?? 0;
+      final widgetProcCount = int.tryParse(
+          await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0') ?? 0;
+      final maxProcCount = dbProcCount > widgetProcCount ? dbProcCount : widgetProcCount;
+      await HomeWidget.saveWidgetData('proclamation_count', '$maxProcCount');
 
       // DDEG scripture (for scripture card DDEG override)
       final ddegScripture = log?.ddegScripture ?? '';

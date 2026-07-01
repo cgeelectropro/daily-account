@@ -15,7 +15,11 @@ import 'widgets/timer_overlay.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  try { await NotificationService.instance.init(); } catch (_) {}
+  try {
+    await NotificationService.instance.init();
+  } catch (e) {
+    debugPrint('[main] NotificationService init failed: $e');
+  }
   try { await BackgroundTimerService.instance.init(); } catch (_) {}
   try { await TimerService.instance.init(); } catch (_) {}
   // Silent auto-backup on every app start (skips if < 6 hours since last)

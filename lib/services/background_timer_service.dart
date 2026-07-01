@@ -7,7 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Notification channel shared between [NotificationService] and the
 /// background isolate so both write to the same Android channel.
-const kTimerChannelId = 'daily_account_stopwatch';
+const kTimerChannelId = 'daily_account_stopwatch_v2';
 const kTimerChannelName = 'Activity Timer';
 const kTimerNotifId = 200; // must match NotificationService.stopwatchNotifId
 
@@ -50,7 +50,7 @@ class BackgroundTimerService {
             kTimerChannelId,
             kTimerChannelName,
             description: 'Shows while a spiritual activity timer is running',
-            importance: Importance.low,
+            importance: Importance.defaultImportance,
             playSound: false,
             enableVibration: false,
           ),
@@ -158,12 +158,37 @@ void _onStart(ServiceInstance service) async {
         ? elapsedMs + DateTime.now().difference(startedAt!).inMilliseconds
         : elapsedMs;
 
+    // Action buttons matching NotificationService.showStopwatchNotification
+    final actions = <AndroidNotificationAction>[
+      if (running)
+        const AndroidNotificationAction(
+          'timer_pause', '\u23F8 Pause',
+          showsUserInterface: false, cancelNotification: false,
+        )
+      else if (paused)
+        const AndroidNotificationAction(
+          'timer_resume', '\u25B6 Resume',
+          showsUserInterface: false, cancelNotification: false,
+        ),
+      AndroidNotificationAction(
+        'timer_stop', '\u23F9 Stop',
+        showsUserInterface: currentLabel.contains('Bible') ||
+            currentLabel.contains('Lecture') ||
+            currentLabel.contains('Litt\u00e9rature'),
+        cancelNotification: true,
+      ),
+      const AndroidNotificationAction(
+        'timer_cancel', '\u2715 Cancel',
+        showsUserInterface: true, cancelNotification: false,
+      ),
+    ];
+
     final channel = AndroidNotificationDetails(
       kTimerChannelId,
       kTimerChannelName,
       channelDescription: 'Shows while a spiritual activity timer is running',
-      importance: Importance.low,
-      priority: Priority.low,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
       playSound: false,
       enableVibration: false,
       ongoing: running,
@@ -173,6 +198,7 @@ void _onStart(ServiceInstance service) async {
       when: running ? DateTime.now().millisecondsSinceEpoch - totalMs : null,
       category: AndroidNotificationCategory.service,
       visibility: NotificationVisibility.public,
+      actions: actions,
     );
 
     final secs = (totalMs ~/ 1000) % 60;
@@ -182,7 +208,7 @@ void _onStart(ServiceInstance service) async {
         ? '${hrs.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}'
         : '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
 
-    final body = paused ? 'Paused — $display' : 'In progress';
+    final body = paused ? '\u23F8 Paused \u2014 $display' : '\u23F1 In progress \u2014 $display';
 
     plugin.show(
       kTimerNotifId,

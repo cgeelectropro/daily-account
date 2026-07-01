@@ -89,6 +89,7 @@
             </intent-filter>
         </receiver>
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"/>
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"/>
 
         <!-- Scripture Card widget (2x2) -->
         <receiver android:name=".ScriptureWidgetProvider"

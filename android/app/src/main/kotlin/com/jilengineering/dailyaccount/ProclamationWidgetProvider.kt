@@ -51,9 +51,7 @@ class ProclamationWidgetProvider : HomeWidgetProvider() {
                 val count = widgetData.getString("proclamation_count", "0") ?: "0"
                 views.setTextViewText(R.id.proclamation_count, count)
 
-                // Localized text
-                views.setTextViewText(R.id.proclamation_text,
-                    WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamation_text))
+                // Localized label
                 views.setTextViewText(R.id.proclamation_label,
                     WidgetHelper.getLocalizedString(context, locale, R.string.widget_proclamations_today).uppercase())
 
