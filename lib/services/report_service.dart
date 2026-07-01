@@ -122,6 +122,37 @@ class ReportService {
     return 0;
   }
 
+  /// Sum all duration fields across a list of logs.
+  static int _totalConsecratedMinutes(List<DailyLog> logs) {
+    int total = 0;
+    for (final log in logs) {
+      for (final d in [
+        log.ddegTime,
+        log.prayerAloneDuration,
+        log.prayerOthersDuration,
+        log.discipleshipDuration,
+        log.proclamationDuration,
+        log.bibleDuration,
+        log.literatureDuration,
+        log.evangelismDuration,
+        log.givingDuration,
+        log.churchDuration,
+      ]) {
+        total += _parseDurationMinutes(d);
+      }
+    }
+    return total;
+  }
+
+  /// Format minutes as "Xh Ym".
+  static String _formatTotalTime(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}m';
+    if (h > 0) return '${h}h';
+    return '${m}m';
+  }
+
   /// Current consecutive-day streak ending today.
   Future<int> computeStreak() async {
     int streak = 0;
@@ -392,9 +423,11 @@ class ReportService {
     int totalChapters = 0;
     int totalContacts = 0;
     double totalCompletion = 0;
+    final allLogs = <DailyLog>[];
 
     for (final d in dates) {
       final log = await StorageService.instance.getLog(keyFor(d));
+      if (log != null) allLogs.add(log);
       buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
       buf.writeln('\uD83D\uDCC5 ${fmtLong.format(d).toUpperCase()}');
       final hasContent = log != null && log.completeness > 0;
@@ -465,6 +498,10 @@ class ReportService {
     buf.writeln(l.reportSummaryEvangelism(totalContacts));
     final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
     buf.writeln(l.reportSummaryCompletion(avgPct));
+    final totalMins = _totalConsecratedMinutes(allLogs);
+    if (totalMins > 0) {
+      buf.writeln(l.totalTimeConsecrated(_formatTotalTime(totalMins)));
+    }
     buf.writeln('');
     buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
     return buf.toString();
@@ -492,8 +529,10 @@ class ReportService {
 
     // Pre-compute stats
     final dayEntries = <String>[];
+    final allLogs = <DailyLog>[];
     for (final d in dates) {
       final log = await StorageService.instance.getLog(keyFor(d));
+      if (log != null) allLogs.add(log);
       final hasContent = log != null && log.completeness > 0;
       if (log == null || !hasContent) {
         dayEntries.add('\u274C ${fmtShort.format(d)}');
@@ -530,6 +569,10 @@ class ReportService {
     buf.writeln(l.reportSummaryBibleChapters(totalChapters));
     buf.writeln(l.reportSummaryEvangelism(totalContacts));
     buf.writeln(l.reportSummaryCompletion(avgPct));
+    final totalMins = _totalConsecratedMinutes(allLogs);
+    if (totalMins > 0) {
+      buf.writeln(l.totalTimeConsecrated(_formatTotalTime(totalMins)));
+    }
     buf.writeln('');
 
     // Day-by-day compact view

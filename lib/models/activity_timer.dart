@@ -54,20 +54,26 @@ extension ActivityTypeMapping on ActivityType {
   /// The DailyLog field key this timer should write to.
   String? get logDurationField {
     switch (this) {
+      case ActivityType.bibleReading:
+        return 'bibleDuration';
+      case ActivityType.literature:
+        return 'literatureDuration';
       case ActivityType.ddeg:
         return 'ddegTime';
       case ActivityType.prayerAlone:
         return 'prayerAloneDuration';
       case ActivityType.prayerOthers:
         return 'prayerOthersDuration';
+      case ActivityType.evangelism:
+        return 'evangelismDuration';
       case ActivityType.fasting:
         return 'fastingDuration';
       case ActivityType.discipleship:
         return 'discipleshipDuration';
+      case ActivityType.church:
+        return 'churchDuration';
       case ActivityType.proclamation:
         return 'proclamationDuration';
-      default:
-        return null; // Bible, evangelism, church don't have a duration field
     }
   }
 

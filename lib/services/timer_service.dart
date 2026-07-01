@@ -367,6 +367,12 @@ class TimerService extends ChangeNotifier {
       final field = session.key.builtIn!.logDurationField;
       if (field != null) {
         switch (field) {
+          case 'bibleDuration':
+            log.bibleDuration =
+                _accumulateDuration(log.bibleDuration, durationStr);
+          case 'literatureDuration':
+            log.literatureDuration =
+                _accumulateDuration(log.literatureDuration, durationStr);
           case 'ddegTime':
             log.ddegTime = _accumulateDuration(log.ddegTime, durationStr);
           case 'prayerAloneDuration':
@@ -375,12 +381,18 @@ class TimerService extends ChangeNotifier {
           case 'prayerOthersDuration':
             log.prayerOthersDuration =
                 _accumulateDuration(log.prayerOthersDuration, durationStr);
+          case 'evangelismDuration':
+            log.evangelismDuration =
+                _accumulateDuration(log.evangelismDuration, durationStr);
           case 'fastingDuration':
             log.fastingDuration =
                 _accumulateDuration(log.fastingDuration, durationStr);
           case 'discipleshipDuration':
             log.discipleshipDuration =
                 _accumulateDuration(log.discipleshipDuration, durationStr);
+          case 'churchDuration':
+            log.churchDuration =
+                _accumulateDuration(log.churchDuration, durationStr);
           case 'proclamationDuration':
             log.proclamationDuration =
                 _accumulateDuration(log.proclamationDuration, durationStr);
