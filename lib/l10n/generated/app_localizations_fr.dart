@@ -55,6 +55,32 @@ class SFr extends S {
   String get bibleChaptersHint => 'ex. 3';
 
   @override
+  String get bibleSessionFrom => 'De';
+
+  @override
+  String get bibleSessionTo => 'À';
+
+  @override
+  String get bibleSessionBook => 'Livre';
+
+  @override
+  String get bibleSessionChapter => 'Ch.';
+
+  @override
+  String bibleSessionChaptersResult(int count) {
+    return '= $count chapitre(s)';
+  }
+
+  @override
+  String get addReadingSession => 'Ajouter une session de lecture';
+
+  @override
+  String get removeSession => 'Supprimer';
+
+  @override
+  String get durationCustom => 'Personnalisé';
+
+  @override
   String get sectionLiterature => 'Littérature Chrétienne';
 
   @override
@@ -139,16 +165,16 @@ class SFr extends S {
   String get sectionEvangelism => 'Évangélisation';
 
   @override
-  String get evangelismContactsLabel => 'Nombre de Contacts';
+  String get evangelismContactsLabel => 'Tracts d\'évangile distribués';
 
   @override
-  String get evangelismContactsHint => 'ex. 2';
+  String get evangelismContactsHint => 'ex. 5';
 
   @override
-  String get evangelismOutcomeLabel => 'Résultat / Réponse';
+  String get evangelismOutcomeLabel => 'Personnes atteintes par l\'évangile';
 
   @override
-  String get evangelismOutcomeHint => 'ex. Un a reçu l’Évangile';
+  String get evangelismOutcomeHint => 'ex. 3';
 
   @override
   String get evangelismNotesLabel => 'Notes / Suivi';
@@ -311,6 +337,9 @@ class SFr extends S {
   String get cancel => 'Annuler';
 
   @override
+  String get delete => 'Supprimer';
+
+  @override
   String get send => 'Envoyer';
 
   @override
@@ -373,6 +402,24 @@ class SFr extends S {
 
   @override
   String get backupSection => 'Sauvegarde et Restauration';
+
+  @override
+  String get autoBackupInfo =>
+      'Vos données sont automatiquement sauvegardées toutes les 6 heures et synchronisées sur Google Drive.';
+
+  @override
+  String get restoreAutoBackup => 'Restaurer la sauvegarde auto';
+
+  @override
+  String autoBackupFound(String date) {
+    return 'Sauvegarde automatique du $date trouvée. Restaurer ?';
+  }
+
+  @override
+  String get noAutoBackup => 'Aucune sauvegarde automatique trouvée.';
+
+  @override
+  String get restoreButton => 'Restaurer';
 
   @override
   String get exportData => 'Exporter les Données';
@@ -623,7 +670,7 @@ class SFr extends S {
 
   @override
   String get autoSendDescription =>
-      'Le dimanche à l’heure programmée, l’application vous rappellera d’envoyer votre compte à votre faiseur de disciples.';
+      'Le dimanche à l’heure programmée, l’application ouvrira automatiquement WhatsApp pour envoyer ton compte à ton faiseur de disciples.';
 
   @override
   String get aboutSection => 'À propos';
@@ -658,4 +705,978 @@ class SFr extends S {
 
   @override
   String get resetSuccess => 'Toutes les données ont été réinitialisées.';
+
+  @override
+  String get thisWeek => 'Cette Semaine';
+
+  @override
+  String get today => 'Aujourd\'hui';
+
+  @override
+  String weekOf(String date) {
+    return 'Semaine du $date';
+  }
+
+  @override
+  String get monthlyReport => 'Mensuel';
+
+  @override
+  String get weeklyReport => 'Hebdomadaire';
+
+  @override
+  String monthOf(String month) {
+    return 'Mois de $month';
+  }
+
+  @override
+  String get monthlySummaryHeader => 'RÉSUMÉ MENSUEL';
+
+  @override
+  String monthlySummaryActiveDays(int count, int total) {
+    return 'Jours actifs : $count/$total';
+  }
+
+  @override
+  String monthlySummaryWeeks(int count) {
+    return 'Semaines rapportées : $count';
+  }
+
+  @override
+  String get noReportForWeek =>
+      'Aucune entrée pour cette semaine.\nVa dans l\'onglet Journal et sélectionne une date passée pour saisir des données.';
+
+  @override
+  String get reportHistory => 'Historique des Rapports';
+
+  @override
+  String get reportHistoryEmpty =>
+      'Aucun rapport généré pour le moment.\nTes rapports apparaîtront ici après les avoir consultés.';
+
+  @override
+  String get reportHistorySection => 'Archive des Rapports';
+
+  @override
+  String sentVia(String channel) {
+    return 'Envoyé via $channel';
+  }
+
+  @override
+  String get notSentYet => 'Pas encore envoyé';
+
+  @override
+  String get resend => 'Renvoyer';
+
+  @override
+  String get viewReport => 'Voir le Rapport';
+
+  @override
+  String get deleteReport => 'Supprimer';
+
+  @override
+  String get reportSaved => 'Rapport sauvegardé dans l\'archive.';
+
+  @override
+  String get reportDeleted => 'Rapport supprimé.';
+
+  @override
+  String get copyFromYesterday => 'Copier d\'hier';
+
+  @override
+  String get copiedFromYesterday => 'Entrées d\'hier copiées !';
+
+  @override
+  String get nothingToCopy => 'Aucune entrée d\'hier à copier.';
+
+  @override
+  String get securitySection => 'Sécurité';
+
+  @override
+  String get appLockEnabled => 'Verrouillage de l\'app';
+
+  @override
+  String get useBiometrics => 'Empreinte digitale / Face ID';
+
+  @override
+  String get changePin => 'Changer le PIN';
+
+  @override
+  String get setPinTitle => 'Définir un PIN';
+
+  @override
+  String get setPinBody =>
+      'Choisissez un code PIN à 4 chiffres pour verrouiller l\'application.';
+
+  @override
+  String get confirmPinTitle => 'Confirmer le PIN';
+
+  @override
+  String get confirmPinBody => 'Ressaisissez votre PIN pour confirmer.';
+
+  @override
+  String get pinMismatch => 'Les PINs ne correspondent pas. Réessayez.';
+
+  @override
+  String get pinSet => 'PIN de l\'application défini avec succès !';
+
+  @override
+  String get pinRemoved => 'Verrouillage désactivé.';
+
+  @override
+  String get enterPin => 'Entrez votre PIN';
+
+  @override
+  String get wrongPin => 'PIN incorrect';
+
+  @override
+  String get useBiometricsPrompt => 'Déverrouiller Compte Journalier';
+
+  @override
+  String get saveAsPdf => 'Enregistrer en PDF';
+
+  @override
+  String get sharePdf => 'Partager le PDF';
+
+  @override
+  String get shareReport => 'Partager';
+
+  @override
+  String get tabStopwatch => 'Chrono';
+
+  @override
+  String get stopwatchTitle => 'Chronomètre';
+
+  @override
+  String get stopwatchSubtitle =>
+      'Mesure tes disciplines spirituelles en temps réel';
+
+  @override
+  String get todayTotal => 'Total aujourd\'hui';
+
+  @override
+  String get timerStopped => 'Chrono arrêté — durée enregistrée !';
+
+  @override
+  String get timerAlreadyRunning =>
+      'Un autre chrono est en cours. Il sera mis en pause.';
+
+  @override
+  String get stopwatchFillFields =>
+      'Remplis les détails avant de démarrer (optionnel)';
+
+  @override
+  String get startTimer => 'Démarrer le chrono';
+
+  @override
+  String get addActivity => 'Ajouter une activité';
+
+  @override
+  String get activityName => 'Nom de l\'activité';
+
+  @override
+  String get activityNameHint => 'ex. Louange, Méditation';
+
+  @override
+  String get activityIcon => 'Icône emoji';
+
+  @override
+  String get activityCreated => 'Activité ajoutée !';
+
+  @override
+  String get activityDeleted => 'Activité supprimée.';
+
+  @override
+  String get deleteActivityConfirm => 'Supprimer cette activité ?';
+
+  @override
+  String get customFieldLabel => 'Libellé du champ notes (optionnel)';
+
+  @override
+  String get customFieldHint => 'ex. Qu\'as-tu appris ?';
+
+  @override
+  String get ddegShort => 'RDQD';
+
+  @override
+  String get bibleStartRef => 'Référence de début';
+
+  @override
+  String get bibleStartHint => 'ex. Jean 1';
+
+  @override
+  String get bibleEndRef => 'Référence de fin (après lecture)';
+
+  @override
+  String get bibleEndHint => 'ex. Jean 3';
+
+  @override
+  String bibleChaptersRead(int count) {
+    return '$count chapitre(s) lu(s)';
+  }
+
+  @override
+  String get enterEndReference => 'Où as-tu terminé ta lecture ?';
+
+  @override
+  String timerStoppedDuration(String duration) {
+    return 'Durée : $duration';
+  }
+
+  @override
+  String get done => 'Terminé';
+
+  @override
+  String get sectionProclamation => 'Proclamation';
+
+  @override
+  String get proclamationCountLabel => 'Nombre de proclamations';
+
+  @override
+  String get proclamationCountHint => 'ex. 50';
+
+  @override
+  String get proclamationDurationLabel => 'Durée (optionnel)';
+
+  @override
+  String get proclamationDurationHint => 'ex. 10 minutes';
+
+  @override
+  String get proclamationCounter => 'Compteur de Proclamation';
+
+  @override
+  String get proclamationSubtitle => 'Proclame : Jésus-Christ est Seigneur !';
+
+  @override
+  String get proclamationTap => 'Appuie pour proclamer';
+
+  @override
+  String get proclamationSave => 'Enregistrer et Fermer';
+
+  @override
+  String reportProclamation(String count, String duration) {
+    return 'Proclamation : $count fois ($duration)';
+  }
+
+  @override
+  String get followUpReminders => 'Rappels de suivi';
+
+  @override
+  String get followUpDescription =>
+      'Après le rappel principal, des alertes de suivi sonnent toutes les 30 minutes pour ne rien oublier.';
+
+  @override
+  String followUpCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '3 suivis (+30, +60, +90 min)',
+      two: '2 suivis (+30, +60 min)',
+      one: '1 suivi (+30 min)',
+      zero: 'Aucun suivi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationIntensity => 'Intensité des notifications';
+
+  @override
+  String get intensityAggressive => 'Agressive (style alarme)';
+
+  @override
+  String get intensityAggressiveDesc =>
+      'Alertes plein écran, son, vibration, LED — comme un réveil';
+
+  @override
+  String get sundayFollowUps => 'Suivis du dimanche';
+
+  @override
+  String sundayFollowUpCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count suivis',
+      two: '2 suivis (+30, +60 min)',
+      one: '1 suivi (+30 min)',
+      zero: 'Aucun suivi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tabPrayer => 'Prières';
+
+  @override
+  String get prayerRequestsTitle => 'Sujets de Prière';
+
+  @override
+  String get prayerRequestsSubtitle => 'Dépose tes fardeaux devant le Seigneur';
+
+  @override
+  String get prayerActive => 'Actifs';
+
+  @override
+  String get prayerAnswered => 'Exaucés';
+
+  @override
+  String get prayerEmptyActive =>
+      'Aucun sujet de prière.\nAppuie sur + pour ajouter ton premier sujet.';
+
+  @override
+  String prayerAnsweredSection(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prières exaucées',
+      one: '1 prière exaucée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get prayerAddTitle => 'Nouveau Sujet de Prière';
+
+  @override
+  String get prayerTitleLabel => 'Sujet de prière';
+
+  @override
+  String get prayerTitleHint => 'ex. Guérison pour mon frère';
+
+  @override
+  String get prayerDescLabel => 'Détails (optionnel)';
+
+  @override
+  String get prayerDescHint => 'Plus de contexte sur ce sujet...';
+
+  @override
+  String get prayerAddButton => 'Ajouter le Sujet';
+
+  @override
+  String get prayerCatPersonal => 'Personnel';
+
+  @override
+  String get prayerCatFamily => 'Famille';
+
+  @override
+  String get prayerCatChurch => 'Église';
+
+  @override
+  String get prayerCatNation => 'Nation';
+
+  @override
+  String get prayerCatHealth => 'Santé';
+
+  @override
+  String get prayerMarkAnswered => 'Prière Exaucée !';
+
+  @override
+  String get prayerAnswerNote => 'Comment Dieu a-t-il répondu ?';
+
+  @override
+  String get prayerAnswerHint => 'Décris comment cette prière a été exaucée...';
+
+  @override
+  String get prayerConfirmAnswered => 'Marquer comme Exaucé';
+
+  @override
+  String get weeklyChart => 'PROGRESSION HEBDOMADAIRE';
+
+  @override
+  String get chartCompletion => 'Complétion %';
+
+  @override
+  String get quickLogTitle => 'Journal Rapide';
+
+  @override
+  String get quickLogSubtitle =>
+      'Coche chaque discipline pratiquée aujourd\'hui';
+
+  @override
+  String get quickLogSaved => 'Journal rapide enregistré !';
+
+  @override
+  String get quickLogButton => 'Journal Rapide';
+
+  @override
+  String get badgeStreakWeek => 'Guerrier 7 Jours';
+
+  @override
+  String get badgeStreakMonth => 'Champion 30 Jours';
+
+  @override
+  String get badgeBibleMarathon => 'Marathon Biblique';
+
+  @override
+  String get badgePrayerWarrior => 'Guerrier de Prière';
+
+  @override
+  String get badgeEvangelismFire => 'Gagneur d\'Âmes';
+
+  @override
+  String get badgePerfectWeek => 'Semaine Parfaite';
+
+  @override
+  String get badgesTitle => 'ACCOMPLISSEMENTS';
+
+  @override
+  String get badgesEmpty =>
+      'Continue ! Les badges apparaîtront au fur et à mesure.';
+
+  @override
+  String get snoozeLabel => 'Reporter 15 min';
+
+  @override
+  String get testNotification => 'Tester les Notifications';
+
+  @override
+  String get testNotificationSuccess =>
+      'Notification envoyée ! Si vous ne la voyez pas, vérifiez les paramètres de notification.';
+
+  @override
+  String get testNotificationFailed =>
+      'Notification échouée. Activez les notifications dans les paramètres de votre appareil.';
+
+  @override
+  String pendingNotifications(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notifications planifiées',
+      one: '1 notification planifiée',
+      zero: 'Aucune notification planifiée',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get missingDisciplinesTitle => 'Disciplines Manquantes';
+
+  @override
+  String get missingDisciplinesSubtitle =>
+      'Appuyez pour les compléter aujourd\'hui';
+
+  @override
+  String get disciplineDone => 'Fait';
+
+  @override
+  String get disciplineMissing => 'Manquant';
+
+  @override
+  String get allDisciplinesDone =>
+      'Toutes les disciplines complétées ! Excellent !';
+
+  @override
+  String get pendingReportBanner => 'Rapport en attente — sera envoyé en ligne';
+
+  @override
+  String get pendingReportRetry => 'Réessayer';
+
+  @override
+  String get pendingReportSent => 'Rapport en attente envoyé !';
+
+  @override
+  String get offlineStatus => 'Hors ligne';
+
+  @override
+  String get midWeekNudgeTitle => 'Bilan de mi-semaine';
+
+  @override
+  String midWeekNudgeBody(int done, int total) {
+    return 'Vous avez complété $done/$total disciplines cette semaine. Continuez !';
+  }
+
+  @override
+  String trendUp(int percent) {
+    return 'en hausse de $percent%';
+  }
+
+  @override
+  String trendDown(int percent) {
+    return 'en baisse de $percent%';
+  }
+
+  @override
+  String get trendSteady => 'stable';
+
+  @override
+  String get trendVsLastMonth => 'vs le mois dernier';
+
+  @override
+  String get trendTitle => 'TENDANCES';
+
+  @override
+  String get trendConsistency => 'Régularité';
+
+  @override
+  String get trendBestDiscipline => 'Point fort';
+
+  @override
+  String get trendWeakDiscipline => 'À améliorer';
+
+  @override
+  String get trendNoData => 'Pas assez de données pour les tendances';
+
+  @override
+  String get reflectionTitle => 'Réflexion Quotidienne';
+
+  @override
+  String get reflectionEmpty =>
+      'Complétez des disciplines pour recevoir une réflexion';
+
+  @override
+  String reflectionGreatDay(int count) {
+    return 'Magnifique journée de fidélité ! Vous avez couvert $count disciplines — votre engagement porte du fruit.';
+  }
+
+  @override
+  String reflectionGoodDay(int count) {
+    return 'Bon effort aujourd\'hui avec $count disciplines. Continuez à bâtir la régularité !';
+  }
+
+  @override
+  String reflectionStartDay(int count) {
+    return 'Vous avez commencé avec $count discipline. Chaque pas compte — continuez !';
+  }
+
+  @override
+  String get reflectionPrayerFocus =>
+      'Votre vie de prière est forte aujourd\'hui. Qu\'elle nourrisse vos autres disciplines.';
+
+  @override
+  String get reflectionBibleFocus =>
+      'Excellent engagement biblique aujourd\'hui. Que la Parole guide votre journée.';
+
+  @override
+  String get reflectionEvangelismFocus =>
+      'Actif en évangélisation aujourd\'hui — des âmes sont atteintes !';
+
+  @override
+  String get reflectionBalanced =>
+      'Une journée magnifiquement équilibrée à travers vos disciplines.';
+
+  @override
+  String reflectionStreakEncouragement(int days) {
+    return 'Vous êtes sur une série de $days jours ! Ne la brisez pas !';
+  }
+
+  @override
+  String get evangelismFollowUp => 'Suivi';
+
+  @override
+  String get evangelismNewBelievers => 'Ceux qui ont accepté Jésus';
+
+  @override
+  String get evangelismNewBelieversHint =>
+      'Nombre de personnes qui ont accepté Christ dans leur cœur';
+
+  @override
+  String get evangelismBeingDiscipled => 'En cours de formation';
+
+  @override
+  String get evangelismBeingDiscipledHint => 'Nombre en formation de disciple';
+
+  @override
+  String get evangelismFollowUpNotes => 'Notes de suivi';
+
+  @override
+  String get evangelismFollowUpHint => 'Noms, prochaines étapes, besoins...';
+
+  @override
+  String get textSizeLabel => 'Taille du texte';
+
+  @override
+  String get textSizeSmall => 'A';
+
+  @override
+  String get textSizeLarge => 'A+';
+
+  @override
+  String get textSizePreview => 'Aperçu du texte';
+
+  @override
+  String get disciplineReminders => 'Rappels par discipline';
+
+  @override
+  String get disciplineRemindersDesc =>
+      'Définir une heure pour chaque discipline';
+
+  @override
+  String get disciplineReminderOff => 'Désactivé';
+
+  @override
+  String get disciplineReminderSet => 'Défini';
+
+  @override
+  String get weeklyGoals => 'Objectifs hebdomadaires';
+
+  @override
+  String get weeklyGoalsDesc => 'Définissez vos cibles pour la semaine';
+
+  @override
+  String get dailyGoals => 'Objectifs quotidiens';
+
+  @override
+  String get dailyGoalsDesc => 'Définissez vos cibles pour chaque jour';
+
+  @override
+  String get goalFrequency => 'Fréquence';
+
+  @override
+  String get daily => 'Quotidien';
+
+  @override
+  String get weekly => 'Hebdomadaire';
+
+  @override
+  String get enterGoalValue => 'Entrer la valeur';
+
+  @override
+  String get goalBibleChapters => 'Chapitres bibliques';
+
+  @override
+  String get goalPrayerMinutes => 'Prière (minutes)';
+
+  @override
+  String get goalEvangelismContacts => 'Contacts d\'évangélisation';
+
+  @override
+  String get goalLiteratureItems => 'Livres lus';
+
+  @override
+  String goalProgress(String current, String target) {
+    return '$current/$target';
+  }
+
+  @override
+  String get goalReached => 'Objectif atteint !';
+
+  @override
+  String get setGoals => 'Définir les objectifs';
+
+  @override
+  String get saveGoals => 'Enregistrer';
+
+  @override
+  String get weeklyChallenge => 'Défi de la semaine';
+
+  @override
+  String challengeWeakDiscipline(String discipline) {
+    return 'Concentrez-vous sur $discipline — votre point faible cette semaine';
+  }
+
+  @override
+  String get challengePrayerDaily =>
+      'Priez chaque jour cette semaine — même 5 minutes comptent';
+
+  @override
+  String get challengeBibleDaily =>
+      'Lisez au moins 1 chapitre biblique chaque jour';
+
+  @override
+  String get challengeEvangelism =>
+      'Partagez l’évangile avec 3 personnes cette semaine';
+
+  @override
+  String get challengeStreak7 =>
+      'Continuez à journaliser pour atteindre 7 jours consécutifs !';
+
+  @override
+  String get challengeStreak30 =>
+      'Vous êtes en feu ! Visez 30 jours consécutifs !';
+
+  @override
+  String get challengePerfectWeek =>
+      'Presque ! Journalisez chaque jour pour une semaine parfaite !';
+
+  @override
+  String get milestoneStreak7 => '7 jours consécutifs !';
+
+  @override
+  String get milestoneStreak7Body =>
+      'Une semaine complète de fidélité. Continuez !';
+
+  @override
+  String get milestoneStreak30 => '30 jours consécutifs !';
+
+  @override
+  String get milestoneStreak30Body =>
+      'Un mois de discipline quotidienne. Vous construisez quelque chose de durable.';
+
+  @override
+  String get milestoneStreak100 => '100 jours consécutifs !';
+
+  @override
+  String get milestoneStreak100Body =>
+      '100 jours de marche avec Dieu. Quel témoignage !';
+
+  @override
+  String get milestonePerfectWeek => 'Semaine parfaite !';
+
+  @override
+  String get milestonePerfectWeekBody =>
+      'Chaque jour comptabilisé. Bien fait, serviteur fidèle.';
+
+  @override
+  String get milestoneBibleMarathon => 'Marathon biblique !';
+
+  @override
+  String get milestoneBibleMarathonBody =>
+      '20+ chapitres cette semaine. La Parole est vivante en vous.';
+
+  @override
+  String get milestoneShare => 'Partager la réussite';
+
+  @override
+  String get voiceNote => 'Note vocale';
+
+  @override
+  String get voiceNoteRecord => 'Appuyez pour enregistrer';
+
+  @override
+  String get voiceNoteRecording => 'Enregistrement...';
+
+  @override
+  String get voiceNotePlay => 'Écouter';
+
+  @override
+  String get voiceNoteDelete => 'Supprimer l\'enregistrement';
+
+  @override
+  String get voiceNoteDeleteConfirm => 'Supprimer cette note vocale ?';
+
+  @override
+  String get voiceNoteSaved => 'Note vocale enregistrée';
+
+  @override
+  String get fastingPeriod => 'Période de jeûne';
+
+  @override
+  String get fastingStartDate => 'Date de début';
+
+  @override
+  String get fastingEndDate => 'Date de fin';
+
+  @override
+  String get fastingTypeComplete => 'Jeûne complet';
+
+  @override
+  String get fastingTypePartial => 'Jeûne partiel';
+
+  @override
+  String get fastingTypeEsther => 'Jeûne d\'Esther';
+
+  @override
+  String fastingDaysRemaining(int days) {
+    return '$days jours restants';
+  }
+
+  @override
+  String fastingDayOf(int current, int total) {
+    return 'Jour $current sur $total';
+  }
+
+  @override
+  String get fastingActive => 'Jeûne actif';
+
+  @override
+  String get fastingCompleted => 'Jeûne terminé !';
+
+  @override
+  String get fastingNone => 'Pas de jeûne actif';
+
+  @override
+  String get startFast => 'Commencer un jeûne';
+
+  @override
+  String get endFast => 'Terminer le jeûne';
+
+  @override
+  String get certificateTitle => 'Certificat de fidélité';
+
+  @override
+  String get certificateSubtitle => 'Réalisation spirituelle mensuelle';
+
+  @override
+  String certificateBody(String name, String month, int percent) {
+    return 'Ceci certifie que $name a fait preuve de discipline spirituelle fidèle au cours de $month, atteignant $percent% de cohérence globale.';
+  }
+
+  @override
+  String get certificateGenerate => 'Générer le certificat';
+
+  @override
+  String get certificateShare => 'Partager le certificat';
+
+  @override
+  String get certificateNoData =>
+      'Il faut au moins 80% de régularité pour obtenir un certificat';
+
+  @override
+  String get autoFillBanner =>
+      'Rempli automatiquement selon vos habitudes récentes';
+
+  @override
+  String get autoFillUndo => 'Annuler';
+
+  @override
+  String get reportLanguageSection => 'Langue du rapport';
+
+  @override
+  String get reportLanguageDesc =>
+      'Choisissez la langue des rapports envoyés et des documents PDF';
+
+  @override
+  String get reportLanguageSameAsApp => 'Identique à l\'application';
+
+  @override
+  String get saturdaySummaryTitle => 'Votre semaine jusqu\'ici';
+
+  @override
+  String saturdaySummaryBody(int days, int chapters, int contacts) {
+    return '$days/7 jours enregistrés, $chapters chapitres lus, $contacts contacts évangélisés. Terminez en beauté demain !';
+  }
+
+  @override
+  String get cloudBackupSection => 'Sauvegarde Cloud';
+
+  @override
+  String get cloudBackupDescription =>
+      'Connectez-vous avec votre compte Google pour sauvegarder toutes vos données sur Google Drive. Restaurez-les sur n\'importe quel appareil.';
+
+  @override
+  String get signInWithGoogle => 'Se connecter avec Google';
+
+  @override
+  String signedInAs(String email) {
+    return 'Connecté en tant que $email';
+  }
+
+  @override
+  String lastCloudBackup(String date) {
+    return 'Dernière sauvegarde : $date';
+  }
+
+  @override
+  String get backupToDrive => 'Sauvegarder sur Google Drive';
+
+  @override
+  String get restoreFromDrive => 'Restaurer depuis Google Drive';
+
+  @override
+  String get signOut => 'Se déconnecter';
+
+  @override
+  String get cloudBackupSuccess => 'Sauvegardé sur Google Drive !';
+
+  @override
+  String get cloudBackupFailed =>
+      'Échec de la sauvegarde cloud. Vérifiez votre connexion.';
+
+  @override
+  String get cloudRestoreSuccess => 'Données restaurées depuis Google Drive !';
+
+  @override
+  String get cloudRestoreFailed =>
+      'Échec de la restauration. Vérifiez votre connexion.';
+
+  @override
+  String get cloudRestoreConfirmTitle => 'Restaurer depuis le cloud ?';
+
+  @override
+  String get cloudRestoreConfirmBody =>
+      'Ceci remplacera toutes les données locales par la sauvegarde cloud. Êtes-vous sûr ?';
+
+  @override
+  String get cloudNoBackupFound =>
+      'Aucune sauvegarde trouvée sur votre Google Drive.';
+
+  @override
+  String get cloudSignInFailed =>
+      'Échec de la connexion Google. Veuillez réessayer.';
+
+  @override
+  String get timeConsciousLabel => 'Mode temps conscient';
+
+  @override
+  String get timeConsciousDescription =>
+      'Suivre le temps que vous consacrez à chaque activité spirituelle';
+
+  @override
+  String totalTimeConsecrated(String time) {
+    return 'Temps total consacré : $time';
+  }
+
+  @override
+  String get save => 'Enregistrer';
+
+  @override
+  String get customActivityTitle => 'Créer une activité';
+
+  @override
+  String get customActivityName => 'Nom de l\'activité';
+
+  @override
+  String get customActivityNameHint => 'ex. Louange, Prière de jeûne';
+
+  @override
+  String get customActivityIcon => 'Icône';
+
+  @override
+  String get customActivityTemplates => 'Modèles rapides';
+
+  @override
+  String get customActivityTemplateSimple => 'Simple';
+
+  @override
+  String get customActivityTemplateTimed => 'Minuté';
+
+  @override
+  String get customActivityTemplateCounted => 'Compté';
+
+  @override
+  String get customActivityTemplateFull => 'Complet';
+
+  @override
+  String get customActivityAddField => 'Ajouter un champ';
+
+  @override
+  String get customActivityFieldLabel => 'Libellé du champ';
+
+  @override
+  String get customActivityFieldType => 'Type';
+
+  @override
+  String get customActivityCountsForProgress =>
+      'Compte pour la progression quotidienne';
+
+  @override
+  String get customFieldTypeText => 'Texte';
+
+  @override
+  String get customFieldTypeNumber => 'Nombre';
+
+  @override
+  String get customFieldTypeDuration => 'Durée';
+
+  @override
+  String get customFieldTypeYesNo => 'Oui/Non';
+
+  @override
+  String get customFieldTypeNotes => 'Notes';
+
+  @override
+  String get customActivityMaxFields => 'Maximum 8 champs';
+
+  @override
+  String get cancelTimerTitle => 'Annuler le minuteur ?';
+
+  @override
+  String cancelTimerContent(String elapsed, String name) {
+    return 'Abandonner $elapsed de $name ?';
+  }
+
+  @override
+  String get cancelTimerKeep => 'Continuer';
+
+  @override
+  String get cancelTimerDiscard => 'Abandonner';
 }

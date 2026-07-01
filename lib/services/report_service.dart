@@ -1,6 +1,9 @@
+import 'package:daily_account/models/daily_log.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../models/custom_activity.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -8,15 +11,67 @@ class WeekStats {
   int totalBibleChapters;
   int totalEvangelismContacts;
   int litItems;
-  WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems);
+  int totalPrayerMinutes;
+  WeekStats(this.daysLogged, this.totalBibleChapters, this.totalEvangelismContacts, this.litItems, this.totalPrayerMinutes);
 }
 
-/// Builds the weekly report and dispatches it via email or WhatsApp.
+class MonthStats {
+  int daysLogged;
+  int totalDays;
+  int totalBibleChapters;
+  int totalEvangelismContacts;
+  int litItems;
+  int weeksReported;
+  double avgCompletion;
+  MonthStats({
+    required this.daysLogged,
+    required this.totalDays,
+    required this.totalBibleChapters,
+    required this.totalEvangelismContacts,
+    required this.litItems,
+    required this.weeksReported,
+    required this.avgCompletion,
+  });
+}
+
+/// Per-discipline consistency data for trend analysis.
+class TrendData {
+  /// Overall consistency this week (0.0–1.0).
+  final double currentConsistency;
+  /// Overall consistency last month (0.0–1.0).
+  final double lastMonthConsistency;
+  /// Per-discipline consistency this week — discipline name → (days done / total days).
+  final Map<String, double> disciplineRates;
+  /// Best discipline name.
+  final String? bestDiscipline;
+  /// Weakest discipline name.
+  final String? weakDiscipline;
+  /// Whether enough data exists.
+  final bool hasData;
+
+  TrendData({
+    required this.currentConsistency,
+    required this.lastMonthConsistency,
+    required this.disciplineRates,
+    this.bestDiscipline,
+    this.weakDiscipline,
+    required this.hasData,
+  });
+
+  /// Change percentage points: positive = improvement.
+  double get change => currentConsistency - lastMonthConsistency;
+}
+
+/// Builds the weekly report and dispatches it via email, WhatsApp, or share.
+///
+/// Two report formats:
+///   - **Full**: Detailed day-by-day, used for email and clipboard
+///   - **Compact**: Summary-first, condensed daily notes, used for WhatsApp
 class ReportService {
   static final ReportService instance = ReportService._();
   ReportService._();
 
-  /// Monday→Sunday dates for the week containing [ref] (default today).
+  /// Monday->Sunday dates for the week containing [ref] (default today).
   List<DateTime> weekDates([DateTime? ref]) {
     final today = ref ?? DateTime.now();
     final monday = today.subtract(Duration(days: (today.weekday + 6) % 7));
@@ -25,18 +80,89 @@ class ReportService {
 
   String keyFor(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
-  Future<WeekStats> computeWeekStats() async {
-    final dates = weekDates();
+  Future<WeekStats> computeWeekStats([DateTime? ref]) async {
+    final dates = weekDates(ref);
     final logs = await StorageService.instance
         .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
-    int days = 0, chapters = 0, contacts = 0, lit = 0;
+    int days = 0, chapters = 0, contacts = 0, lit = 0, prayerMins = 0;
     for (final l in logs) {
       if (l.completed) days++;
-      chapters += int.tryParse(l.bibleChapters) ?? 0;
+      chapters += l.totalBibleChapters;
       contacts += int.tryParse(l.evangelismContacts) ?? 0;
       lit += l.literature.where((e) => e.title.isNotEmpty).length;
+      prayerMins += _parseDurationMinutes(l.prayerAloneDuration);
+      prayerMins += _parseDurationMinutes(l.prayerOthersDuration);
     }
-    return WeekStats(days, chapters, contacts, lit);
+    return WeekStats(days, chapters, contacts, lit, prayerMins);
+  }
+
+  /// Best-effort parse of duration strings like "45m", "1h 30m", "30 minutes", "1h15m".
+  static int _parseDurationMinutes(String s) {
+    if (s.isEmpty || s == '\u2713') return 0;
+    // Try "Xh Ym" or "XhYm"
+    final hm = RegExp(r'(\d+)\s*h\s*(\d+)\s*m');
+    final hmMatch = hm.firstMatch(s);
+    if (hmMatch != null) {
+      return int.parse(hmMatch.group(1)!) * 60 + int.parse(hmMatch.group(2)!);
+    }
+    // Try "Xh" only
+    final hOnly = RegExp(r'(\d+)\s*h');
+    final hMatch = hOnly.firstMatch(s);
+    if (hMatch != null) return int.parse(hMatch.group(1)!) * 60;
+    // Try "Xm" or "X minutes" or "X min"
+    final mOnly = RegExp(r'(\d+)\s*m');
+    final mMatch = mOnly.firstMatch(s);
+    if (mMatch != null) return int.parse(mMatch.group(1)!);
+    // Try "Xs" (seconds only, from timer)
+    final sOnly = RegExp(r'^(\d+)\s*s$');
+    final sMatch = sOnly.firstMatch(s);
+    if (sMatch != null) return (int.parse(sMatch.group(1)!) / 60).ceil();
+    // Try bare number (assume minutes)
+    final n = int.tryParse(s.trim());
+    if (n != null) return n;
+    return 0;
+  }
+
+  /// Sum all duration fields across a list of logs.
+  static int _totalConsecratedMinutes(List<DailyLog> logs) {
+    int total = 0;
+    for (final log in logs) {
+      for (final d in [
+        log.ddegTime,
+        log.prayerAloneDuration,
+        log.prayerOthersDuration,
+        log.discipleshipDuration,
+        log.proclamationDuration,
+        log.bibleDuration,
+        log.literatureDuration,
+        log.evangelismDuration,
+        log.givingDuration,
+        log.churchDuration,
+      ]) {
+        total += _parseDurationMinutes(d);
+      }
+      // Custom activity duration fields
+      for (final actData in log.customActivityData.values) {
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        for (final entry in fields.entries) {
+          if (entry.key == '_duration' ||
+              entry.key.toLowerCase().contains('duration') ||
+              entry.key.toLowerCase().contains('time')) {
+            total += _parseDurationMinutes(entry.value.toString());
+          }
+        }
+      }
+    }
+    return total;
+  }
+
+  /// Format minutes as "Xh Ym".
+  static String _formatTotalTime(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    if (h > 0 && m > 0) return '${h}h ${m}m';
+    if (h > 0) return '${h}h';
+    return '${m}m';
   }
 
   /// Current consecutive-day streak ending today.
@@ -49,7 +175,6 @@ class ReportService {
         streak++;
         day = day.subtract(const Duration(days: 1));
       } else {
-        // allow today to be unlogged without breaking the streak
         if (i == 0) {
           day = day.subtract(const Duration(days: 1));
           continue;
@@ -60,14 +185,270 @@ class ReportService {
     return streak;
   }
 
-  /// Build the weekly report using localized strings from [l].
-  Future<String> buildWeeklyReport(String name, S l) async {
-    final dates = weekDates();
+  // ═══════════════════════════════════════════════════════════
+  //  TREND ANALYSIS
+  // ═══════════════════════════════════════════════════════════
+
+  static const _disciplineNames = [
+    'Bible', 'Literature', 'DDEG', 'Prayer (alone)',
+    'Prayer (others)', 'Evangelism', 'Fasting',
+    'Giving', 'Church', 'Discipleship', 'Proclamation',
+  ];
+
+  static List<bool> _disciplineChecks(DailyLog l) => [
+    l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty || l.bibleSessions.any((s) => s.isNotEmpty),
+    l.literature.any((e) => e.title.isNotEmpty),
+    l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
+    l.prayerAloneDuration.isNotEmpty,
+    l.prayerOthersDuration.isNotEmpty,
+    l.evangelismContacts.isNotEmpty,
+    l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
+    l.givingType.isNotEmpty,
+    l.churchType.isNotEmpty,
+    l.discipleshipWho.isNotEmpty,
+    l.proclamationCount.isNotEmpty,
+  ];
+
+  /// Compare this week's discipline consistency with the previous 30 days.
+  Future<TrendData> computeTrend([DateTime? ref]) async {
+    final dates = weekDates(ref);
+    final weekLogs = await StorageService.instance
+        .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
+
+    if (weekLogs.isEmpty) {
+      return TrendData(
+        currentConsistency: 0, lastMonthConsistency: 0,
+        disciplineRates: {}, hasData: false,
+      );
+    }
+
+    // Current week per-discipline rates
+    final weekCounts = List.filled(11, 0);
+    for (final log in weekLogs) {
+      final checks = _disciplineChecks(log);
+      for (int i = 0; i < 11; i++) {
+        if (checks[i]) weekCounts[i]++;
+      }
+    }
+    final weekRates = <String, double>{};
+    for (int i = 0; i < 11; i++) {
+      weekRates[_disciplineNames[i]] = weekCounts[i] / weekLogs.length;
+    }
+    final currentConsistency = weekRates.values.fold(0.0, (a, b) => a + b) / 11;
+
+    // Last 30 days (excluding current week)
+    final monthEnd = dates.first.subtract(const Duration(days: 1));
+    final monthStart = monthEnd.subtract(const Duration(days: 29));
+    final monthLogs = await StorageService.instance
+        .getLogsBetween(keyFor(monthStart), keyFor(monthEnd));
+
+    double lastMonthConsistency = 0;
+    if (monthLogs.isNotEmpty) {
+      final monthCounts = List.filled(11, 0);
+      for (final log in monthLogs) {
+        final checks = _disciplineChecks(log);
+        for (int i = 0; i < 11; i++) {
+          if (checks[i]) monthCounts[i]++;
+        }
+      }
+      lastMonthConsistency = monthCounts.fold(0.0, (a, c) => a + c / monthLogs.length) / 11;
+    }
+
+    // Best & weakest
+    String? best, weak;
+    double bestVal = -1, weakVal = 2;
+    for (final entry in weekRates.entries) {
+      if (entry.value > bestVal) { bestVal = entry.value; best = entry.key; }
+      if (entry.value < weakVal) { weakVal = entry.value; weak = entry.key; }
+    }
+
+    return TrendData(
+      currentConsistency: currentConsistency,
+      lastMonthConsistency: lastMonthConsistency,
+      disciplineRates: weekRates,
+      bestDiscipline: best,
+      weakDiscipline: weak,
+      hasData: true,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  MONTHLY STATS & REPORT
+  // ═══════════════════════════════════════════════════════════
+
+  /// Returns a list of Monday dates for all weeks in the given month.
+  List<DateTime> _weeksInMonth(int year, int month) {
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0); // last day of month
+    final firstMonday = firstDay.subtract(Duration(days: (firstDay.weekday - 1) % 7));
+    final weeks = <DateTime>[];
+    var monday = firstMonday;
+    while (monday.isBefore(lastDay) || monday.isAtSameMomentAs(lastDay)) {
+      weeks.add(monday);
+      monday = monday.add(const Duration(days: 7));
+    }
+    return weeks;
+  }
+
+  Future<MonthStats> computeMonthStats(int year, int month) async {
+    final firstDay = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+    final totalDays = lastDay.day;
+    final logs = await StorageService.instance
+        .getLogsBetween(keyFor(firstDay), keyFor(lastDay));
+    int days = 0, chapters = 0, contacts = 0, lit = 0;
+    double totalCompletion = 0;
+    for (final l in logs) {
+      if (l.completed) days++;
+      chapters += l.totalBibleChapters;
+      contacts += int.tryParse(l.evangelismContacts) ?? 0;
+      lit += l.literature.where((e) => e.title.isNotEmpty).length;
+      totalCompletion += l.completeness;
+    }
+    final weeks = _weeksInMonth(year, month);
+    int weeksReported = 0;
+    for (final mon in weeks) {
+      final sun = mon.add(const Duration(days: 6));
+      final weekLogs = await StorageService.instance
+          .getLogsBetween(keyFor(mon), keyFor(sun));
+      if (weekLogs.any((l) => l.completeness > 0)) weeksReported++;
+    }
+    return MonthStats(
+      daysLogged: days,
+      totalDays: totalDays,
+      totalBibleChapters: chapters,
+      totalEvangelismContacts: contacts,
+      litItems: lit,
+      weeksReported: weeksReported,
+      avgCompletion: days > 0 ? totalCompletion / days : 0,
+    );
+  }
+
+  Future<String> buildMonthlyReport(String name, S l, int year, int month) async {
+    final fmtMonth = DateFormat('MMMM yyyy');
+    final fmtLong = DateFormat('EEEE, MMM d');
+    final monthDate = DateTime(year, month, 1);
+    final lastDay = DateTime(year, month + 1, 0);
+    final buf = StringBuffer();
+
+    // Load custom activity names once for ID → display label lookup
+    final customActivities = await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
+
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln(l.monthOf(fmtMonth.format(monthDate)));
+    buf.writeln('');
+
+    // Monthly summary at the top
+    final stats = await computeMonthStats(year, month);
+    buf.writeln('\uD83D\uDCCA ${l.monthlySummaryHeader}');
+    buf.writeln(l.monthlySummaryActiveDays(stats.daysLogged, stats.totalDays));
+    buf.writeln(l.monthlySummaryWeeks(stats.weeksReported));
+    buf.writeln(l.reportSummaryBibleChapters(stats.totalBibleChapters));
+    buf.writeln(l.reportSummaryEvangelism(stats.totalEvangelismContacts));
+    final avgPct = (stats.avgCompletion * 100).round();
+    buf.writeln(l.reportSummaryCompletion(avgPct));
+    buf.writeln('');
+
+    // Full day-by-day detail for every day of the month
+    for (int day = 1; day <= lastDay.day; day++) {
+      final d = DateTime(year, month, day);
+      // Don't include future days
+      if (d.isAfter(DateTime.now())) break;
+
+      final log = await StorageService.instance.getLog(keyFor(d));
+      buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+      buf.writeln('\uD83D\uDCC5 ${fmtLong.format(d).toUpperCase()}');
+      final hasContent = log != null && log.completeness > 0;
+      if (!hasContent) {
+        buf.writeln('   \u26A0\uFE0F  ${l.reportNoEntry}');
+        buf.writeln('');
+        continue;
+      }
+
+      // Same detailed output as the weekly full report
+      final bibleRef = log.combinedBibleReference('en');
+      if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
+      }
+      for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
+        buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
+      }
+      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
+        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
+        if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
+        if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
+        if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
+      }
+      if (log.prayerAloneDuration.isNotEmpty) {
+        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
+      }
+      if (log.prayerOthersDuration.isNotEmpty) {
+        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
+      }
+      if (log.evangelismContacts.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
+          final parts = <String>[];
+          if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
+          if (log.evangelismBeingDiscipled.isNotEmpty) parts.add('${l.evangelismBeingDiscipled}: ${log.evangelismBeingDiscipled}');
+          buf.writeln('   \uD83C\uDF31 ${parts.join(' | ')}');
+        }
+        if (log.evangelismFollowUpNotes.isNotEmpty) {
+          buf.writeln('   \uD83D\uDCDD ${log.evangelismFollowUpNotes}');
+        }
+      }
+      if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
+        buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
+      }
+      if (log.givingType.isNotEmpty) {
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+      }
+      if (log.churchType.isNotEmpty) {
+        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+      }
+      if (log.discipleshipWho.isNotEmpty) {
+        buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
+      }
+      if (log.proclamationCount.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
+      // Custom activities
+      for (final entry in log.customActivityData.entries) {
+        final actData = entry.value;
+        if (actData['done'] != true) continue;
+        final label = customNames[entry.key] ?? entry.key;
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        final parts = fields.entries
+            .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buf.writeln('\uD83D\uDCCC $label${parts.isNotEmpty ? ": $parts" : ": \u2713"}');
+      }
+      buf.writeln('');
+    }
+
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
+    return buf.toString();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  FULL REPORT — detailed day-by-day (email, clipboard)
+  // ═══════════════════════════════════════════════════════════
+
+  Future<String> buildFullReport(String name, S l, [DateTime? ref]) async {
+    final dates = weekDates(ref);
     final fmtLong = DateFormat('EEEE, MMM d');
     final fmtRange = DateFormat('MMM d');
     final buf = StringBuffer();
 
-    buf.writeln('✝️ ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    // Load custom activity names once for ID → display label lookup
+    final List<CustomActivity> customActivities =
+        await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
+
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
 
@@ -75,76 +456,186 @@ class ReportService {
     int totalChapters = 0;
     int totalContacts = 0;
     double totalCompletion = 0;
+    final allLogs = <DailyLog>[];
 
     for (final d in dates) {
       final log = await StorageService.instance.getLog(keyFor(d));
-      buf.writeln('━━━━━━━━━━━━━━━━━━━━');
-      buf.writeln('📅 ${fmtLong.format(d).toUpperCase()}');
-      // Show data if the log has any content, even if not explicitly marked complete
+      if (log != null) allLogs.add(log);
+      buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+      buf.writeln('\uD83D\uDCC5 ${fmtLong.format(d).toUpperCase()}');
       final hasContent = log != null && log.completeness > 0;
       if (log == null || !hasContent) {
-        buf.writeln('   ⚠️  ${l.reportNoEntry}');
+        buf.writeln('   \u26A0\uFE0F  ${l.reportNoEntry}');
         buf.writeln('');
         continue;
       }
       activeDays++;
-      totalChapters += int.tryParse(log.bibleChapters) ?? 0;
+      totalChapters += log.totalBibleChapters;
       totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
       totalCompletion += log.completeness;
 
-      if (log.bibleReference.isNotEmpty) {
-        buf.writeln('📖 ${l.reportBible(log.bibleReference, log.bibleChapters.isNotEmpty ? log.bibleChapters : "0")}');
+      final bibleRef = log.combinedBibleReference('en');
+      if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
+        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
-        buf.writeln('📚 ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
+        buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
       }
       if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
-        buf.writeln('🔥 ${l.reportDDEG}');
+        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
         if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
         if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
         if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
       }
       if (log.prayerAloneDuration.isNotEmpty) {
-        buf.writeln('🙏 ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
+        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
       }
       if (log.prayerOthersDuration.isNotEmpty) {
-        buf.writeln('🤝 ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
+        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
       }
       if (log.evangelismContacts.isNotEmpty) {
-        buf.writeln('📢 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
+          final parts = <String>[];
+          if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
+          if (log.evangelismBeingDiscipled.isNotEmpty) parts.add('${l.evangelismBeingDiscipled}: ${log.evangelismBeingDiscipled}');
+          buf.writeln('   \uD83C\uDF31 ${parts.join(' | ')}');
+        }
+        if (log.evangelismFollowUpNotes.isNotEmpty) {
+          buf.writeln('   \uD83D\uDCDD ${log.evangelismFollowUpNotes}');
+        }
       }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
-        buf.writeln('🍽️ ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
+        buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
       if (log.givingType.isNotEmpty) {
-        buf.writeln('💰 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
       }
       if (log.churchType.isNotEmpty) {
-        buf.writeln('⛪ ${l.reportChurch(log.churchType, log.churchNotes)}');
+        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
       }
       if (log.discipleshipWho.isNotEmpty) {
-        buf.writeln('👥 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
+        buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
       }
-      if (log.other.isNotEmpty) buf.writeln('➕ ${l.reportOther(log.other)}');
+      if (log.proclamationCount.isNotEmpty) {
+        buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
+      }
+      if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
+      // Custom activities
+      for (final entry in log.customActivityData.entries) {
+        final actData = entry.value;
+        if (actData['done'] != true) continue;
+        final label = customNames[entry.key] ?? entry.key;
+        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+        final parts = fields.entries
+            .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
+            .map((e) => '${e.key}: ${e.value}')
+            .join(', ');
+        buf.writeln('\uD83D\uDCCC $label${parts.isNotEmpty ? ": $parts" : ": \u2713"}');
+      }
       buf.writeln('');
     }
 
-    // Weekly summary for the disciple maker
-    buf.writeln('━━━━━━━━━━━━━━━━━━━━');
-    buf.writeln('📊 ${l.reportSummaryHeader}');
+    buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
+    buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
     buf.writeln(l.reportSummaryActiveDays(activeDays));
     buf.writeln(l.reportSummaryBibleChapters(totalChapters));
     buf.writeln(l.reportSummaryEvangelism(totalContacts));
     final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
     buf.writeln(l.reportSummaryCompletion(avgPct));
+    final totalMins = _totalConsecratedMinutes(allLogs);
+    if (totalMins > 0) {
+      buf.writeln(l.totalTimeConsecrated(_formatTotalTime(totalMins)));
+    }
     buf.writeln('');
-    buf.writeln('${l.reportFooter} 🕊️');
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
     return buf.toString();
   }
 
-  /// Open the device email client pre-filled with the report.
+  // ═══════════════════════════════════════════════════════════
+  //  COMPACT REPORT — summary-first (WhatsApp-optimized)
+  // ═══════════════════════════════════════════════════════════
+
+  Future<String> buildCompactReport(String name, S l, [DateTime? ref]) async {
+    final dates = weekDates(ref);
+    final fmtRange = DateFormat('MMM d');
+    final fmtShort = DateFormat('E d');
+    final buf = StringBuffer();
+
+    buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
+    buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
+    buf.writeln('');
+
+    // Summary first — the disciple maker sees this immediately
+    int activeDays = 0;
+    int totalChapters = 0;
+    int totalContacts = 0;
+    double totalCompletion = 0;
+
+    // Pre-compute stats
+    final dayEntries = <String>[];
+    final allLogs = <DailyLog>[];
+    for (final d in dates) {
+      final log = await StorageService.instance.getLog(keyFor(d));
+      if (log != null) allLogs.add(log);
+      final hasContent = log != null && log.completeness > 0;
+      if (log == null || !hasContent) {
+        dayEntries.add('\u274C ${fmtShort.format(d)}');
+        continue;
+      }
+      activeDays++;
+      totalChapters += log.totalBibleChapters;
+      totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
+      totalCompletion += log.completeness;
+
+      // Build a compact one-line summary per day
+      final parts = <String>[];
+      if (log.bibleReference.isNotEmpty || log.bibleSessions.any((s) => s.isNotEmpty)) {
+        final ch = log.totalBibleChapters;
+        parts.add('\uD83D\uDCD6${ch > 0 ? "$ch" : ""}ch');
+      }
+      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) parts.add('\uD83D\uDD25${l.ddegShort}');
+      if (log.prayerAloneDuration.isNotEmpty) parts.add('\uD83D\uDE4F${log.prayerAloneDuration}');
+      if (log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
+      if (log.evangelismContacts.isNotEmpty) parts.add('\uD83D\uDCE2${log.evangelismContacts}');
+      if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
+      if (log.givingType.isNotEmpty) parts.add('\uD83D\uDCB0');
+      if (log.churchType.isNotEmpty) parts.add('\u26EA');
+      if (log.discipleshipWho.isNotEmpty) parts.add('\uD83D\uDC65');
+      if (log.proclamationCount.isNotEmpty) parts.add('\uD83D\uDCE3${log.proclamationCount}');
+      final pct = (log.completeness * 100).round();
+      dayEntries.add('\u2705 ${fmtShort.format(d)} ($pct%) ${parts.join(' ')}');
+    }
+
+    // Summary block
+    final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
+    buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
+    buf.writeln(l.reportSummaryActiveDays(activeDays));
+    buf.writeln(l.reportSummaryBibleChapters(totalChapters));
+    buf.writeln(l.reportSummaryEvangelism(totalContacts));
+    buf.writeln(l.reportSummaryCompletion(avgPct));
+    final totalMins = _totalConsecratedMinutes(allLogs);
+    if (totalMins > 0) {
+      buf.writeln(l.totalTimeConsecrated(_formatTotalTime(totalMins)));
+    }
+    buf.writeln('');
+
+    // Day-by-day compact view
+    for (final entry in dayEntries) {
+      buf.writeln(entry);
+    }
+    buf.writeln('');
+    buf.writeln('${l.reportFooter} \u{1F54A}\uFE0F');
+    return buf.toString();
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  //  SEND METHODS
+  // ═══════════════════════════════════════════════════════════
+
+  /// Open the device email client pre-filled with the FULL report.
   Future<bool> sendByEmail(String toEmail, String name, String body, S l) async {
-    final subject = '📖 ${l.reportEmailSubject(
+    final subject = '\uD83D\uDCD6 ${l.reportEmailSubject(
       name.isEmpty ? "Disciple" : name,
       DateFormat('MMM d, y').format(DateTime.now()),
     )}';
@@ -159,14 +650,31 @@ class ReportService {
     return false;
   }
 
-  /// Share the report via WhatsApp (reliable fallback).
-  Future<bool> sendByWhatsApp(String phone, String body) async {
-    // phone in international format without '+' e.g. 237xxxxxxxxx
-    final uri = Uri.parse('https://wa.me/$phone?text=${Uri.encodeComponent(body)}');
-    if (await canLaunchUrl(uri)) {
-      return launchUrl(uri, mode: LaunchMode.externalApplication);
+  /// Share the COMPACT report via WhatsApp using deep link.
+  Future<bool> sendByWhatsApp(String phone, String compactReport) async {
+    // Normalise phone: ensure it starts with country code, no +
+    final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final encoded = Uri.encodeComponent(compactReport);
+
+    // Try wa.me HTTPS link first — most reliable across Android versions
+    final webUri = Uri.parse('https://wa.me/$cleanPhone?text=$encoded');
+    try {
+      final ok = await launchUrl(webUri, mode: LaunchMode.externalApplication);
+      if (ok) return true;
+    } catch (_) {}
+
+    // Fallback: whatsapp:// deep link
+    final waUri = Uri.parse('whatsapp://send?phone=$cleanPhone&text=$encoded');
+    try {
+      return await launchUrl(waUri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
     }
-    return false;
+  }
+
+  /// Share the report via the system share sheet (any app).
+  Future<void> shareReport(String report) async {
+    await SharePlus.instance.share(ShareParams(text: report));
   }
 
   String _encodeQuery(Map<String, String> params) => params.entries

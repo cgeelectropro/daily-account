@@ -10,7 +10,6 @@
   "tabReport": "Rapport",
   "tabSettings": "Param\u00e8tres",
 
-  "completedLabel": "Compl\u00e9t\u00e9",
   "markComplete": "Marquer le Jour Complet",
   "markedComplete": "Compl\u00e9t\u00e9",
 
@@ -19,6 +18,15 @@
   "bibleRefHint": "ex. Jean 3 ; Romains 8",
   "bibleChaptersLabel": "Nombre de Chapitres",
   "bibleChaptersHint": "ex. 3",
+  "bibleSessionFrom": "De",
+  "bibleSessionTo": "\u00c0",
+  "bibleSessionBook": "Livre",
+  "bibleSessionChapter": "Ch.",
+  "bibleSessionChaptersResult": "= {count} chapitre(s)",
+  "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
+  "addReadingSession": "Ajouter une session de lecture",
+  "removeSession": "Supprimer",
+  "durationCustom": "Personnalis\u00e9",
 
   "sectionLiterature": "Litt\u00e9rature Chr\u00e9tienne",
   "bookTitleLabel": "Titre du Livre",
@@ -51,10 +59,10 @@
   "prayerOthersContextHint": "ex. Groupe de cellule, r\u00e9union de pri\u00e8re",
 
   "sectionEvangelism": "\u00c9vang\u00e9lisation",
-  "evangelismContactsLabel": "Nombre de Contacts",
-  "evangelismContactsHint": "ex. 2",
-  "evangelismOutcomeLabel": "R\u00e9sultat / R\u00e9ponse",
-  "evangelismOutcomeHint": "ex. Un a re\u00e7u l\u2019\u00c9vangile",
+  "evangelismContactsLabel": "Tracts d'évangile distribués",
+  "evangelismContactsHint": "ex. 5",
+  "evangelismOutcomeLabel": "Personnes atteintes par l'évangile",
+  "evangelismOutcomeHint": "ex. 3",
   "evangelismNotesLabel": "Notes / Suivi",
   "evangelismNotesHint": "Noms, conversations, prochaines \u00e9tapes...",
 
@@ -115,6 +123,7 @@
   "confirmSendTitle": "Envoyer le Rapport ?",
   "confirmSendBody": "Envoyer ton compte hebdomadaire \u00e0 ton faiseur de disciples ?",
   "cancel": "Annuler",
+  "delete": "Supprimer",
   "send": "Envoyer",
 
   "settingsTitle": "Param\u00e8tres",
@@ -138,8 +147,16 @@
   "howItWorks": "1. Enregistre ta marche avec Dieu chaque jour\n2. Marque chaque jour comme complet \u2705\n3. Re\u00e7ois un rappel quotidien, et un sp\u00e9cial chaque dimanche\n4. Appuie sur Envoyer pour transmettre la semaine compl\u00e8te \u00e0 ton faiseur de disciples par email ou WhatsApp\n5. Tout est stock\u00e9 en priv\u00e9 sur ton appareil",
 
   "backupSection": "Sauvegarde et Restauration",
-  "exportData": "Exporter les Donn\u00e9es",
-  "importData": "Importer les Donn\u00e9es",
+  "autoBackupInfo": "Vos données sont automatiquement sauvegardées toutes les 6 heures et synchronisées sur Google Drive.",
+  "restoreAutoBackup": "Restaurer la sauvegarde auto",
+  "autoBackupFound": "Sauvegarde automatique du {date} trouvée. Restaurer ?",
+  "@autoBackupFound": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "noAutoBackup": "Aucune sauvegarde automatique trouvée.",
+  "restoreButton": "Restaurer",
+  "exportData": "Exporter les Données",
+  "importData": "Importer les Données",
   "exportSuccess": "Sauvegarde r\u00e9ussie !",
   "importSuccess": "Donn\u00e9es import\u00e9es avec succ\u00e8s !",
   "importFailed": "\u00c9chec de l\u2019importation. Format de fichier invalide.",
@@ -311,7 +328,7 @@
   "autoSendSection": "Envoi automatique",
   "autoSendEnabled": "Rappel d\u2019envoi le dimanche",
   "autoSendTime": "Heure du rappel",
-  "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application vous rappellera d\u2019envoyer votre compte \u00e0 votre faiseur de disciples.",
+  "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application ouvrira automatiquement WhatsApp pour envoyer ton compte \u00e0 ton faiseur de disciples.",
 
   "aboutSection": "\u00c0 propos",
   "appVersion": "Version {version}",
@@ -326,5 +343,393 @@
   "resetConfirmTitle": "Tout r\u00e9initialiser ?",
   "resetConfirmBody": "Cela supprimera d\u00e9finitivement tous vos journaux, param\u00e8tres et pr\u00e9f\u00e9rences. Cette action est irr\u00e9versible.",
   "resetConfirmButton": "Tout supprimer",
-  "resetSuccess": "Toutes les donn\u00e9es ont \u00e9t\u00e9 r\u00e9initialis\u00e9es."
+  "resetSuccess": "Toutes les donn\u00e9es ont \u00e9t\u00e9 r\u00e9initialis\u00e9es.",
+
+  "thisWeek": "Cette Semaine",
+  "today": "Aujourd'hui",
+  "weekOf": "Semaine du {date}",
+  "@weekOf": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+
+  "monthlyReport": "Mensuel",
+  "weeklyReport": "Hebdomadaire",
+  "monthOf": "Mois de {month}",
+  "@monthOf": {
+    "placeholders": { "month": { "type": "String" } }
+  },
+  "monthlySummaryHeader": "R\u00c9SUM\u00c9 MENSUEL",
+  "monthlySummaryActiveDays": "Jours actifs : {count}/{total}",
+  "@monthlySummaryActiveDays": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "monthlySummaryWeeks": "Semaines rapport\u00e9es : {count}",
+  "@monthlySummaryWeeks": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noReportForWeek": "Aucune entr\u00e9e pour cette semaine.\nVa dans l'onglet Journal et s\u00e9lectionne une date pass\u00e9e pour saisir des donn\u00e9es.",
+
+  "reportHistory": "Historique des Rapports",
+  "reportHistoryEmpty": "Aucun rapport g\u00e9n\u00e9r\u00e9 pour le moment.\nTes rapports appara\u00eetront ici apr\u00e8s les avoir consult\u00e9s.",
+  "reportHistorySection": "Archive des Rapports",
+  "sentVia": "Envoy\u00e9 via {channel}",
+  "@sentVia": {
+    "placeholders": { "channel": { "type": "String" } }
+  },
+  "notSentYet": "Pas encore envoy\u00e9",
+  "resend": "Renvoyer",
+  "viewReport": "Voir le Rapport",
+  "deleteReport": "Supprimer",
+  "reportSaved": "Rapport sauvegard\u00e9 dans l'archive.",
+  "reportDeleted": "Rapport supprim\u00e9.",
+  "copyFromYesterday": "Copier d'hier",
+  "copiedFromYesterday": "Entr\u00e9es d'hier copi\u00e9es !",
+  "nothingToCopy": "Aucune entr\u00e9e d'hier \u00e0 copier.",
+
+  "securitySection": "S\u00e9curit\u00e9",
+  "appLockEnabled": "Verrouillage de l'app",
+  "useBiometrics": "Empreinte digitale / Face ID",
+  "changePin": "Changer le PIN",
+  "setPinTitle": "D\u00e9finir un PIN",
+  "setPinBody": "Choisissez un code PIN \u00e0 4 chiffres pour verrouiller l'application.",
+  "confirmPinTitle": "Confirmer le PIN",
+  "confirmPinBody": "Ressaisissez votre PIN pour confirmer.",
+  "pinMismatch": "Les PINs ne correspondent pas. R\u00e9essayez.",
+  "pinSet": "PIN de l'application d\u00e9fini avec succ\u00e8s !",
+  "pinRemoved": "Verrouillage d\u00e9sactiv\u00e9.",
+  "enterPin": "Entrez votre PIN",
+  "wrongPin": "PIN incorrect",
+  "useBiometricsPrompt": "D\u00e9verrouiller Compte Journalier",
+
+  "saveAsPdf": "Enregistrer en PDF",
+  "sharePdf": "Partager le PDF",
+  "shareReport": "Partager",
+
+  "tabStopwatch": "Chrono",
+  "stopwatchTitle": "Chronomètre",
+  "stopwatchSubtitle": "Mesure tes disciplines spirituelles en temps réel",
+  "todayTotal": "Total aujourd'hui",
+  "timerStopped": "Chrono arrêté — durée enregistrée !",
+  "timerAlreadyRunning": "Un autre chrono est en cours. Il sera mis en pause.",
+  "stopwatchFillFields": "Remplis les détails avant de démarrer (optionnel)",
+  "startTimer": "Démarrer le chrono",
+  "addActivity": "Ajouter une activité",
+  "activityName": "Nom de l'activité",
+  "activityNameHint": "ex. Louange, Méditation",
+  "activityIcon": "Icône emoji",
+  "activityCreated": "Activité ajoutée !",
+  "activityDeleted": "Activité supprimée.",
+  "deleteActivityConfirm": "Supprimer cette activité ?",
+  "customFieldLabel": "Libellé du champ notes (optionnel)",
+  "customFieldHint": "ex. Qu'as-tu appris ?",
+
+  "ddegShort": "RDQD",
+  "bibleStartRef": "Référence de début",
+  "bibleStartHint": "ex. Jean 1",
+  "bibleEndRef": "Référence de fin (après lecture)",
+  "bibleEndHint": "ex. Jean 3",
+  "bibleChaptersRead": "{count} chapitre(s) lu(s)",
+  "@bibleChaptersRead": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "enterEndReference": "Où as-tu terminé ta lecture ?",
+  "timerStoppedDuration": "Durée : {duration}",
+  "@timerStoppedDuration": {
+    "placeholders": { "duration": { "type": "String" } }
+  },
+  "done": "Terminé",
+
+  "sectionProclamation": "Proclamation",
+  "proclamationCountLabel": "Nombre de proclamations",
+  "proclamationCountHint": "ex. 50",
+  "proclamationDurationLabel": "Durée (optionnel)",
+  "proclamationDurationHint": "ex. 10 minutes",
+  "proclamationCounter": "Compteur de Proclamation",
+  "proclamationSubtitle": "Proclame : Jésus-Christ est Seigneur !",
+  "proclamationTap": "Appuie pour proclamer",
+  "proclamationSave": "Enregistrer et Fermer",
+  "reportProclamation": "Proclamation : {count} fois ({duration})",
+  "@reportProclamation": {
+    "placeholders": {
+      "count": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
+
+  "followUpReminders": "Rappels de suivi",
+  "followUpDescription": "Après le rappel principal, des alertes de suivi sonnent toutes les 30 minutes pour ne rien oublier.",
+  "followUpCount": "{count, plural, =0{Aucun suivi} =1{1 suivi (+30 min)} =2{2 suivis (+30, +60 min)} other{3 suivis (+30, +60, +90 min)}}",
+  "@followUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "notificationIntensity": "Intensité des notifications",
+  "intensityAggressive": "Agressive (style alarme)",
+  "intensityAggressiveDesc": "Alertes plein écran, son, vibration, LED — comme un réveil",
+  "sundayFollowUps": "Suivis du dimanche",
+  "sundayFollowUpCount": "{count, plural, =0{Aucun suivi} =1{1 suivi (+30 min)} =2{2 suivis (+30, +60 min)} other{{count} suivis}}",
+  "@sundayFollowUpCount": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "tabPrayer": "Pri\u00e8res",
+
+  "prayerRequestsTitle": "Sujets de Pri\u00e8re",
+  "prayerRequestsSubtitle": "D\u00e9pose tes fardeaux devant le Seigneur",
+  "prayerActive": "Actifs",
+  "prayerAnswered": "Exauc\u00e9s",
+  "prayerEmptyActive": "Aucun sujet de pri\u00e8re.\nAppuie sur + pour ajouter ton premier sujet.",
+  "prayerAnsweredSection": "{count, plural, =1{1 pri\u00e8re exauc\u00e9e} other{{count} pri\u00e8res exauc\u00e9es}}",
+  "@prayerAnsweredSection": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "prayerAddTitle": "Nouveau Sujet de Pri\u00e8re",
+  "prayerTitleLabel": "Sujet de pri\u00e8re",
+  "prayerTitleHint": "ex. Gu\u00e9rison pour mon fr\u00e8re",
+  "prayerDescLabel": "D\u00e9tails (optionnel)",
+  "prayerDescHint": "Plus de contexte sur ce sujet...",
+  "prayerAddButton": "Ajouter le Sujet",
+  "prayerCatPersonal": "Personnel",
+  "prayerCatFamily": "Famille",
+  "prayerCatChurch": "\u00c9glise",
+  "prayerCatNation": "Nation",
+  "prayerCatHealth": "Sant\u00e9",
+  "prayerMarkAnswered": "Pri\u00e8re Exauc\u00e9e !",
+  "prayerAnswerNote": "Comment Dieu a-t-il r\u00e9pondu ?",
+  "prayerAnswerHint": "D\u00e9cris comment cette pri\u00e8re a \u00e9t\u00e9 exauc\u00e9e...",
+  "prayerConfirmAnswered": "Marquer comme Exauc\u00e9",
+
+  "weeklyChart": "PROGRESSION HEBDOMADAIRE",
+  "chartCompletion": "Compl\u00e9tion %",
+
+  "quickLogTitle": "Journal Rapide",
+  "quickLogSubtitle": "Coche chaque discipline pratiqu\u00e9e aujourd'hui",
+  "quickLogSaved": "Journal rapide enregistr\u00e9 !",
+  "quickLogButton": "Journal Rapide",
+
+  "badgeStreakWeek": "Guerrier 7 Jours",
+  "badgeStreakMonth": "Champion 30 Jours",
+  "badgeBibleMarathon": "Marathon Biblique",
+  "badgePrayerWarrior": "Guerrier de Pri\u00e8re",
+  "badgeEvangelismFire": "Gagneur d'\u00c2mes",
+  "badgePerfectWeek": "Semaine Parfaite",
+  "badgesTitle": "ACCOMPLISSEMENTS",
+  "badgesEmpty": "Continue ! Les badges appara\u00eetront au fur et \u00e0 mesure.",
+
+  "snoozeLabel": "Reporter 15 min",
+
+  "testNotification": "Tester les Notifications",
+  "testNotificationSuccess": "Notification envoyée ! Si vous ne la voyez pas, vérifiez les paramètres de notification.",
+  "testNotificationFailed": "Notification échouée. Activez les notifications dans les paramètres de votre appareil.",
+  "pendingNotifications": "{count, plural, =0{Aucune notification planifi\u00e9e} =1{1 notification planifi\u00e9e} other{{count} notifications planifi\u00e9es}}",
+  "@pendingNotifications": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+
+  "missingDisciplinesTitle": "Disciplines Manquantes",
+  "missingDisciplinesSubtitle": "Appuyez pour les compl\u00e9ter aujourd'hui",
+  "disciplineDone": "Fait",
+  "disciplineMissing": "Manquant",
+  "allDisciplinesDone": "Toutes les disciplines compl\u00e9t\u00e9es\u00a0! Excellent\u00a0!",
+
+  "pendingReportBanner": "Rapport en attente \u2014 sera envoy\u00e9 en ligne",
+  "pendingReportRetry": "R\u00e9essayer",
+  "pendingReportSent": "Rapport en attente envoy\u00e9\u00a0!",
+  "offlineStatus": "Hors ligne",
+
+  "midWeekNudgeTitle": "Bilan de mi-semaine",
+  "midWeekNudgeBody": "Vous avez compl\u00e9t\u00e9 {done}/{total} disciplines cette semaine. Continuez\u00a0!",
+  "@midWeekNudgeBody": {
+    "placeholders": { "done": { "type": "int" }, "total": { "type": "int" } }
+  },
+
+  "trendUp": "en hausse de {percent}%",
+  "@trendUp": { "placeholders": { "percent": { "type": "int" } } },
+  "trendDown": "en baisse de {percent}%",
+  "@trendDown": { "placeholders": { "percent": { "type": "int" } } },
+  "trendSteady": "stable",
+  "trendVsLastMonth": "vs le mois dernier",
+  "trendTitle": "TENDANCES",
+  "trendConsistency": "R\u00e9gularit\u00e9",
+  "trendBestDiscipline": "Point fort",
+  "trendWeakDiscipline": "À am\u00e9liorer",
+  "trendNoData": "Pas assez de donn\u00e9es pour les tendances",
+
+  "reflectionTitle": "R\u00e9flexion Quotidienne",
+  "reflectionEmpty": "Compl\u00e9tez des disciplines pour recevoir une r\u00e9flexion",
+  "reflectionGreatDay": "Magnifique journ\u00e9e de fid\u00e9lit\u00e9\u00a0! Vous avez couvert {count} disciplines \u2014 votre engagement porte du fruit.",
+  "@reflectionGreatDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionGoodDay": "Bon effort aujourd'hui avec {count} disciplines. Continuez \u00e0 b\u00e2tir la r\u00e9gularit\u00e9\u00a0!",
+  "@reflectionGoodDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionStartDay": "Vous avez commenc\u00e9 avec {count} discipline. Chaque pas compte \u2014 continuez\u00a0!",
+  "@reflectionStartDay": { "placeholders": { "count": { "type": "int" } } },
+  "reflectionPrayerFocus": "Votre vie de pri\u00e8re est forte aujourd'hui. Qu'elle nourrisse vos autres disciplines.",
+  "reflectionBibleFocus": "Excellent engagement biblique aujourd'hui. Que la Parole guide votre journ\u00e9e.",
+  "reflectionEvangelismFocus": "Actif en \u00e9vang\u00e9lisation aujourd'hui \u2014 des \u00e2mes sont atteintes\u00a0!",
+  "reflectionBalanced": "Une journ\u00e9e magnifiquement \u00e9quilibr\u00e9e \u00e0 travers vos disciplines.",
+  "reflectionStreakEncouragement": "Vous \u00eates sur une s\u00e9rie de {days} jours\u00a0! Ne la brisez pas\u00a0!",
+  "@reflectionStreakEncouragement": { "placeholders": { "days": { "type": "int" } } },
+
+  "evangelismFollowUp": "Suivi",
+  "evangelismNewBelievers": "Ceux qui ont accepté Jésus",
+  "evangelismNewBelieversHint": "Nombre de personnes qui ont accepté Christ dans leur cœur",
+  "evangelismBeingDiscipled": "En cours de formation",
+  "evangelismBeingDiscipledHint": "Nombre en formation de disciple",
+  "evangelismFollowUpNotes": "Notes de suivi",
+  "evangelismFollowUpHint": "Noms, prochaines \u00e9tapes, besoins...",
+
+  "textSizeLabel": "Taille du texte",
+  "textSizeSmall": "A",
+  "textSizeLarge": "A+",
+  "textSizePreview": "Aper\u00e7u du texte",
+
+  "disciplineReminders": "Rappels par discipline",
+  "disciplineRemindersDesc": "D\u00e9finir une heure pour chaque discipline",
+  "disciplineReminderOff": "D\u00e9sactiv\u00e9",
+  "disciplineReminderSet": "D\u00e9fini",
+
+  "weeklyGoals": "Objectifs hebdomadaires",
+  "weeklyGoalsDesc": "D\u00e9finissez vos cibles pour la semaine",
+  "dailyGoals": "Objectifs quotidiens",
+  "dailyGoalsDesc": "D\u00e9finissez vos cibles pour chaque jour",
+  "goalFrequency": "Fr\u00e9quence",
+  "daily": "Quotidien",
+  "weekly": "Hebdomadaire",
+  "enterGoalValue": "Entrer la valeur",
+  "goalBibleChapters": "Chapitres bibliques",
+  "goalPrayerMinutes": "Pri\u00e8re (minutes)",
+  "goalEvangelismContacts": "Contacts d'\u00e9vang\u00e9lisation",
+  "goalLiteratureItems": "Livres lus",
+  "goalProgress": "{current}/{target}",
+  "@goalProgress": { "placeholders": { "current": { "type": "String" }, "target": { "type": "String" } } },
+  "goalReached": "Objectif atteint !",
+  "setGoals": "D\u00e9finir les objectifs",
+  "saveGoals": "Enregistrer",
+
+  "weeklyChallenge": "D\u00e9fi de la semaine",
+  "challengeWeakDiscipline": "Concentrez-vous sur {discipline} \u2014 votre point faible cette semaine",
+  "@challengeWeakDiscipline": { "placeholders": { "discipline": { "type": "String" } } },
+  "challengePrayerDaily": "Priez chaque jour cette semaine \u2014 m\u00eame 5 minutes comptent",
+  "challengeBibleDaily": "Lisez au moins 1 chapitre biblique chaque jour",
+  "challengeEvangelism": "Partagez l\u2019\u00e9vangile avec 3 personnes cette semaine",
+  "challengeStreak7": "Continuez \u00e0 journaliser pour atteindre 7 jours cons\u00e9cutifs !",
+  "challengeStreak30": "Vous \u00eates en feu ! Visez 30 jours cons\u00e9cutifs !",
+  "challengePerfectWeek": "Presque ! Journalisez chaque jour pour une semaine parfaite !",
+
+  "milestoneStreak7": "7 jours cons\u00e9cutifs !",
+  "milestoneStreak7Body": "Une semaine compl\u00e8te de fid\u00e9lit\u00e9. Continuez !",
+  "milestoneStreak30": "30 jours cons\u00e9cutifs !",
+  "milestoneStreak30Body": "Un mois de discipline quotidienne. Vous construisez quelque chose de durable.",
+  "milestoneStreak100": "100 jours cons\u00e9cutifs !",
+  "milestoneStreak100Body": "100 jours de marche avec Dieu. Quel t\u00e9moignage !",
+  "milestonePerfectWeek": "Semaine parfaite !",
+  "milestonePerfectWeekBody": "Chaque jour comptabilis\u00e9. Bien fait, serviteur fid\u00e8le.",
+  "milestoneBibleMarathon": "Marathon biblique !",
+  "milestoneBibleMarathonBody": "20+ chapitres cette semaine. La Parole est vivante en vous.",
+  "milestoneShare": "Partager la r\u00e9ussite",
+
+  "voiceNote": "Note vocale",
+  "voiceNoteRecord": "Appuyez pour enregistrer",
+  "voiceNoteRecording": "Enregistrement...",
+  "voiceNotePlay": "\u00c9couter",
+  "voiceNoteDelete": "Supprimer l'enregistrement",
+  "voiceNoteDeleteConfirm": "Supprimer cette note vocale ?",
+  "voiceNoteSaved": "Note vocale enregistr\u00e9e",
+
+  "fastingPeriod": "P\u00e9riode de je\u00fbne",
+  "fastingStartDate": "Date de d\u00e9but",
+  "fastingEndDate": "Date de fin",
+  "fastingTypeComplete": "Je\u00fbne complet",
+  "fastingTypePartial": "Je\u00fbne partiel",
+  "fastingTypeEsther": "Je\u00fbne d'Esther",
+  "fastingDaysRemaining": "{days} jours restants",
+  "@fastingDaysRemaining": { "placeholders": { "days": { "type": "int" } } },
+  "fastingDayOf": "Jour {current} sur {total}",
+  "@fastingDayOf": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+  "fastingActive": "Je\u00fbne actif",
+  "fastingCompleted": "Je\u00fbne termin\u00e9 !",
+  "fastingNone": "Pas de je\u00fbne actif",
+  "startFast": "Commencer un je\u00fbne",
+  "endFast": "Terminer le je\u00fbne",
+
+  "certificateTitle": "Certificat de fid\u00e9lit\u00e9",
+  "certificateSubtitle": "R\u00e9alisation spirituelle mensuelle",
+  "certificateBody": "Ceci certifie que {name} a fait preuve de discipline spirituelle fid\u00e8le au cours de {month}, atteignant {percent}% de coh\u00e9rence globale.",
+  "@certificateBody": { "placeholders": { "name": { "type": "String" }, "month": { "type": "String" }, "percent": { "type": "int" } } },
+  "certificateGenerate": "G\u00e9n\u00e9rer le certificat",
+  "certificateShare": "Partager le certificat",
+  "certificateNoData": "Il faut au moins 80% de r\u00e9gularit\u00e9 pour obtenir un certificat",
+
+  "autoFillBanner": "Rempli automatiquement selon vos habitudes r\u00e9centes",
+  "autoFillUndo": "Annuler",
+
+  "reportLanguageSection": "Langue du rapport",
+  "reportLanguageDesc": "Choisissez la langue des rapports envoy\u00e9s et des documents PDF",
+  "reportLanguageSameAsApp": "Identique \u00e0 l'application",
+
+  "saturdaySummaryTitle": "Votre semaine jusqu'ici",
+  "saturdaySummaryBody": "{days}/7 jours enregistr\u00e9s, {chapters} chapitres lus, {contacts} contacts \u00e9vang\u00e9lis\u00e9s. Terminez en beaut\u00e9 demain !",
+  "@saturdaySummaryBody": { "placeholders": { "days": { "type": "int" }, "chapters": { "type": "int" }, "contacts": { "type": "int" } } },
+
+  "cloudBackupSection": "Sauvegarde Cloud",
+  "cloudBackupDescription": "Connectez-vous avec votre compte Google pour sauvegarder toutes vos donn\u00e9es sur Google Drive. Restaurez-les sur n'importe quel appareil.",
+  "signInWithGoogle": "Se connecter avec Google",
+  "signedInAs": "Connect\u00e9 en tant que {email}",
+  "@signedInAs": { "placeholders": { "email": { "type": "String" } } },
+  "lastCloudBackup": "Derni\u00e8re sauvegarde : {date}",
+  "@lastCloudBackup": { "placeholders": { "date": { "type": "String" } } },
+  "backupToDrive": "Sauvegarder sur Google Drive",
+  "restoreFromDrive": "Restaurer depuis Google Drive",
+  "signOut": "Se d\u00e9connecter",
+  "cloudBackupSuccess": "Sauvegard\u00e9 sur Google Drive !",
+  "cloudBackupFailed": "\u00c9chec de la sauvegarde cloud. V\u00e9rifiez votre connexion.",
+  "cloudRestoreSuccess": "Donn\u00e9es restaur\u00e9es depuis Google Drive !",
+  "cloudRestoreFailed": "\u00c9chec de la restauration. V\u00e9rifiez votre connexion.",
+  "cloudRestoreConfirmTitle": "Restaurer depuis le cloud ?",
+  "cloudRestoreConfirmBody": "Ceci remplacera toutes les donn\u00e9es locales par la sauvegarde cloud. \u00cates-vous s\u00fbr ?",
+  "cloudNoBackupFound": "Aucune sauvegarde trouv\u00e9e sur votre Google Drive.",
+  "cloudSignInFailed": "\u00c9chec de la connexion Google. Veuillez r\u00e9essayer.",
+
+  "timeConsciousLabel": "Mode temps conscient",
+  "timeConsciousDescription": "Suivre le temps que vous consacrez \u00e0 chaque activit\u00e9 spirituelle",
+  "totalTimeConsecrated": "Temps total consacr\u00e9 : {time}",
+  "@totalTimeConsecrated": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+
+  "save": "Enregistrer",
+
+  "customActivityTitle": "Cr\u00e9er une activit\u00e9",
+  "customActivityName": "Nom de l'activit\u00e9",
+  "customActivityNameHint": "ex. Louange, Pri\u00e8re de je\u00fbne",
+  "customActivityIcon": "Ic\u00f4ne",
+  "customActivityTemplates": "Mod\u00e8les rapides",
+  "customActivityTemplateSimple": "Simple",
+  "customActivityTemplateTimed": "Minut\u00e9",
+  "customActivityTemplateCounted": "Compt\u00e9",
+  "customActivityTemplateFull": "Complet",
+  "customActivityAddField": "Ajouter un champ",
+  "customActivityFieldLabel": "Libell\u00e9 du champ",
+  "customActivityFieldType": "Type",
+  "customActivityCountsForProgress": "Compte pour la progression quotidienne",
+  "customFieldTypeText": "Texte",
+  "customFieldTypeNumber": "Nombre",
+  "customFieldTypeDuration": "Dur\u00e9e",
+  "customFieldTypeYesNo": "Oui/Non",
+  "customFieldTypeNotes": "Notes",
+  "customActivityMaxFields": "Maximum 8 champs",
+  "cancelTimerTitle": "Annuler le minuteur ?",
+  "cancelTimerContent": "Abandonner {elapsed} de {name} ?",
+  "@cancelTimerContent": {
+    "placeholders": {
+      "elapsed": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "cancelTimerKeep": "Continuer",
+  "cancelTimerDiscard": "Abandonner"
 }
