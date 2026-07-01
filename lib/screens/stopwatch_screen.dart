@@ -403,114 +403,263 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   }
 
   void _showAddActivityDialog(S l, Color accent) {
-    final nameCtrl = TextEditingController();
-    final iconCtrl = TextEditingController(text: '\u2728');
-    final fieldCtrl = TextEditingController();
+    String name = '';
+    String icon = '\u2728';
+    final fields = <CustomField>[];
+    bool countsForProgress = true;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surfaceColor(context),
+      backgroundColor: AppTheme.isDark(context) ? AppTheme.bg1 : AppTheme.lightBg1,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l.addActivity, style: AppTheme.display(18, color: accent)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameCtrl,
-              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
-              decoration: InputDecoration(
-                labelText: l.activityName,
-                hintText: l.activityNameHint,
-                labelStyle: AppTheme.serif(12, color: accent),
-                hintStyle:
-                    AppTheme.serif(12, color: AppTheme.faintColor(context)),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: accent.withValues(alpha: 0.3))),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: iconCtrl,
-              style: const TextStyle(fontSize: 24),
-              decoration: InputDecoration(
-                labelText: l.activityIcon,
-                labelStyle: AppTheme.serif(12, color: accent),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: accent.withValues(alpha: 0.3))),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: fieldCtrl,
-              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
-              decoration: InputDecoration(
-                labelText: l.customFieldLabel,
-                hintText: l.customFieldHint,
-                labelStyle: AppTheme.serif(12, color: accent),
-                hintStyle:
-                    AppTheme.serif(12, color: AppTheme.faintColor(context)),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide:
-                        BorderSide(color: accent.withValues(alpha: 0.3))),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: accent)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: () async {
-                  if (nameCtrl.text.trim().isEmpty) return;
-                  final activity = CustomActivity(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    name: nameCtrl.text.trim(),
-                    icon: iconCtrl.text.trim().isEmpty
-                        ? '\u2728'
-                        : iconCtrl.text.trim(),
-                    fields: fieldCtrl.text.trim().isNotEmpty
-                        ? [CustomField(label: fieldCtrl.text.trim())]
-                        : [],
-                  );
-                  await StorageService.instance.addCustomActivity(activity);
-                  nameCtrl.dispose();
-                  iconCtrl.dispose();
-                  fieldCtrl.dispose();
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    _loadCustomActivities();
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.goldGradient,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(l.addActivity,
-                      style: AppTheme.display(16, color: AppTheme.bg0)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(l.customActivityTitle,
+                    style: AppTheme.display(18, color: AppTheme.accentGold(ctx))),
+                const SizedBox(height: 16),
+
+                // Name + Icon row
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        style: AppTheme.serif(14, color: AppTheme.textColor(ctx)),
+                        decoration: InputDecoration(
+                          labelText: l.customActivityName,
+                          hintText: l.customActivityNameHint,
+                          labelStyle: AppTheme.serif(12, color: AppTheme.accentGold(ctx)),
+                          hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(ctx)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: AppTheme.accentGold(ctx).withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: AppTheme.accentGold(ctx))),
+                        ),
+                        onChanged: (v) => setModalState(() => name = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () async {
+                        final emojis = ['\u2728', '\uD83D\uDE4F', '\uD83C\uDFB5',
+                          '\uD83D\uDCAA', '\u2764\uFE0F', '\uD83D\uDD25', '\u2B50',
+                          '\uD83C\uDF1F', '\uD83D\uDC51', '\uD83C\uDF3F',
+                          '\uD83D\uDCA1', '\uD83C\uDFAF', '\u270D\uFE0F', '\uD83D\uDCD6'];
+                        final picked = await showDialog<String>(
+                          context: ctx,
+                          builder: (_) => AlertDialog(
+                            title: Text(l.customActivityIcon),
+                            content: Wrap(
+                              spacing: 12, runSpacing: 12,
+                              children: emojis.map((e) => GestureDetector(
+                                onTap: () => Navigator.pop(ctx, e),
+                                child: Text(e, style: const TextStyle(fontSize: 28)),
+                              )).toList(),
+                            ),
+                          ),
+                        );
+                        if (picked != null) setModalState(() => icon = picked);
+                      },
+                      child: Container(
+                        width: 52, height: 52,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: AppTheme.accentGold(ctx).withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                            child: Text(icon, style: const TextStyle(fontSize: 28))),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 16),
+
+                // Quick templates
+                Text(l.customActivityTemplates,
+                    style: AppTheme.label(12,
+                        color: AppTheme.textColor(ctx).withValues(alpha: 0.6))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _templateChip(l.customActivityTemplateSimple, [], fields, setModalState),
+                    _templateChip(l.customActivityTemplateTimed, [
+                      CustomField(label: 'Duration', type: CustomFieldType.duration),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                    _templateChip(l.customActivityTemplateCounted, [
+                      CustomField(label: 'Count', type: CustomFieldType.number),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                    _templateChip(l.customActivityTemplateFull, [
+                      CustomField(label: 'Duration', type: CustomFieldType.duration),
+                      CustomField(label: 'Count', type: CustomFieldType.number),
+                      CustomField(label: 'Person', type: CustomFieldType.text),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Custom fields list
+                ...fields.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final f = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: l.customActivityFieldLabel,
+                              isDense: true,
+                            ),
+                            controller: TextEditingController(text: f.label),
+                            onChanged: (v) => f.label = v,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<CustomFieldType>(
+                            initialValue: f.type,
+                            isDense: true,
+                            decoration: const InputDecoration(isDense: true),
+                            items: CustomFieldType.values
+                                .map((ft) => DropdownMenuItem(
+                                    value: ft,
+                                    child: Text(_fieldTypeName(ft, ctx, l))))
+                                .toList(),
+                            onChanged: (v) =>
+                                setModalState(() => f.type = v!),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () =>
+                              setModalState(() => fields.removeAt(i)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+                // Add field button
+                if (fields.length < 8)
+                  TextButton.icon(
+                    onPressed: () => setModalState(() => fields
+                        .add(CustomField(label: '', type: CustomFieldType.text))),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l.customActivityAddField),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(l.customActivityMaxFields,
+                        style: AppTheme.serif(11, color: AppTheme.rust)),
+                  ),
+                const SizedBox(height: 8),
+
+                // Counts for progress toggle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: Text(l.customActivityCountsForProgress,
+                            style: AppTheme.serif(14,
+                                color: AppTheme.textColor(ctx)))),
+                    Switch.adaptive(
+                      value: countsForProgress,
+                      activeTrackColor: AppTheme.accentGold(ctx),
+                      onChanged: (v) =>
+                          setModalState(() => countsForProgress = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Save button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentGold(ctx),
+                      foregroundColor: AppTheme.bg0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: name.trim().isEmpty
+                        ? null
+                        : () async {
+                            fields.removeWhere((f) => f.label.trim().isEmpty);
+                            final activity = CustomActivity(
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
+                              name: name.trim(),
+                              icon: icon,
+                              fields: List<CustomField>.from(fields),
+                              countsForCompleteness: countsForProgress,
+                            );
+                            final nav = Navigator.of(ctx);
+                            await StorageService.instance
+                                .addCustomActivity(activity);
+                            if (!mounted) return;
+                            nav.pop();
+                            _loadCustomActivities();
+                          },
+                    child: Text(l.save),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
+  }
+
+  Widget _templateChip(String label, List<CustomField> template,
+      List<CustomField> target, StateSetter setModalState) {
+    return ActionChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      onPressed: () => setModalState(() {
+        target.clear();
+        target.addAll(
+            template.map((f) => CustomField(label: f.label, type: f.type)));
+      }),
+    );
+  }
+
+  String _fieldTypeName(CustomFieldType type, BuildContext ctx, S l) {
+    switch (type) {
+      case CustomFieldType.text:
+        return l.customFieldTypeText;
+      case CustomFieldType.number:
+        return l.customFieldTypeNumber;
+      case CustomFieldType.duration:
+        return l.customFieldTypeDuration;
+      case CustomFieldType.yesNo:
+        return l.customFieldTypeYesNo;
+      case CustomFieldType.notes:
+        return l.customFieldTypeNotes;
+    }
   }
 
   void _confirmDeleteActivity(CustomActivity ca) {

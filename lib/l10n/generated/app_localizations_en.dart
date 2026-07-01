@@ -1587,4 +1587,64 @@ class SEn extends S {
   String totalTimeConsecrated(String time) {
     return 'Total time consecrated: $time';
   }
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get customActivityTitle => 'Create Activity';
+
+  @override
+  String get customActivityName => 'Activity name';
+
+  @override
+  String get customActivityNameHint => 'e.g. Worship, Fasting Prayer';
+
+  @override
+  String get customActivityIcon => 'Icon';
+
+  @override
+  String get customActivityTemplates => 'Quick templates';
+
+  @override
+  String get customActivityTemplateSimple => 'Simple';
+
+  @override
+  String get customActivityTemplateTimed => 'Timed';
+
+  @override
+  String get customActivityTemplateCounted => 'Counted';
+
+  @override
+  String get customActivityTemplateFull => 'Full';
+
+  @override
+  String get customActivityAddField => 'Add field';
+
+  @override
+  String get customActivityFieldLabel => 'Field label';
+
+  @override
+  String get customActivityFieldType => 'Type';
+
+  @override
+  String get customActivityCountsForProgress => 'Counts for daily progress';
+
+  @override
+  String get customFieldTypeText => 'Text';
+
+  @override
+  String get customFieldTypeNumber => 'Number';
+
+  @override
+  String get customFieldTypeDuration => 'Duration';
+
+  @override
+  String get customFieldTypeYesNo => 'Yes/No';
+
+  @override
+  String get customFieldTypeNotes => 'Notes';
+
+  @override
+  String get customActivityMaxFields => 'Maximum 8 fields';
 }

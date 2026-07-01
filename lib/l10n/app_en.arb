@@ -701,5 +701,27 @@
     "placeholders": {
       "time": {"type": "String"}
     }
-  }
+  },
+
+  "save": "Save",
+
+  "customActivityTitle": "Create Activity",
+  "customActivityName": "Activity name",
+  "customActivityNameHint": "e.g. Worship, Fasting Prayer",
+  "customActivityIcon": "Icon",
+  "customActivityTemplates": "Quick templates",
+  "customActivityTemplateSimple": "Simple",
+  "customActivityTemplateTimed": "Timed",
+  "customActivityTemplateCounted": "Counted",
+  "customActivityTemplateFull": "Full",
+  "customActivityAddField": "Add field",
+  "customActivityFieldLabel": "Field label",
+  "customActivityFieldType": "Type",
+  "customActivityCountsForProgress": "Counts for daily progress",
+  "customFieldTypeText": "Text",
+  "customFieldTypeNumber": "Number",
+  "customFieldTypeDuration": "Duration",
+  "customFieldTypeYesNo": "Yes/No",
+  "customFieldTypeNotes": "Notes",
+  "customActivityMaxFields": "Maximum 8 fields"
 }

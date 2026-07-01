@@ -1604,4 +1604,65 @@ class SFr extends S {
   String totalTimeConsecrated(String time) {
     return 'Temps total consacré : $time';
   }
+
+  @override
+  String get save => 'Enregistrer';
+
+  @override
+  String get customActivityTitle => 'Créer une activité';
+
+  @override
+  String get customActivityName => 'Nom de l\'activité';
+
+  @override
+  String get customActivityNameHint => 'ex. Louange, Prière de jeûne';
+
+  @override
+  String get customActivityIcon => 'Icône';
+
+  @override
+  String get customActivityTemplates => 'Modèles rapides';
+
+  @override
+  String get customActivityTemplateSimple => 'Simple';
+
+  @override
+  String get customActivityTemplateTimed => 'Minuté';
+
+  @override
+  String get customActivityTemplateCounted => 'Compté';
+
+  @override
+  String get customActivityTemplateFull => 'Complet';
+
+  @override
+  String get customActivityAddField => 'Ajouter un champ';
+
+  @override
+  String get customActivityFieldLabel => 'Libellé du champ';
+
+  @override
+  String get customActivityFieldType => 'Type';
+
+  @override
+  String get customActivityCountsForProgress =>
+      'Compte pour la progression quotidienne';
+
+  @override
+  String get customFieldTypeText => 'Texte';
+
+  @override
+  String get customFieldTypeNumber => 'Nombre';
+
+  @override
+  String get customFieldTypeDuration => 'Durée';
+
+  @override
+  String get customFieldTypeYesNo => 'Oui/Non';
+
+  @override
+  String get customFieldTypeNotes => 'Notes';
+
+  @override
+  String get customActivityMaxFields => 'Maximum 8 champs';
 }

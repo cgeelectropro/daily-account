@@ -2874,6 +2874,126 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Total time consecrated: {time}'**
   String totalTimeConsecrated(String time);
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @customActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Activity'**
+  String get customActivityTitle;
+
+  /// No description provided for @customActivityName.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity name'**
+  String get customActivityName;
+
+  /// No description provided for @customActivityNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Worship, Fasting Prayer'**
+  String get customActivityNameHint;
+
+  /// No description provided for @customActivityIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get customActivityIcon;
+
+  /// No description provided for @customActivityTemplates.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick templates'**
+  String get customActivityTemplates;
+
+  /// No description provided for @customActivityTemplateSimple.
+  ///
+  /// In en, this message translates to:
+  /// **'Simple'**
+  String get customActivityTemplateSimple;
+
+  /// No description provided for @customActivityTemplateTimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Timed'**
+  String get customActivityTemplateTimed;
+
+  /// No description provided for @customActivityTemplateCounted.
+  ///
+  /// In en, this message translates to:
+  /// **'Counted'**
+  String get customActivityTemplateCounted;
+
+  /// No description provided for @customActivityTemplateFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get customActivityTemplateFull;
+
+  /// No description provided for @customActivityAddField.
+  ///
+  /// In en, this message translates to:
+  /// **'Add field'**
+  String get customActivityAddField;
+
+  /// No description provided for @customActivityFieldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Field label'**
+  String get customActivityFieldLabel;
+
+  /// No description provided for @customActivityFieldType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get customActivityFieldType;
+
+  /// No description provided for @customActivityCountsForProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Counts for daily progress'**
+  String get customActivityCountsForProgress;
+
+  /// No description provided for @customFieldTypeText.
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get customFieldTypeText;
+
+  /// No description provided for @customFieldTypeNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Number'**
+  String get customFieldTypeNumber;
+
+  /// No description provided for @customFieldTypeDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Duration'**
+  String get customFieldTypeDuration;
+
+  /// No description provided for @customFieldTypeYesNo.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes/No'**
+  String get customFieldTypeYesNo;
+
+  /// No description provided for @customFieldTypeNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get customFieldTypeNotes;
+
+  /// No description provided for @customActivityMaxFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum 8 fields'**
+  String get customActivityMaxFields;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

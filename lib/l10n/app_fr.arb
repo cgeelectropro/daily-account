@@ -701,5 +701,27 @@
     "placeholders": {
       "time": {"type": "String"}
     }
-  }
+  },
+
+  "save": "Enregistrer",
+
+  "customActivityTitle": "Cr\u00e9er une activit\u00e9",
+  "customActivityName": "Nom de l'activit\u00e9",
+  "customActivityNameHint": "ex. Louange, Pri\u00e8re de je\u00fbne",
+  "customActivityIcon": "Ic\u00f4ne",
+  "customActivityTemplates": "Mod\u00e8les rapides",
+  "customActivityTemplateSimple": "Simple",
+  "customActivityTemplateTimed": "Minut\u00e9",
+  "customActivityTemplateCounted": "Compt\u00e9",
+  "customActivityTemplateFull": "Complet",
+  "customActivityAddField": "Ajouter un champ",
+  "customActivityFieldLabel": "Libell\u00e9 du champ",
+  "customActivityFieldType": "Type",
+  "customActivityCountsForProgress": "Compte pour la progression quotidienne",
+  "customFieldTypeText": "Texte",
+  "customFieldTypeNumber": "Nombre",
+  "customFieldTypeDuration": "Dur\u00e9e",
+  "customFieldTypeYesNo": "Oui/Non",
+  "customFieldTypeNotes": "Notes",
+  "customActivityMaxFields": "Maximum 8 champs"
 }
