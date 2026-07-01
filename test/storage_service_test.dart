@@ -11,11 +11,11 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  /// Helper: open an in-memory database with the same schema as the app (v9).
+  /// Helper: open an in-memory database with the same schema as the app (v10).
   Future<Database> openTestDb() async {
     return openDatabase(
       inMemoryDatabasePath,
-      version: 9,
+      version: 10,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -53,7 +53,13 @@ void main() {
             evangelismBeingDiscipled TEXT DEFAULT '',
             evangelismFollowUpNotes TEXT DEFAULT '',
             voiceNotePath TEXT DEFAULT '',
-            bibleSessions TEXT DEFAULT ''
+            bibleSessions TEXT DEFAULT '',
+            bibleDuration TEXT DEFAULT '',
+            literatureDuration TEXT DEFAULT '',
+            evangelismDuration TEXT DEFAULT '',
+            givingDuration TEXT DEFAULT '',
+            churchDuration TEXT DEFAULT '',
+            custom_activity_data TEXT DEFAULT ''
           )
         ''');
         await db.execute('''
@@ -290,11 +296,11 @@ void main() {
   });
 
   group('Migration simulation', () {
-    test('v1 to v9 migration adds all columns', () async {
+    test('v1 to v10 migration adds all columns', () async {
       // Create a v1-like database (minimal schema)
       final db = await openDatabase(
         inMemoryDatabasePath,
-        version: 9,
+        version: 10,
         onCreate: (db, version) async {
           // Simulate v1 schema
           await db.execute('''
@@ -366,6 +372,13 @@ void main() {
             ''');
             // v9 column
             await txn.execute("ALTER TABLE logs ADD COLUMN bibleSessions TEXT DEFAULT ''");
+            // v10 columns
+            for (final col in [
+              'bibleDuration', 'literatureDuration', 'evangelismDuration',
+              'givingDuration', 'churchDuration', 'custom_activity_data',
+            ]) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
           });
         },
       );
