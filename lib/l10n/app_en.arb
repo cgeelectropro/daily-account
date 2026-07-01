@@ -694,8 +694,6 @@
 
   "timeConsciousLabel": "Time-conscious mode",
   "timeConsciousDescription": "Track how much time you consecrate to each spiritual activity",
-  "durationLabel": "Duration",
-  "durationHint": "e.g. 30 minutes",
   "totalTimeConsecrated": "Total time consecrated: {time}",
   "@totalTimeConsecrated": {
     "placeholders": {

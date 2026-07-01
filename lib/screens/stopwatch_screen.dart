@@ -1256,7 +1256,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         await ts.stop(key);
       }
     } else {
-      // Custom activity — just stop, data goes to "other" field
+      // Custom activity — just stop, data goes to customActivityData
       await ts.stop(key);
     }
     widget.onTimerStopped?.call();

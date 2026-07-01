@@ -358,7 +358,7 @@ abstract class S {
   /// No description provided for @durationHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. 30 minutes'**
+  /// **'e.g. 45 minutes'**
   String get durationHint;
 
   /// No description provided for @prayerAloneNotesLabel.

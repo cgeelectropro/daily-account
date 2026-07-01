@@ -141,7 +141,7 @@ class SEn extends S {
   String get durationLabel => 'Duration';
 
   @override
-  String get durationHint => 'e.g. 30 minutes';
+  String get durationHint => 'e.g. 45 minutes';
 
   @override
   String get prayerAloneNotesLabel => 'How was your prayer time?';

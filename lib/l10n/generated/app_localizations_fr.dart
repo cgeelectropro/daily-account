@@ -142,7 +142,7 @@ class SFr extends S {
   String get durationLabel => 'Durée';
 
   @override
-  String get durationHint => 'ex. 30 minutes';
+  String get durationHint => 'ex. 45 minutes';
 
   @override
   String get prayerAloneNotesLabel =>

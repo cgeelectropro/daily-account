@@ -694,8 +694,6 @@
 
   "timeConsciousLabel": "Mode temps conscient",
   "timeConsciousDescription": "Suivre le temps que vous consacrez \u00e0 chaque activit\u00e9 spirituelle",
-  "durationLabel": "Dur\u00e9e",
-  "durationHint": "ex. 30 minutes",
   "totalTimeConsecrated": "Temps total consacr\u00e9 : {time}",
   "@totalTimeConsecrated": {
     "placeholders": {
