@@ -85,14 +85,75 @@ class TimerService extends ChangeNotifier {
   }
 
   void _handleNotifAction(String action) {
-    final running = activeKey;
-    if (running == null) return;
     switch (action) {
       case 'timer_pause':
-        pause(running);
+        final running = activeKey;
+        if (running != null) pause(running);
+      case 'timer_resume':
+        // Resume the first paused session
+        for (final entry in _sessions.entries) {
+          if (entry.value.paused) {
+            start(entry.key);
+            break;
+          }
+        }
       case 'timer_stop':
-        stop(running);
+        final key = activeKey;
+        if (key != null) {
+          stop(key);
+        } else {
+          // Stop any paused timer
+          for (final k in _sessions.keys.toList()) {
+            stop(k);
+            break;
+          }
+        }
+      case 'timer_cancel':
+        final cancelKey = activeKey ??
+            _sessions.entries
+                .where((e) => e.value.paused)
+                .map((e) => e.key)
+                .firstOrNull;
+        if (cancelKey != null) _requestCancel(cancelKey);
     }
+  }
+
+  /// Key awaiting cancel confirmation from UI.
+  TimerKey? _pendingCancelKey;
+  TimerKey? get pendingCancelKey => _pendingCancelKey;
+
+  /// Clear the pending cancel (user chose "Keep timing").
+  void clearPendingCancel() {
+    _pendingCancelKey = null;
+    notifyListeners();
+  }
+
+  /// If elapsed < 10s, cancels immediately. Otherwise flags UI to confirm.
+  void _requestCancel(TimerKey key) {
+    final session = _sessions[key];
+    if (session == null) return;
+    if (session.currentElapsed.inSeconds < 10) {
+      cancelTimer(key);
+    } else {
+      // The notification already has showsUserInterface:true for cancel —
+      // the app will open and the UI will detect pendingCancelKey to show
+      // a confirmation dialog.
+      _pendingCancelKey = key;
+      notifyListeners();
+    }
+  }
+
+  /// Cancel a timer without saving its duration to the log.
+  void cancelTimer(TimerKey key) {
+    final session = _sessions[key];
+    if (session == null) return;
+    _sessions.remove(key);
+    _pendingCancelKey = null;
+    NotificationService.instance.cancelStopwatchNotification();
+    _stopForegroundService();
+    _closeOverlay();
+    _persist();
+    notifyListeners();
   }
 
   /// Start or resume a timer.
@@ -166,6 +227,13 @@ class TimerService extends ChangeNotifier {
     _updateStopwatchNotification();
     _stopForegroundService();
     _closeOverlay();
+
+    // For Bible Reading, fire the navigation tap so HomeShell can navigate
+    // to the log tab where the user can review their reading entry.
+    if (key.isBuiltIn && key.builtIn == ActivityType.bibleReading) {
+      NotificationService.instance.onNotificationTap?.call('stopwatch_bible');
+    }
+
     notifyListeners();
   }
 

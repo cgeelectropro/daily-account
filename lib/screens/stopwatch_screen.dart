@@ -38,7 +38,18 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   }
 
   void _onTick() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    final ts = TimerService.instance;
+    if (ts.pendingCancelKey != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final pendingKey = ts.pendingCancelKey;
+        if (pendingKey != null) {
+          ts.clearPendingCancel();
+          _cancelTimer(pendingKey);
+        }
+      });
+    }
   }
 
   Future<void> _loadCustomActivities() async {
@@ -272,6 +283,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   }
                 }),
               if (isRunning) ...[
+                _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                const SizedBox(width: 8),
                 _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
                   ts.pause(key);
                 }),
@@ -280,6 +293,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
               ],
               if (isPaused) ...[
+                _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                const SizedBox(width: 8),
                 _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
                   ts.start(key);
                 }),
@@ -352,6 +367,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     _showCustomFieldsAndStart(ca);
                   }),
                 if (isRunning) ...[
+                  _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                  const SizedBox(width: 8),
                   _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
                     ts.pause(key);
                   }),
@@ -360,6 +377,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                       Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
                 ],
                 if (isPaused) ...[
+                  _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                  const SizedBox(width: 8),
                   _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
                     ts.start(key);
                   }),
@@ -1181,6 +1200,44 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   }
 
   String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  /// Cancel a timer without saving — shows confirmation for timers >= 10s.
+  void _cancelTimer(TimerKey key) {
+    final ts = TimerService.instance;
+    final session = ts.sessions[key];
+    if (session == null) return;
+
+    if (session.currentElapsed.inSeconds < 10) {
+      ts.cancelTimer(key);
+      return;
+    }
+
+    final elapsed = session.formattedDuration;
+    final name = key.isBuiltIn
+        ? key.builtIn!.shortCode
+        : (session.fields['_customName'] ?? 'Activity');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel timer?'),
+        content: Text('Discard $elapsed of $name?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Keep timing'),
+          ),
+          TextButton(
+            onPressed: () {
+              ts.cancelTimer(key);
+              Navigator.pop(ctx);
+            },
+            child: Text('Discard', style: TextStyle(color: AppTheme.rust)),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Unified stop handler for both built-in and custom activities.
   Future<void> _stopTimer(TimerKey key) async {

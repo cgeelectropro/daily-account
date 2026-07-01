@@ -52,9 +52,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     _checkAutoSend();
     _scheduleSaturdaySummary();
     _handleWidgetClicks();
-    // Navigate to report tab when tapping a report notification
+    // Navigate to report tab when tapping a report notification,
+    // or to the log tab when a Bible Reading timer is stopped.
     NotificationService.instance.onNotificationTap = (payload) {
       if (payload == 'navigate_report' && mounted) {
+        setState(() => _tab = 2);
+      } else if (payload == 'stopwatch_bible' && mounted) {
+        // Navigate to the log tab so the user can review their Bible entry.
         setState(() => _tab = 1);
       }
     };

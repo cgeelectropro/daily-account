@@ -225,6 +225,19 @@ class NotificationService {
           enableVibration: false,
         ),
       );
+      // v2 channel with default importance so action buttons are visible.
+      // Android caches channel settings permanently, so a new channel ID is
+      // required to change importance on existing installs.
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'daily_account_stopwatch_v2',
+          'Activity Timer',
+          description: 'Shows while a spiritual activity timer is running',
+          importance: Importance.defaultImportance,
+          playSound: false,
+          enableVibration: false,
+        ),
+      );
       await androidImpl.createNotificationChannel(
         const AndroidNotificationChannel(
           'daily_account_discipline_v2',
@@ -409,7 +422,9 @@ class NotificationService {
         _scheduleSnooze();
         return;
       case 'timer_pause':
+      case 'timer_resume':
       case 'timer_stop':
+      case 'timer_cancel':
         onTimerAction?.call(response.actionId!);
         return;
     }
@@ -785,20 +800,35 @@ class NotificationService {
   }) async {
     if (!_ready) return;
 
-    // Build actions based on state
+    // Build actions based on state — include Resume/Pause toggle and Cancel
     final actions = <AndroidNotificationAction>[
       if (!isPaused)
         const AndroidNotificationAction(
           'timer_pause',
-          'Pause',
+          '\u23F8 Pause',
+          showsUserInterface: false,
+          cancelNotification: false,
+        )
+      else
+        const AndroidNotificationAction(
+          'timer_resume',
+          '\u25B6 Resume',
           showsUserInterface: false,
           cancelNotification: false,
         ),
-      const AndroidNotificationAction(
+      AndroidNotificationAction(
         'timer_stop',
-        'Stop',
-        showsUserInterface: true,
+        '\u23F9 Stop',
+        showsUserInterface: activityLabel.contains('Bible') ||
+            activityLabel.contains('Lecture') ||
+            activityLabel.contains('Littérature'),
         cancelNotification: true,
+      ),
+      const AndroidNotificationAction(
+        'timer_cancel',
+        '\u2715 Cancel',
+        showsUserInterface: true,
+        cancelNotification: false,
       ),
     ];
 
@@ -810,12 +840,18 @@ class NotificationService {
         ? DateTime.now().millisecondsSinceEpoch - elapsedMs
         : null;
 
+    // Body text: show elapsed when paused, "in progress" when running
+    // (the chronometer in the `when` field shows live time when running).
+    final status = isPaused
+        ? (pausedLabel ?? '\u23F8 Paused \u2014 $elapsed')
+        : '\u23F1 In progress \u2014 $elapsed';
+
     final channel = AndroidNotificationDetails(
-      'daily_account_stopwatch',
+      'daily_account_stopwatch_v2',
       'Activity Timer',
       channelDescription: 'Shows while a spiritual activity timer is running',
-      importance: Importance.low,
-      priority: Priority.low,
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
       playSound: false,
       enableVibration: false,
       ongoing: !isPaused,
@@ -826,6 +862,10 @@ class NotificationService {
       category: AndroidNotificationCategory.service,
       visibility: NotificationVisibility.public,
       actions: actions,
+      styleInformation: BigTextStyleInformation(
+        status,
+        contentTitle: '$activityIcon $activityLabel',
+      ),
     );
 
     final details = NotificationDetails(
@@ -837,10 +877,6 @@ class NotificationService {
       ),
     );
 
-    // When running, the Android chronometer handles the live time display
-    // in the notification's `when` field — use a static body to avoid a
-    // stale elapsed string that freezes when the Dart isolate is suspended.
-    final status = isPaused ? (pausedLabel ?? 'Paused — $elapsed') : 'In progress';
     await _plugin.show(
       stopwatchNotifId,
       '$activityIcon $activityLabel',
