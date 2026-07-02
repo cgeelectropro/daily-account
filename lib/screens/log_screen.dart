@@ -12,6 +12,8 @@ import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
 import '../models/fasting_period.dart';
 import '../services/notification_service.dart';
+import '../services/reflection_service.dart';
+import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/bible_books.dart';
@@ -50,6 +52,11 @@ class _LogScreenState extends State<LogScreen> {
   // Debounce for auto-persist
   Timer? _persistDebounce;
 
+  // Reflection
+  ReflectionResult? _reflection;
+  bool _reflectionExpanded = false;
+  Timer? _reflectionDebounce;
+
   // Time-conscious mode
   bool _timeConscious = false;
 
@@ -74,6 +81,19 @@ class _LogScreenState extends State<LogScreen> {
     if (isNew) await _tryAutoFill();
     _timeConscious = (await StorageService.instance.getSetting('timeConscious', fallback: 'false')) == 'true';
     if (mounted) setState(() => _loading = false);
+
+    // Load cached reflection or generate fresh
+    if (_log.aiReflection.isNotEmpty) {
+      try {
+        _reflection = ReflectionResult.fromJsonString(_log.aiReflection);
+      } catch (_) {
+        _scheduleReflectionUpdate();
+      }
+    }
+    // Always regenerate for today (live updates); use cache for past days
+    if (_key == DateFormat('yyyy-MM-dd').format(DateTime.now())) {
+      _scheduleReflectionUpdate();
+    }
   }
 
   /// Look at last 7 days' logs and pre-fill recurring values into a new log.
@@ -502,6 +522,7 @@ class _LogScreenState extends State<LogScreen> {
       _persistDebounce!.cancel();
       StorageService.instance.saveLog(_log);
     }
+    _reflectionDebounce?.cancel();
     _recordTimer?.cancel();
     _recorder.dispose();
     _player.dispose();
@@ -513,6 +534,46 @@ class _LogScreenState extends State<LogScreen> {
     _persistDebounce = Timer(const Duration(milliseconds: 500), () {
       StorageService.instance.saveLog(_log);
       widget.onChanged();
+      _scheduleReflectionUpdate();
+    });
+  }
+
+  // ── Reflection ──────────────────────────────────────────────
+
+  /// Build the ReflectionContext from current data.
+  Future<ReflectionContext> _buildReflectionContext() async {
+    final rs = ReportService.instance;
+    final streak = await rs.computeStreak();
+    final stats = await rs.computeWeekStats();
+    final trend = await rs.computeTrend();
+    return ReflectionContext(
+      streak: streak,
+      weekDaysFilled: stats.daysLogged,
+      weeklyAvgCompletion: trend.hasData ? trend.currentConsistency : 0,
+      disciplineRates: trend.disciplineRates,
+      monthRates: trend.hasData ? trend.disciplineRates : const {},
+      bestDiscipline: trend.bestDiscipline,
+      weakDiscipline: trend.weakDiscipline,
+      totalBibleChaptersThisWeek: stats.totalBibleChapters,
+      totalEvangelismContactsThisWeek: stats.totalEvangelismContacts,
+      totalPrayerMinutesThisWeek: stats.totalPrayerMinutes,
+      timeOfDay: TimeOfDay.now(),
+    );
+  }
+
+  /// Generate (or regenerate) the reflection. Debounced — called after _persist.
+  void _scheduleReflectionUpdate() {
+    _reflectionDebounce?.cancel();
+    _reflectionDebounce = Timer(const Duration(seconds: 2), () async {
+      if (!mounted) return;
+      final locale = Localizations.localeOf(context).languageCode;
+      final ctx = await _buildReflectionContext();
+      final result = await ReflectionService.instance.generate(_log, ctx, locale);
+      if (mounted) {
+        setState(() => _reflection = result);
+        _log.aiReflection = result.toJsonString();
+        StorageService.instance.saveLog(_log);
+      }
     });
   }
 
@@ -1989,10 +2050,11 @@ class _LogScreenState extends State<LogScreen> {
   }
 
   Widget _buildReflectionCard(S t) {
-    final completeness = _log.completeness;
-    final filled = (completeness * 11).round();
+    final accent = AppTheme.accentGold(context);
+    final r = _reflection;
 
-    if (filled == 0) {
+    // Empty state — no data yet
+    if (r == null || r.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Container(
@@ -2002,7 +2064,7 @@ class _LogScreenState extends State<LogScreen> {
                 ? Colors.white.withValues(alpha: 0.04)
                 : Colors.black.withValues(alpha: 0.03),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.accentGold(context).withValues(alpha: 0.15)),
+            border: Border.all(color: accent.withValues(alpha: 0.15)),
           ),
           child: Row(
             children: [
@@ -2012,8 +2074,8 @@ class _LogScreenState extends State<LogScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(t.reflectionTitle,
-                        style: AppTheme.display(16, color: AppTheme.accentGold(context))),
+                    Text(t.reflectTitle,
+                        style: AppTheme.display(16, color: accent)),
                     const SizedBox(height: 4),
                     Text(t.reflectionEmpty,
                         style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
@@ -2026,66 +2088,144 @@ class _LogScreenState extends State<LogScreen> {
       );
     }
 
-    // Build contextual reflection
-    final accent = AppTheme.accentGold(context);
-    String mainMessage;
-    if (filled >= 9) {
-      mainMessage = t.reflectionGreatDay(filled);
-    } else if (filled >= 5) {
-      mainMessage = t.reflectionGoodDay(filled);
-    } else {
-      mainMessage = t.reflectionStartDay(filled);
-    }
-
-    // Add a focus suggestion
-    String? focusTip;
-    if (_log.prayerAloneDuration.isEmpty && _log.prayerOthersDuration.isEmpty) {
-      focusTip = t.reflectionPrayerFocus;
-    } else if (_log.bibleReference.isEmpty && _log.bibleChapters.isEmpty && _log.bibleSessions.every((s) => s.isEmpty)) {
-      focusTip = t.reflectionBibleFocus;
-    } else if (_log.evangelismContacts.isEmpty) {
-      focusTip = t.reflectionEvangelismFocus;
-    } else if (filled >= 7) {
-      focusTip = t.reflectionBalanced;
-    }
-
+    // Rich reflection card
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              accent.withValues(alpha: 0.10),
-              accent.withValues(alpha: 0.03),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: accent.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('\u2728', style: TextStyle(fontSize: 20)),
-                const SizedBox(width: 10),
-                Text(t.reflectionTitle,
-                    style: AppTheme.display(16, color: accent)),
+      child: GestureDetector(
+        onTap: () => setState(() => _reflectionExpanded = !_reflectionExpanded),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                accent.withValues(alpha: 0.12),
+                accent.withValues(alpha: 0.04),
               ],
             ),
-            const SizedBox(height: 10),
-            Text(mainMessage,
-                style: AppTheme.serif(14, color: AppTheme.textColor(context))),
-            if (focusTip != null) ...[
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row — always visible
+              Row(
+                children: [
+                  const Text('\u2728', style: TextStyle(fontSize: 20)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(t.reflectTitle,
+                        style: AppTheme.display(16, color: accent)),
+                  ),
+                  AnimatedRotation(
+                    turns: _reflectionExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.expand_more,
+                        color: AppTheme.faintColor(context), size: 20),
+                  ),
+                ],
+              ),
+
               const SizedBox(height: 8),
-              Text(focusTip,
-                  style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+
+              // Collapsed: first sentence preview
+              if (!_reflectionExpanded) ...[
+                Text(
+                  _firstSentence(r.narrative),
+                  style: AppTheme.serif(13, color: AppTheme.textColor(context)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(t.reflectTapToExpand,
+                    style: AppTheme.label(9, color: AppTheme.faintColor(context))),
+              ],
+
+              // Expanded: full reflection
+              if (_reflectionExpanded) ...[
+                // Narrative
+                _reflectSection(t.reflectNarrativeLabel, r.narrative, accent),
+
+                const SizedBox(height: 12),
+
+                // Encouragement
+                _reflectSection(t.reflectEncouragementLabel, r.encouragement, accent,
+                    italic: true),
+
+                const SizedBox(height: 12),
+
+                // Suggestion
+                _reflectSection(t.reflectSuggestionLabel, r.suggestion, accent,
+                    icon: Icons.lightbulb_outline),
+
+                // Verse
+                if (r.verse != null && r.verseReference != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: accent.withValues(alpha: 0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.reflectVerseLabel,
+                            style: AppTheme.label(9, color: accent)),
+                        const SizedBox(height: 6),
+                        Text('"${r.verse}"',
+                            style: AppTheme.serif(13,
+                                color: AppTheme.textColor(context),
+                                style: FontStyle.italic)),
+                        const SizedBox(height: 4),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Text('\u2014 ${r.verseReference}',
+                              style: AppTheme.label(10, color: AppTheme.mutedColor(context))),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ],
-          ],
+          ),
         ),
       ).animate().fadeIn(delay: 540.ms),
     );
+  }
+
+  Widget _reflectSection(String label, String text, Color accent,
+      {bool italic = false, IconData? icon}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: accent),
+              const SizedBox(width: 4),
+            ],
+            Text(label, style: AppTheme.label(9, color: accent)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(text,
+            style: AppTheme.serif(13,
+                color: AppTheme.textColor(context),
+                style: italic ? FontStyle.italic : FontStyle.normal)),
+      ],
+    );
+  }
+
+  String _firstSentence(String text) {
+    final dotIndex = text.indexOf('. ');
+    if (dotIndex > 0 && dotIndex < 120) return text.substring(0, dotIndex + 1);
+    if (text.length > 100) return '${text.substring(0, 100)}...';
+    return text;
   }
 
   // ── Bible reading sessions (multi-session with auto-calculate) ──

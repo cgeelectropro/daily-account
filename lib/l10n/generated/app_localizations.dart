@@ -2203,65 +2203,11 @@ abstract class S {
   /// **'Not enough data for trends yet'**
   String get trendNoData;
 
-  /// No description provided for @reflectionTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Daily Reflection'**
-  String get reflectionTitle;
-
   /// No description provided for @reflectionEmpty.
   ///
   /// In en, this message translates to:
   /// **'Complete some disciplines to receive a reflection'**
   String get reflectionEmpty;
-
-  /// No description provided for @reflectionGreatDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Wonderful day of faithfulness! You covered {count} disciplines — your commitment is bearing fruit.'**
-  String reflectionGreatDay(int count);
-
-  /// No description provided for @reflectionGoodDay.
-  ///
-  /// In en, this message translates to:
-  /// **'Good effort today with {count} disciplines. Keep building consistency!'**
-  String reflectionGoodDay(int count);
-
-  /// No description provided for @reflectionStartDay.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'ve started with {count} discipline. Every step counts — keep pressing forward!'**
-  String reflectionStartDay(int count);
-
-  /// No description provided for @reflectionPrayerFocus.
-  ///
-  /// In en, this message translates to:
-  /// **'Your prayer life is strong today. Let it fuel your other disciplines.'**
-  String get reflectionPrayerFocus;
-
-  /// No description provided for @reflectionBibleFocus.
-  ///
-  /// In en, this message translates to:
-  /// **'Great Bible engagement today. Let the Word guide your day.'**
-  String get reflectionBibleFocus;
-
-  /// No description provided for @reflectionEvangelismFocus.
-  ///
-  /// In en, this message translates to:
-  /// **'Active in evangelism today — souls are being reached!'**
-  String get reflectionEvangelismFocus;
-
-  /// No description provided for @reflectionBalanced.
-  ///
-  /// In en, this message translates to:
-  /// **'A beautifully balanced day across your disciplines.'**
-  String get reflectionBalanced;
-
-  /// No description provided for @reflectionStreakEncouragement.
-  ///
-  /// In en, this message translates to:
-  /// **'You\'re on a {days}-day streak! Don\'t break it!'**
-  String reflectionStreakEncouragement(int days);
 
   /// No description provided for @evangelismFollowUp.
   ///

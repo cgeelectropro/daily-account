@@ -1210,47 +1210,8 @@ class SEn extends S {
   String get trendNoData => 'Not enough data for trends yet';
 
   @override
-  String get reflectionTitle => 'Daily Reflection';
-
-  @override
   String get reflectionEmpty =>
       'Complete some disciplines to receive a reflection';
-
-  @override
-  String reflectionGreatDay(int count) {
-    return 'Wonderful day of faithfulness! You covered $count disciplines — your commitment is bearing fruit.';
-  }
-
-  @override
-  String reflectionGoodDay(int count) {
-    return 'Good effort today with $count disciplines. Keep building consistency!';
-  }
-
-  @override
-  String reflectionStartDay(int count) {
-    return 'You\'ve started with $count discipline. Every step counts — keep pressing forward!';
-  }
-
-  @override
-  String get reflectionPrayerFocus =>
-      'Your prayer life is strong today. Let it fuel your other disciplines.';
-
-  @override
-  String get reflectionBibleFocus =>
-      'Great Bible engagement today. Let the Word guide your day.';
-
-  @override
-  String get reflectionEvangelismFocus =>
-      'Active in evangelism today — souls are being reached!';
-
-  @override
-  String get reflectionBalanced =>
-      'A beautifully balanced day across your disciplines.';
-
-  @override
-  String reflectionStreakEncouragement(int days) {
-    return 'You\'re on a $days-day streak! Don\'t break it!';
-  }
 
   @override
   String get evangelismFollowUp => 'Follow-up';

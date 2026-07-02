@@ -1216,47 +1216,8 @@ class SFr extends S {
   String get trendNoData => 'Pas assez de données pour les tendances';
 
   @override
-  String get reflectionTitle => 'Réflexion Quotidienne';
-
-  @override
   String get reflectionEmpty =>
       'Complétez des disciplines pour recevoir une réflexion';
-
-  @override
-  String reflectionGreatDay(int count) {
-    return 'Magnifique journée de fidélité ! Vous avez couvert $count disciplines — votre engagement porte du fruit.';
-  }
-
-  @override
-  String reflectionGoodDay(int count) {
-    return 'Bon effort aujourd\'hui avec $count disciplines. Continuez à bâtir la régularité !';
-  }
-
-  @override
-  String reflectionStartDay(int count) {
-    return 'Vous avez commencé avec $count discipline. Chaque pas compte — continuez !';
-  }
-
-  @override
-  String get reflectionPrayerFocus =>
-      'Votre vie de prière est forte aujourd\'hui. Qu\'elle nourrisse vos autres disciplines.';
-
-  @override
-  String get reflectionBibleFocus =>
-      'Excellent engagement biblique aujourd\'hui. Que la Parole guide votre journée.';
-
-  @override
-  String get reflectionEvangelismFocus =>
-      'Actif en évangélisation aujourd\'hui — des âmes sont atteintes !';
-
-  @override
-  String get reflectionBalanced =>
-      'Une journée magnifiquement équilibrée à travers vos disciplines.';
-
-  @override
-  String reflectionStreakEncouragement(int days) {
-    return 'Vous êtes sur une série de $days jours ! Ne la brisez pas !';
-  }
 
   @override
   String get evangelismFollowUp => 'Suivi';
