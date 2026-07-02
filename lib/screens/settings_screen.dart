@@ -170,6 +170,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await s.setSetting('notifDailyBody', l.notifDailyBody);
     await s.setSetting('notifSundayTitle', l.notifSundayTitle);
     await s.setSetting('notifSundayBody', l.notifSundayBody);
+    await s.setSetting('notifSatTitle', l.saturdaySummaryTitle);
+    await s.setSetting('notifMidWeekTitle', l.midWeekNudgeTitle);
 
     await NotificationService.instance.scheduleDailyReminder(
       _dailyTime.hour, _dailyTime.minute,
@@ -1816,8 +1818,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (picked != null && mounted) {
       setState(() => _disciplineTimes[index] = picked);
-      final key = 'discReminder_$index';
-      await StorageService.instance.setSetting(key, '${picked.hour}:${picked.minute}');
+      final s = StorageService.instance;
+      await s.setSetting('discReminder_$index', '${picked.hour}:${picked.minute}');
+      await s.setSetting('discName_$index', _disciplineNames[index]);
       await NotificationService.instance.scheduleDisciplineReminder(
         index, picked.hour, picked.minute, _disciplineNames[index],
       );

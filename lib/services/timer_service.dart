@@ -59,9 +59,18 @@ class TimerService extends ChangeNotifier {
         final list = jsonDecode(raw) as List;
         for (final item in list) {
           final session = TimerSession.fromMap(Map<String, dynamic>.from(item));
-          // Only restore sessions from today
           if (session.dateKey == _todayKey) {
             _sessions[session.key] = session;
+          } else {
+            // Yesterday's session survived midnight — finalize its elapsed
+            // time and write to the log for that day so no data is lost.
+            if (session.isRunning) {
+              session.elapsed += DateTime.now().difference(session.startedAt!);
+              session.startedAt = null;
+            }
+            if (session.elapsed.inSeconds > 0) {
+              await _writeToDailyLog(session);
+            }
           }
         }
       } catch (_) {

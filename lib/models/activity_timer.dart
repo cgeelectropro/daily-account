@@ -24,13 +24,20 @@ class TimerKey {
   bool get isBuiltIn => builtIn != null;
   bool get isCustom => customId != null;
 
-  /// Stable string for serialization.
-  String get serialKey => isBuiltIn ? 'b:${builtIn!.index}' : 'c:$customId';
+  /// Stable string for serialization (uses enum name, not index).
+  String get serialKey => isBuiltIn ? 'b:${builtIn!.name}' : 'c:$customId';
 
   factory TimerKey.fromSerialKey(String key) {
     if (key.startsWith('b:')) {
-      final idx = int.parse(key.substring(2));
-      return TimerKey.builtIn(ActivityType.values[idx]);
+      final val = key.substring(2);
+      // Try name-based lookup first, fall back to legacy index-based
+      final byName = ActivityType.values.where((t) => t.name == val);
+      if (byName.isNotEmpty) return TimerKey.builtIn(byName.first);
+      final idx = int.tryParse(val);
+      if (idx != null && idx < ActivityType.values.length) {
+        return TimerKey.builtIn(ActivityType.values[idx]);
+      }
+      return TimerKey.builtIn(ActivityType.bibleReading); // safe fallback
     }
     return TimerKey.custom(key.substring(2));
   }

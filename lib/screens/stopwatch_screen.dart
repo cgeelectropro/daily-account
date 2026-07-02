@@ -340,24 +340,26 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final hasElapsed = session != null && session.currentElapsed > Duration.zero;
     final dark = AppTheme.isDark(context);
 
-    return GestureDetector(
-      onLongPress: () => _confirmDeleteActivity(ca),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isRunning
-              ? accent.withValues(alpha: 0.15)
-              : dark
-                  ? Colors.white.withValues(alpha: 0.04)
-                  : Colors.black.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
+    return Tooltip(
+      message: S.of(context).longPressToDeleteActivity,
+      child: GestureDetector(
+        onLongPress: () => _confirmDeleteActivity(ca),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
             color: isRunning
-                ? accent.withValues(alpha: 0.5)
-                : accent.withValues(alpha: 0.12),
-            width: isRunning ? 1.5 : 1,
+                ? accent.withValues(alpha: 0.15)
+                : dark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isRunning
+                  ? accent.withValues(alpha: 0.5)
+                  : accent.withValues(alpha: 0.12),
+              width: isRunning ? 1.5 : 1,
+            ),
           ),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -411,6 +413,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

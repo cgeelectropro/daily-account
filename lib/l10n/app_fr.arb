@@ -788,5 +788,37 @@
   "notifNameDiscipline": "Discipline {id}",
   "@notifNameDiscipline": {
     "placeholders": { "id": { "type": "int" } }
-  }
+  },
+
+  "pdfBible": "Bible",
+  "pdfLiterature": "Litt\u00e9rature",
+  "pdfPrayerAlone": "Pri\u00e8re (Seul)",
+  "pdfPrayerOthers": "Pri\u00e8re (Autres)",
+  "pdfEvangelism": "\u00c9vang\u00e9lisation",
+  "pdfGiving": "Dons",
+  "pdfChurch": "\u00c9glise",
+  "pdfOther": "Autres",
+  "pdfNewBelievers": "Nouveaux Croyants",
+  "pdfBeingDiscipled": "En Discipulat",
+  "pdfContacts": "contact(s)",
+  "pdfTimes": "fois",
+  "pdfChAbbr": "ch.",
+  "pdfActiveDays": "Jours Actifs",
+  "pdfWeeksReported": "Semaines Rapport\u00e9es",
+  "pdfAvgCompletion": "Compl\u00e9tion Moy.",
+  "pdfCertifiesThat": "Ceci certifie que",
+  "pdfFaithfulDiscipline": "a fait preuve de discipline spirituelle fid\u00e8le au cours de",
+  "pdfConsistency": "R\u00e9gularit\u00e9",
+  "pdfDaysActive": "Jours Actifs",
+  "pdfChaptersRead": "Chapitres Lus",
+  "pdfCertificateFooter": "Compte Journalier \u2022 Discipulat CMFI",
+  "pdfPageOf": "Page {current} / {total}",
+  "@pdfPageOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "longPressToDelete": "Appui long pour supprimer",
+  "longPressToDeleteActivity": "Appui long pour supprimer cette activité"
 }

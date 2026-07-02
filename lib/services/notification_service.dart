@@ -17,11 +17,47 @@ import 'storage_service.dart';
 /// needs to schedule a new notification.
 @pragma('vm:entry-point')
 void _onBackgroundNotificationResponse(NotificationResponse response) {
-  // Background responses for timer actions will open the app
-  // (showsUserInterface: true) so the main isolate handles them.
-  // Snooze is handled inline since it doesn't need the main isolate.
-  // No-op: the foreground handler takes care of everything since
-  // showsUserInterface: true brings the app to the foreground first.
+  // Timer actions open the app (showsUserInterface: true) — handled in foreground.
+  // Snooze must work even when the app is terminated — schedule directly.
+  if (response.actionId == 'snooze_15') {
+    _backgroundSnooze();
+  }
+}
+
+/// Schedule a snooze notification from the background isolate.
+/// Uses a fresh plugin instance since the main isolate isn't running.
+Future<void> _backgroundSnooze() async {
+  try {
+    tzdata.initializeTimeZones();
+    final tzInfo = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+
+    final plugin = FlutterLocalNotificationsPlugin();
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await plugin.initialize(const InitializationSettings(android: android));
+
+    final snoozeTime = tz.TZDateTime.now(tz.local).add(const Duration(minutes: 15));
+    await plugin.zonedSchedule(
+      99, // snooze ID
+      '\u23F0 Daily Account',
+      'Snooze is over! Time to log your walk with God.',
+      snoozeTime,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_account_alarm_sound_happy_bells',
+          'Daily Account Reminders',
+          channelDescription: 'Alarm-style reminders to record your walk with God',
+          importance: Importance.max,
+          priority: Priority.max,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  } catch (_) {
+    // Best-effort — if it fails in background, next foreground launch re-schedules
+  }
 }
 
 /// Aggressive, alarm-style notification system for Daily Account.
@@ -413,13 +449,15 @@ class NotificationService {
       body: midWeekBody.isNotEmpty ? midWeekBody : null,
     );
 
-    // Saturday summary (Saturday at 18:00)
+    // Saturday summary (Saturday at 18:00) — use saved localized strings
+    final satTitle = await s.getSetting('notifSatTitle', fallback: 'Your week so far');
+    final satBody = await s.getSetting('notifSatBody', fallback: 'Check your progress and finish strong tomorrow!');
     await scheduleSaturdaySummary(18, 0,
-      title: 'Your week so far',
-      body: 'Check your progress and finish strong tomorrow!',
+      title: satTitle,
+      body: satBody,
     );
 
-    // Re-schedule per-discipline reminders
+    // Re-schedule per-discipline reminders — use saved localized names
     for (int i = 0; i < 11; i++) {
       final raw = await s.getSetting('discReminder_$i', fallback: '');
       if (raw.isNotEmpty) {
@@ -427,9 +465,11 @@ class NotificationService {
         if (parts.length == 2) {
           final h = int.tryParse(parts[0]) ?? 0;
           final m = int.tryParse(parts[1]) ?? 0;
-          final names = ['Bible', 'Literature', 'DDEG', 'Prayer (alone)', 'Prayer (others)',
+          final savedName = await s.getSetting('discName_$i', fallback: '');
+          final fallbackNames = ['Bible', 'Literature', 'DDEG', 'Prayer (alone)', 'Prayer (others)',
             'Evangelism', 'Fasting', 'Giving', 'Church', 'Discipleship', 'Proclamation'];
-          await scheduleDisciplineReminder(i, h, m, names[i]);
+          await scheduleDisciplineReminder(i, h, m,
+            savedName.isNotEmpty ? savedName : fallbackNames[i]);
         }
       }
     }
@@ -711,17 +751,68 @@ class NotificationService {
   // ═════════════════════════════════════════════════════════════
 
   /// Call this when the user completes their daily log.
-  /// Cancels follow-up reminders for today so they stop nagging.
+  /// Cancels follow-up reminders for today, then re-schedules them
+  /// so they still fire tomorrow. (cancel() permanently kills a
+  /// recurring zonedSchedule — we must re-register.)
   Future<void> cancelDailyFollowUps() async {
     for (final id in [11, 12, 13]) {
       await _plugin.cancel(id);
     }
+    // Re-schedule so they fire again tomorrow
+    final s = StorageService.instance;
+    final dh = int.tryParse(await s.getSetting('dailyHour', fallback: '20')) ?? 20;
+    final dm = int.tryParse(await s.getSetting('dailyMin', fallback: '0')) ?? 0;
+    final count = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
+    final body = await s.getSetting('notifDailyBody', fallback: '');
+
+    if (count >= 1) {
+      final f1 = _addMinutesToTime(dh, dm, 30);
+      await _safeZonedSchedule(11, '\u23F0 Daily Account',
+        body.isNotEmpty ? body : 'You still haven\'t logged today. Your disciple maker is counting on you!',
+        _nextInstanceOfTime(f1.hour, f1.minute),
+        _alarmDetails, matchDateTimeComponents: DateTimeComponents.time);
+    }
+    if (count >= 2) {
+      final f2 = _addMinutesToTime(dh, dm, 60);
+      await _safeZonedSchedule(12, '\u26A0\uFE0F Daily Account',
+        'Don\'t break your streak! Open the app and log your spiritual walk now.',
+        _nextInstanceOfTime(f2.hour, f2.minute),
+        _alarmDetails, matchDateTimeComponents: DateTimeComponents.time);
+    }
+    if (count >= 3) {
+      final f3 = _addMinutesToTime(dh, dm, 90);
+      await _safeZonedSchedule(13, '\uD83D\uDEA8 Daily Account',
+        'Last reminder! Your day\'s account is still empty. Tap to log before midnight.',
+        _nextInstanceOfTime(f3.hour, f3.minute),
+        _alarmDetails, matchDateTimeComponents: DateTimeComponents.time);
+    }
   }
 
   /// Call this when the user sends their Sunday report.
+  /// Cancels follow-up reminders for today, then re-schedules for next Sunday.
   Future<void> cancelSundayFollowUps() async {
     for (final id in [21, 22]) {
       await _plugin.cancel(id);
+    }
+    // Re-schedule so they fire again next Sunday
+    final s = StorageService.instance;
+    final sh = int.tryParse(await s.getSetting('sundayHour', fallback: '18')) ?? 18;
+    final sm = int.tryParse(await s.getSetting('sundayMin', fallback: '0')) ?? 0;
+    final count = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+
+    if (count >= 1) {
+      final f1 = _addMinutesToTime(sh, sm, 30);
+      await _safeZonedSchedule(21, '\u23F0 Sunday — Send Your Account',
+        'Your disciple maker is waiting! Send your weekly report now.',
+        _nextInstanceOfSunday(f1.hour, f1.minute),
+        _alarmDetails, matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime);
+    }
+    if (count >= 2) {
+      final f2 = _addMinutesToTime(sh, sm, 60);
+      await _safeZonedSchedule(22, '\u26A0\uFE0F Sunday — Send Your Account',
+        'Last chance today! Send your account before the week ends.',
+        _nextInstanceOfSunday(f2.hour, f2.minute),
+        _alarmDetails, matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime);
     }
   }
 

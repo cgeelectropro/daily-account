@@ -788,5 +788,37 @@
   "notifNameDiscipline": "Discipline {id}",
   "@notifNameDiscipline": {
     "placeholders": { "id": { "type": "int" } }
-  }
+  },
+
+  "pdfBible": "Bible",
+  "pdfLiterature": "Literature",
+  "pdfPrayerAlone": "Prayer (Alone)",
+  "pdfPrayerOthers": "Prayer (Others)",
+  "pdfEvangelism": "Evangelism",
+  "pdfGiving": "Giving",
+  "pdfChurch": "Church",
+  "pdfOther": "Other",
+  "pdfNewBelievers": "New Believers",
+  "pdfBeingDiscipled": "Being Discipled",
+  "pdfContacts": "contact(s)",
+  "pdfTimes": "times",
+  "pdfChAbbr": "ch.",
+  "pdfActiveDays": "Active Days",
+  "pdfWeeksReported": "Weeks Reported",
+  "pdfAvgCompletion": "Avg Completion",
+  "pdfCertifiesThat": "This certifies that",
+  "pdfFaithfulDiscipline": "demonstrated faithful spiritual discipline during",
+  "pdfConsistency": "Consistency",
+  "pdfDaysActive": "Days Active",
+  "pdfChaptersRead": "Chapters Read",
+  "pdfCertificateFooter": "Daily Account \u2022 CMFI Discipleship",
+  "pdfPageOf": "Page {current} / {total}",
+  "@pdfPageOf": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "longPressToDelete": "Long press to delete",
+  "longPressToDeleteActivity": "Long press to delete this activity"
 }

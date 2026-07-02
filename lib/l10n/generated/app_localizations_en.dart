@@ -1805,4 +1805,82 @@ class SEn extends S {
   String notifNameDiscipline(int id) {
     return 'Discipline $id';
   }
+
+  @override
+  String get pdfBible => 'Bible';
+
+  @override
+  String get pdfLiterature => 'Literature';
+
+  @override
+  String get pdfPrayerAlone => 'Prayer (Alone)';
+
+  @override
+  String get pdfPrayerOthers => 'Prayer (Others)';
+
+  @override
+  String get pdfEvangelism => 'Evangelism';
+
+  @override
+  String get pdfGiving => 'Giving';
+
+  @override
+  String get pdfChurch => 'Church';
+
+  @override
+  String get pdfOther => 'Other';
+
+  @override
+  String get pdfNewBelievers => 'New Believers';
+
+  @override
+  String get pdfBeingDiscipled => 'Being Discipled';
+
+  @override
+  String get pdfContacts => 'contact(s)';
+
+  @override
+  String get pdfTimes => 'times';
+
+  @override
+  String get pdfChAbbr => 'ch.';
+
+  @override
+  String get pdfActiveDays => 'Active Days';
+
+  @override
+  String get pdfWeeksReported => 'Weeks Reported';
+
+  @override
+  String get pdfAvgCompletion => 'Avg Completion';
+
+  @override
+  String get pdfCertifiesThat => 'This certifies that';
+
+  @override
+  String get pdfFaithfulDiscipline =>
+      'demonstrated faithful spiritual discipline during';
+
+  @override
+  String get pdfConsistency => 'Consistency';
+
+  @override
+  String get pdfDaysActive => 'Days Active';
+
+  @override
+  String get pdfChaptersRead => 'Chapters Read';
+
+  @override
+  String get pdfCertificateFooter => 'Daily Account • CMFI Discipleship';
+
+  @override
+  String pdfPageOf(int current, int total) {
+    return 'Page $current / $total';
+  }
+
+  @override
+  String get longPressToDelete => 'Long press to delete';
+
+  @override
+  String get longPressToDeleteActivity => 'Long press to delete this activity';
 }

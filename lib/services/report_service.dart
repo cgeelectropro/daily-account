@@ -166,16 +166,28 @@ class ReportService {
   }
 
   /// Current consecutive-day streak ending today.
+  /// Uses a single batch query instead of N+1 individual queries.
   Future<int> computeStreak() async {
+    final today = DateTime.now();
+    // Fetch last 365 days in one query
+    final start = today.subtract(const Duration(days: 365));
+    final logs = await StorageService.instance
+        .getLogsBetween(keyFor(start), keyFor(today));
+    // Build a set of completed date keys for O(1) lookup
+    final completedDays = <String>{
+      for (final log in logs)
+        if (log.completed) log.dateKey,
+    };
+
     int streak = 0;
-    var day = DateTime.now();
+    var day = today;
     for (int i = 0; i < 365; i++) {
-      final log = await StorageService.instance.getLog(keyFor(day));
-      if (log != null && log.completed) {
+      if (completedDays.contains(keyFor(day))) {
         streak++;
         day = day.subtract(const Duration(days: 1));
       } else {
         if (i == 0) {
+          // Today not yet completed — check yesterday
           day = day.subtract(const Duration(days: 1));
           continue;
         }
@@ -325,8 +337,9 @@ class ReportService {
   }
 
   Future<String> buildMonthlyReport(String name, S l, int year, int month) async {
-    final fmtMonth = DateFormat('MMMM yyyy');
-    final fmtLong = DateFormat('EEEE, MMM d');
+    final locale = l.localeName;
+    final fmtMonth = DateFormat('MMMM yyyy', locale);
+    final fmtLong = DateFormat('EEEE, MMM d', locale);
     final monthDate = DateTime(year, month, 1);
     final lastDay = DateTime(year, month + 1, 0);
     final buf = StringBuffer();
@@ -443,8 +456,9 @@ class ReportService {
 
   Future<String> buildFullReport(String name, S l, [DateTime? ref]) async {
     final dates = weekDates(ref);
-    final fmtLong = DateFormat('EEEE, MMM d');
-    final fmtRange = DateFormat('MMM d');
+    final locale = l.localeName;
+    final fmtLong = DateFormat('EEEE, MMM d', locale);
+    final fmtRange = DateFormat('MMM d', locale);
     final buf = StringBuffer();
 
     // Load custom activity names once for ID → display label lookup
@@ -566,8 +580,9 @@ class ReportService {
 
   Future<String> buildCompactReport(String name, S l, [DateTime? ref]) async {
     final dates = weekDates(ref);
-    final fmtRange = DateFormat('MMM d');
-    final fmtShort = DateFormat('E d');
+    final locale = l.localeName;
+    final fmtRange = DateFormat('MMM d', locale);
+    final fmtShort = DateFormat('E d', locale);
     final buf = StringBuffer();
 
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
@@ -645,7 +660,7 @@ class ReportService {
   Future<bool> sendByEmail(String toEmail, String name, String body, S l) async {
     final subject = '\uD83D\uDCD6 ${l.reportEmailSubject(
       name.isEmpty ? "Disciple" : name,
-      DateFormat('MMM d, y').format(DateTime.now()),
+      DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
     )}';
     final uri = Uri(
       scheme: 'mailto',

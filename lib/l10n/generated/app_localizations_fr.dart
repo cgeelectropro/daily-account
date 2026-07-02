@@ -1826,4 +1826,83 @@ class SFr extends S {
   String notifNameDiscipline(int id) {
     return 'Discipline $id';
   }
+
+  @override
+  String get pdfBible => 'Bible';
+
+  @override
+  String get pdfLiterature => 'Littérature';
+
+  @override
+  String get pdfPrayerAlone => 'Prière (Seul)';
+
+  @override
+  String get pdfPrayerOthers => 'Prière (Autres)';
+
+  @override
+  String get pdfEvangelism => 'Évangélisation';
+
+  @override
+  String get pdfGiving => 'Dons';
+
+  @override
+  String get pdfChurch => 'Église';
+
+  @override
+  String get pdfOther => 'Autres';
+
+  @override
+  String get pdfNewBelievers => 'Nouveaux Croyants';
+
+  @override
+  String get pdfBeingDiscipled => 'En Discipulat';
+
+  @override
+  String get pdfContacts => 'contact(s)';
+
+  @override
+  String get pdfTimes => 'fois';
+
+  @override
+  String get pdfChAbbr => 'ch.';
+
+  @override
+  String get pdfActiveDays => 'Jours Actifs';
+
+  @override
+  String get pdfWeeksReported => 'Semaines Rapportées';
+
+  @override
+  String get pdfAvgCompletion => 'Complétion Moy.';
+
+  @override
+  String get pdfCertifiesThat => 'Ceci certifie que';
+
+  @override
+  String get pdfFaithfulDiscipline =>
+      'a fait preuve de discipline spirituelle fidèle au cours de';
+
+  @override
+  String get pdfConsistency => 'Régularité';
+
+  @override
+  String get pdfDaysActive => 'Jours Actifs';
+
+  @override
+  String get pdfChaptersRead => 'Chapitres Lus';
+
+  @override
+  String get pdfCertificateFooter => 'Compte Journalier • Discipulat CMFI';
+
+  @override
+  String pdfPageOf(int current, int total) {
+    return 'Page $current / $total';
+  }
+
+  @override
+  String get longPressToDelete => 'Appui long pour supprimer';
+
+  @override
+  String get longPressToDeleteActivity =>
+      'Appui long pour supprimer cette activité';
 }

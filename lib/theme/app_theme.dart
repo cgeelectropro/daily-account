@@ -23,7 +23,7 @@ class AppTheme {
   static const Color lightBg2 = Color(0xFFEDE6D6); // raised cards/surfaces
   static const Color lightText = Color(0xFF1A1207); // near-black for max readability
   static const Color lightMuted = Color(0xFF5C4E38); // readable secondary text
-  static const Color lightFaint = Color(0xFF8A7C64); // tertiary / hints
+  static const Color lightFaint = Color(0xFF6B5E48); // tertiary / hints (WCAG AA compliant)
   static const Color lightGold = Color(0xFF9A7B1C); // rich deep gold for contrast
 
   // ── Gradients ─────────────────────────────────────────────

@@ -862,40 +862,50 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Prayer requests button — always visible
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PrayerRequestScreen()),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: accent.withValues(alpha: 0.3)),
+              Material(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  splashColor: accent.withValues(alpha: 0.2),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PrayerRequestScreen()),
                   ),
-                  child: Text('\uD83D\uDE4F', style: const TextStyle(fontSize: 18)),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Icon(Icons.volunteer_activism, color: accent, size: 20),
+                  ),
                 ),
               ),
               // Quick Log button — only on Log tab
               if (_tab == 1) ...[
                 const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _showQuickLog,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: accent.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.flash_on, color: accent, size: 16),
-                        const SizedBox(width: 4),
-                        Text(S.of(context).quickLogButton,
-                            style: AppTheme.label(9, color: accent)),
-                      ],
+                Material(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    splashColor: accent.withValues(alpha: 0.2),
+                    onTap: _showQuickLog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.flash_on, color: accent, size: 16),
+                          const SizedBox(width: 4),
+                          Text(S.of(context).quickLogButton,
+                              style: AppTheme.label(9, color: accent)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1139,10 +1149,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             ],
           ),
         ),
-        // Day strip
+        // Day strip — responsive margins for small screens
         Container(
-          margin: const EdgeInsets.fromLTRB(20, 0, 20, 4),
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          margin: EdgeInsets.fromLTRB(
+            MediaQuery.of(context).size.width < 360 ? 8 : 20, 0,
+            MediaQuery.of(context).size.width < 360 ? 8 : 20, 4),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           decoration: BoxDecoration(
             color: accent.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(16),
@@ -1159,7 +1171,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 child: GestureDetector(
                   onTap: isFuture ? null : () => setState(() => _selected = d),
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
                       color: done
@@ -1282,16 +1294,17 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   Widget _bottomNav() {
     final items = [
-      ('\u23F1\uFE0F', S.of(context).tabStopwatch, 0),
-      ('\uD83D\uDCD6', S.of(context).tabLog, 1),
-      ('\uD83D\uDCE8', S.of(context).tabReport, 2),
-      ('\u2699\uFE0F', S.of(context).tabSettings, 3),
+      (Icons.timer_outlined, Icons.timer, S.of(context).tabStopwatch, 0),
+      (Icons.menu_book_outlined, Icons.menu_book, S.of(context).tabLog, 1),
+      (Icons.insert_chart_outlined, Icons.insert_chart, S.of(context).tabReport, 2),
+      (Icons.settings_outlined, Icons.settings, S.of(context).tabSettings, 3),
     ];
     final dark = AppTheme.isDark(context);
+    final accent = AppTheme.accentGold(context);
     return Container(
       decoration: BoxDecoration(
         color: dark ? AppTheme.bg1 : AppTheme.lightBg1,
-        border: Border(top: BorderSide(color: AppTheme.accentGold(context).withValues(alpha: 0.15))),
+        border: Border(top: BorderSide(color: accent.withValues(alpha: 0.15))),
       ),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SafeArea(
@@ -1299,32 +1312,38 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: items.map((it) {
-            final active = _tab == it.$3;
+            final active = _tab == it.$4;
             return Semantics(
-              label: it.$2,
+              label: it.$3,
               button: true,
               selected: active,
-              child: GestureDetector(
+              child: InkResponse(
                 onTap: () {
-                  if (_tab != it.$3) HapticFeedback.selectionClick();
-                  setState(() => _tab = it.$3);
+                  if (_tab != it.$4) {
+                    HapticFeedback.selectionClick();
+                    // When leaving settings, bump report key so report screen
+                    // refreshes with any changed settings (language, contacts).
+                    if (_tab == 3) _reportKey++;
+                  }
+                  setState(() => _tab = it.$4);
                 },
-                behavior: HitTestBehavior.opaque,
+                highlightShape: BoxShape.circle,
+                splashColor: accent.withValues(alpha: 0.15),
+                highlightColor: accent.withValues(alpha: 0.08),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ExcludeSemantics(
-                        child: Text(it.$1,
-                            style: TextStyle(
-                                fontSize: 20,
-                                color: active ? null : AppTheme.faintColor(context))),
+                      Icon(
+                        active ? it.$2 : it.$1,
+                        size: 22,
+                        color: active ? accent : AppTheme.faintColor(context),
                       ),
                       const SizedBox(height: 2),
-                      Text(it.$2,
+                      Text(it.$3,
                           style: AppTheme.label(10,
-                              color: active ? AppTheme.accentGold(context) : AppTheme.faintColor(context))),
+                              color: active ? accent : AppTheme.faintColor(context))),
                     ],
                   ),
                 ),

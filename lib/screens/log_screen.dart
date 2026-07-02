@@ -1427,41 +1427,43 @@ class _LogScreenState extends State<LogScreen> {
     final isLogged = _log.other.contains(ca.name);
     final accent = AppTheme.accentGold(context);
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isLogged) {
-            // Remove this activity's entry from "other"
-            final parts = _log.other.split('; ')
-                .where((p) => !p.startsWith(ca.name))
-                .toList();
-            _log.other = parts.join('; ');
-          } else {
-            // Add this activity name to "other"
-            if (_log.other.isEmpty) {
-              _log.other = ca.name;
+    return Tooltip(
+      message: t.longPressToDeleteActivity,
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            if (isLogged) {
+              // Remove this activity's entry from "other"
+              final parts = _log.other.split('; ')
+                  .where((p) => !p.startsWith(ca.name))
+                  .toList();
+              _log.other = parts.join('; ');
             } else {
-              _log.other = '${_log.other}; ${ca.name}';
+              // Add this activity name to "other"
+              if (_log.other.isEmpty) {
+                _log.other = ca.name;
+              } else {
+                _log.other = '${_log.other}; ${ca.name}';
+              }
             }
-          }
-        });
-        _persist();
-      },
-      onLongPress: () => _confirmDeleteActivity(ca, t),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isLogged
-              ? AppTheme.green.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
+          });
+          _persist();
+        },
+        onLongPress: () => _confirmDeleteActivity(ca, t),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
             color: isLogged
-                ? AppTheme.green.withValues(alpha: 0.4)
-                : accent.withValues(alpha: 0.12),
+                ? AppTheme.green.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isLogged
+                  ? AppTheme.green.withValues(alpha: 0.4)
+                  : accent.withValues(alpha: 0.12),
+            ),
           ),
-        ),
         child: Row(
           children: [
             Text(ca.icon, style: const TextStyle(fontSize: 18)),
@@ -1478,6 +1480,7 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

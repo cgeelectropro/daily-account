@@ -3270,6 +3270,156 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Discipline {id}'**
   String notifNameDiscipline(int id);
+
+  /// No description provided for @pdfBible.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible'**
+  String get pdfBible;
+
+  /// No description provided for @pdfLiterature.
+  ///
+  /// In en, this message translates to:
+  /// **'Literature'**
+  String get pdfLiterature;
+
+  /// No description provided for @pdfPrayerAlone.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer (Alone)'**
+  String get pdfPrayerAlone;
+
+  /// No description provided for @pdfPrayerOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Prayer (Others)'**
+  String get pdfPrayerOthers;
+
+  /// No description provided for @pdfEvangelism.
+  ///
+  /// In en, this message translates to:
+  /// **'Evangelism'**
+  String get pdfEvangelism;
+
+  /// No description provided for @pdfGiving.
+  ///
+  /// In en, this message translates to:
+  /// **'Giving'**
+  String get pdfGiving;
+
+  /// No description provided for @pdfChurch.
+  ///
+  /// In en, this message translates to:
+  /// **'Church'**
+  String get pdfChurch;
+
+  /// No description provided for @pdfOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get pdfOther;
+
+  /// No description provided for @pdfNewBelievers.
+  ///
+  /// In en, this message translates to:
+  /// **'New Believers'**
+  String get pdfNewBelievers;
+
+  /// No description provided for @pdfBeingDiscipled.
+  ///
+  /// In en, this message translates to:
+  /// **'Being Discipled'**
+  String get pdfBeingDiscipled;
+
+  /// No description provided for @pdfContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'contact(s)'**
+  String get pdfContacts;
+
+  /// No description provided for @pdfTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'times'**
+  String get pdfTimes;
+
+  /// No description provided for @pdfChAbbr.
+  ///
+  /// In en, this message translates to:
+  /// **'ch.'**
+  String get pdfChAbbr;
+
+  /// No description provided for @pdfActiveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Days'**
+  String get pdfActiveDays;
+
+  /// No description provided for @pdfWeeksReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Weeks Reported'**
+  String get pdfWeeksReported;
+
+  /// No description provided for @pdfAvgCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Completion'**
+  String get pdfAvgCompletion;
+
+  /// No description provided for @pdfCertifiesThat.
+  ///
+  /// In en, this message translates to:
+  /// **'This certifies that'**
+  String get pdfCertifiesThat;
+
+  /// No description provided for @pdfFaithfulDiscipline.
+  ///
+  /// In en, this message translates to:
+  /// **'demonstrated faithful spiritual discipline during'**
+  String get pdfFaithfulDiscipline;
+
+  /// No description provided for @pdfConsistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency'**
+  String get pdfConsistency;
+
+  /// No description provided for @pdfDaysActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Days Active'**
+  String get pdfDaysActive;
+
+  /// No description provided for @pdfChaptersRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Chapters Read'**
+  String get pdfChaptersRead;
+
+  /// No description provided for @pdfCertificateFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Account • CMFI Discipleship'**
+  String get pdfCertificateFooter;
+
+  /// No description provided for @pdfPageOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {current} / {total}'**
+  String pdfPageOf(int current, int total);
+
+  /// No description provided for @longPressToDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Long press to delete'**
+  String get longPressToDelete;
+
+  /// No description provided for @longPressToDeleteActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Long press to delete this activity'**
+  String get longPressToDeleteActivity;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

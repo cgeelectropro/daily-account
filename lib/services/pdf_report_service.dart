@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../models/daily_log.dart';
 import 'report_service.dart';
 import 'storage_service.dart';
@@ -24,10 +25,10 @@ class PdfReportService {
   // ═════════════════════════════════════════════════════════
 
   /// Build + show print/share dialog for a weekly report.
-  Future<void> printWeeklyReport(String name, DateTime ref, [String locale = 'en']) async {
-    final doc = await _buildWeeklyPdf(name, ref, locale);
+  Future<void> printWeeklyReport(String name, DateTime ref, S l, [String locale = 'en']) async {
+    final doc = await _buildWeeklyPdf(name, ref, l, locale);
     final dates = ReportService.instance.weekDates(ref);
-    final fmtRange = DateFormat('MMM_d');
+    final fmtRange = DateFormat('MMM_d', locale);
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
     await Printing.layoutPdf(
       onLayout: (_) => doc.save(),
@@ -36,9 +37,9 @@ class PdfReportService {
   }
 
   /// Build + show print/share dialog for a monthly report.
-  Future<void> printMonthlyReport(String name, int year, int month, [String locale = 'en']) async {
-    final doc = await _buildMonthlyPdf(name, year, month, locale);
-    final fmtMonth = DateFormat('MMMM_yyyy');
+  Future<void> printMonthlyReport(String name, int year, int month, S l, [String locale = 'en']) async {
+    final doc = await _buildMonthlyPdf(name, year, month, l, locale);
+    final fmtMonth = DateFormat('MMMM_yyyy', locale);
     final fileName = 'DailyAccount_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
     await Printing.layoutPdf(
       onLayout: (_) => doc.save(),
@@ -47,17 +48,17 @@ class PdfReportService {
   }
 
   /// Share PDF bytes directly (for system share sheet).
-  Future<void> shareWeeklyPdf(String name, DateTime ref, [String locale = 'en']) async {
-    final doc = await _buildWeeklyPdf(name, ref, locale);
+  Future<void> shareWeeklyPdf(String name, DateTime ref, S l, [String locale = 'en']) async {
+    final doc = await _buildWeeklyPdf(name, ref, l, locale);
     final dates = ReportService.instance.weekDates(ref);
-    final fmtRange = DateFormat('MMM_d');
+    final fmtRange = DateFormat('MMM_d', locale);
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
   }
 
-  Future<void> shareMonthlyPdf(String name, int year, int month, [String locale = 'en']) async {
-    final doc = await _buildMonthlyPdf(name, year, month, locale);
-    final fmtMonth = DateFormat('MMMM_yyyy');
+  Future<void> shareMonthlyPdf(String name, int year, int month, S l, [String locale = 'en']) async {
+    final doc = await _buildMonthlyPdf(name, year, month, l, locale);
+    final fmtMonth = DateFormat('MMMM_yyyy', locale);
     final fileName = 'DailyAccount_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
   }
@@ -66,11 +67,11 @@ class PdfReportService {
   //  WEEKLY PDF
   // ═════════════════════════════════════════════════════════
 
-  Future<pw.Document> _buildWeeklyPdf(String name, DateTime ref, [String locale = 'en']) async {
+  Future<pw.Document> _buildWeeklyPdf(String name, DateTime ref, S l, [String locale = 'en']) async {
     final dates = ReportService.instance.weekDates(ref);
     final stats = await ReportService.instance.computeWeekStats(ref);
-    final fmtRange = DateFormat('MMM d, yyyy');
-    final fmtLong = DateFormat('EEEE, MMM d');
+    final fmtRange = DateFormat('MMM d, yyyy', locale);
+    final fmtLong = DateFormat('EEEE, MMM d', locale);
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(
@@ -93,18 +94,19 @@ class PdfReportService {
         header: (ctx) => _header(
           name.isEmpty ? 'Disciple' : name,
           '${fmtRange.format(dates.first)} – ${fmtRange.format(dates.last)}',
+          l,
         ),
-        footer: (ctx) => _footer(ctx),
+        footer: (ctx) => _footer(ctx, l),
         build: (ctx) {
           final widgets = <pw.Widget>[];
 
           // Summary stats row
-          widgets.add(_summaryRow(stats));
+          widgets.add(_summaryRow(stats, l));
           widgets.add(pw.SizedBox(height: 16));
 
           // Day-by-day entries
           for (int i = 0; i < dates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i], locale));
+            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i], l, locale));
             if (i < dates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -120,10 +122,10 @@ class PdfReportService {
   //  MONTHLY PDF
   // ═════════════════════════════════════════════════════════
 
-  Future<pw.Document> _buildMonthlyPdf(String name, int year, int month, [String locale = 'en']) async {
+  Future<pw.Document> _buildMonthlyPdf(String name, int year, int month, S l, [String locale = 'en']) async {
     final monthStats = await ReportService.instance.computeMonthStats(year, month);
-    final fmtMonth = DateFormat('MMMM yyyy');
-    final fmtLong = DateFormat('EEEE, MMM d');
+    final fmtMonth = DateFormat('MMMM yyyy', locale);
+    final fmtLong = DateFormat('EEEE, MMM d', locale);
     final monthDate = DateTime(year, month, 1);
     final lastDay = DateTime(year, month + 1, 0);
 
@@ -152,18 +154,19 @@ class PdfReportService {
         header: (ctx) => _header(
           name.isEmpty ? 'Disciple' : name,
           fmtMonth.format(monthDate),
+          l,
         ),
-        footer: (ctx) => _footer(ctx),
+        footer: (ctx) => _footer(ctx, l),
         build: (ctx) {
           final widgets = <pw.Widget>[];
 
           // Monthly summary at the top
-          widgets.add(_monthlySummaryBlock(monthStats));
+          widgets.add(_monthlySummaryBlock(monthStats, l));
           widgets.add(pw.SizedBox(height: 16));
 
           // Full day-by-day entries — same format as weekly PDF
           for (int i = 0; i < dayDates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i], locale));
+            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i], l, locale));
             if (i < dayDates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -179,7 +182,7 @@ class PdfReportService {
   //  SHARED PDF COMPONENTS
   // ═════════════════════════════════════════════════════════
 
-  pw.Widget _header(String name, String period) {
+  pw.Widget _header(String name, String period, S l) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(bottom: 12),
       decoration: const pw.BoxDecoration(
@@ -193,7 +196,7 @@ class PdfReportService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'DAILY ACCOUNT',
+                l.appTitle.toUpperCase(),
                 style: pw.TextStyle(
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,
@@ -221,7 +224,7 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _footer(pw.Context ctx) {
+  pw.Widget _footer(pw.Context ctx, S l) {
     return pw.Container(
       padding: const pw.EdgeInsets.only(top: 8),
       decoration: const pw.BoxDecoration(
@@ -231,11 +234,11 @@ class PdfReportService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Sent with love · Daily Account',
+            l.reportFooter,
             style: const pw.TextStyle(fontSize: 8, color: _sand),
           ),
           pw.Text(
-            'Page ${ctx.pageNumber} / ${ctx.pagesCount}',
+            l.pdfPageOf(ctx.pageNumber, ctx.pagesCount),
             style: const pw.TextStyle(fontSize: 8, color: _sand),
           ),
         ],
@@ -243,7 +246,7 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _summaryRow(WeekStats stats) {
+  pw.Widget _summaryRow(WeekStats stats, S l) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       decoration: pw.BoxDecoration(
@@ -254,16 +257,16 @@ class PdfReportService {
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
         children: [
-          _statCell('${stats.daysLogged}/7', 'Days Logged'),
-          _statCell('${stats.totalBibleChapters}', 'Bible Chapters'),
-          _statCell('${stats.litItems}', 'Books Read'),
-          _statCell('${stats.totalEvangelismContacts}', 'Souls Reached'),
+          _statCell('${stats.daysLogged}/7', l.daysLogged),
+          _statCell('${stats.totalBibleChapters}', l.bibleChapters),
+          _statCell('${stats.litItems}', l.booksRead),
+          _statCell('${stats.totalEvangelismContacts}', l.soulsReached),
         ],
       ),
     );
   }
 
-  pw.Widget _monthlySummaryBlock(MonthStats ms) {
+  pw.Widget _monthlySummaryBlock(MonthStats ms, S l) {
     return pw.Container(
       padding: const pw.EdgeInsets.all(16),
       decoration: pw.BoxDecoration(
@@ -275,7 +278,7 @@ class PdfReportService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            'MONTHLY SUMMARY',
+            l.monthlySummaryHeader,
             style: pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
@@ -287,18 +290,18 @@ class PdfReportService {
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
             children: [
-              _statCell('${ms.daysLogged}/${ms.totalDays}', 'Active Days'),
-              _statCell('${ms.weeksReported}', 'Weeks Reported'),
-              _statCell('${ms.totalBibleChapters}', 'Bible Chapters'),
-              _statCell('${ms.totalEvangelismContacts}', 'Souls Reached'),
+              _statCell('${ms.daysLogged}/${ms.totalDays}', l.pdfActiveDays),
+              _statCell('${ms.weeksReported}', l.pdfWeeksReported),
+              _statCell('${ms.totalBibleChapters}', l.bibleChapters),
+              _statCell('${ms.totalEvangelismContacts}', l.soulsReached),
             ],
           ),
           pw.SizedBox(height: 8),
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
             children: [
-              _statCell('${ms.litItems}', 'Books Read'),
-              _statCell('${(ms.avgCompletion * 100).round()}%', 'Avg Completion'),
+              _statCell('${ms.litItems}', l.booksRead),
+              _statCell('${(ms.avgCompletion * 100).round()}%', l.pdfAvgCompletion),
             ],
           ),
         ],
@@ -326,7 +329,7 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _dayEntry(String dayLabel, DailyLog? log, [String locale = 'en']) {
+  pw.Widget _dayEntry(String dayLabel, DailyLog? log, S l, [String locale = 'en']) {
     final hasContent = log != null && log.completeness > 0;
 
     return pw.Container(
@@ -361,7 +364,7 @@ class PdfReportService {
           pw.SizedBox(height: 6),
           if (!hasContent)
             pw.Text(
-              'No entry recorded.',
+              l.reportNoEntry,
               style: pw.TextStyle(
                 fontSize: 10,
                 color: _sand,
@@ -369,7 +372,7 @@ class PdfReportService {
               ),
             )
           else
-            ..._dayDetailRows(log, locale),
+            ..._dayDetailRows(log, l, locale),
         ],
       ),
     );
@@ -395,49 +398,49 @@ class PdfReportService {
     );
   }
 
-  List<pw.Widget> _dayDetailRows(DailyLog log, [String locale = 'en']) {
+  List<pw.Widget> _dayDetailRows(DailyLog log, S l, [String locale = 'en']) {
     final rows = <pw.Widget>[];
 
     final bibleRef = log.combinedBibleReference(locale);
     if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
-      rows.add(_detailRow('Bible', '${bibleRef.isNotEmpty ? bibleRef : log.bibleReference} (${log.totalBibleChapters} ch.)'));
+      rows.add(_detailRow(l.pdfBible, '${bibleRef.isNotEmpty ? bibleRef : log.bibleReference} (${log.totalBibleChapters} ${l.pdfChAbbr})'));
     }
     for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
-      rows.add(_detailRow('Literature', '"${lit.title}" — ${lit.amount} ${lit.unit}'));
+      rows.add(_detailRow(l.pdfLiterature, '"${lit.title}" — ${lit.amount} ${lit.unit}'));
     }
     if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
       final parts = <String>[];
       if (log.ddegScripture.isNotEmpty) parts.add(log.ddegScripture);
       if (log.ddegTime.isNotEmpty) parts.add(log.ddegTime);
       if (log.ddegNotes.isNotEmpty) parts.add(log.ddegNotes);
-      rows.add(_detailRow('DDEG', parts.join(' · ')));
+      rows.add(_detailRow(l.ddegShort, parts.join(' · ')));
     }
     if (log.prayerAloneDuration.isNotEmpty) {
-      rows.add(_detailRow('Prayer (Alone)', '${log.prayerAloneDuration}${log.prayerAloneNotes.isNotEmpty ? " — ${log.prayerAloneNotes}" : ""}'));
+      rows.add(_detailRow(l.pdfPrayerAlone, '${log.prayerAloneDuration}${log.prayerAloneNotes.isNotEmpty ? " — ${log.prayerAloneNotes}" : ""}'));
     }
     if (log.prayerOthersDuration.isNotEmpty) {
-      rows.add(_detailRow('Prayer (Others)', '${log.prayerOthersDuration}${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}'));
+      rows.add(_detailRow(l.pdfPrayerOthers, '${log.prayerOthersDuration}${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}'));
     }
     if (log.evangelismContacts.isNotEmpty) {
       final parts = <String>[
-        '${log.evangelismContacts} contact(s)',
+        '${log.evangelismContacts} ${l.pdfContacts}',
         if (log.evangelismOutcome.isNotEmpty) log.evangelismOutcome,
         if (log.evangelismNotes.isNotEmpty) log.evangelismNotes,
       ];
-      rows.add(_detailRow('Evangelism', parts.join('. ')));
+      rows.add(_detailRow(l.pdfEvangelism, parts.join('. ')));
       // Follow-up data
       if (log.evangelismNewBelievers.isNotEmpty) {
-        rows.add(_detailRow('  New Believers', log.evangelismNewBelievers));
+        rows.add(_detailRow('  ${l.pdfNewBelievers}', log.evangelismNewBelievers));
       }
       if (log.evangelismBeingDiscipled.isNotEmpty) {
-        rows.add(_detailRow('  Being Discipled', log.evangelismBeingDiscipled));
+        rows.add(_detailRow('  ${l.pdfBeingDiscipled}', log.evangelismBeingDiscipled));
       }
       if (log.evangelismFollowUpNotes.isNotEmpty) {
-        rows.add(_detailRow('  Follow-up', log.evangelismFollowUpNotes));
+        rows.add(_detailRow('  ${l.evangelismFollowUp}', log.evangelismFollowUpNotes));
       }
     }
     if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
-      rows.add(_detailRow('Fasting', '${log.fastingType} (${log.fastingDuration})${log.fastingPrayerFocus.isNotEmpty ? " — ${log.fastingPrayerFocus}" : ""}'));
+      rows.add(_detailRow(l.sectionFasting, '${log.fastingType} (${log.fastingDuration})${log.fastingPrayerFocus.isNotEmpty ? " — ${log.fastingPrayerFocus}" : ""}'));
     }
     if (log.givingType.isNotEmpty) {
       final givingParts = <String>[
@@ -445,19 +448,19 @@ class PdfReportService {
         if (log.givingAmount.isNotEmpty) log.givingAmount,
         if (log.givingPurpose.isNotEmpty) log.givingPurpose,
       ];
-      rows.add(_detailRow('Giving', givingParts.join(' — ')));
+      rows.add(_detailRow(l.pdfGiving, givingParts.join(' — ')));
     }
     if (log.churchType.isNotEmpty) {
-      rows.add(_detailRow('Church', '${log.churchType}${log.churchNotes.isNotEmpty ? " — ${log.churchNotes}" : ""}'));
+      rows.add(_detailRow(l.pdfChurch, '${log.churchType}${log.churchNotes.isNotEmpty ? " — ${log.churchNotes}" : ""}'));
     }
     if (log.discipleshipWho.isNotEmpty) {
-      rows.add(_detailRow('Discipleship', '${log.discipleshipWho}${log.discipleshipTopic.isNotEmpty ? " — ${log.discipleshipTopic}" : ""}${log.discipleshipDuration.isNotEmpty ? " (${log.discipleshipDuration})" : ""}'));
+      rows.add(_detailRow(l.sectionDiscipleship, '${log.discipleshipWho}${log.discipleshipTopic.isNotEmpty ? " — ${log.discipleshipTopic}" : ""}${log.discipleshipDuration.isNotEmpty ? " (${log.discipleshipDuration})" : ""}'));
     }
     if (log.proclamationCount.isNotEmpty) {
-      rows.add(_detailRow('Proclamation', '${log.proclamationCount} times${log.proclamationDuration.isNotEmpty ? " (${log.proclamationDuration})" : ""}'));
+      rows.add(_detailRow(l.sectionProclamation, '${log.proclamationCount} ${l.pdfTimes}${log.proclamationDuration.isNotEmpty ? " (${log.proclamationDuration})" : ""}'));
     }
     if (log.other.isNotEmpty) {
-      rows.add(_detailRow('Other', log.other));
+      rows.add(_detailRow(l.pdfOther, log.other));
     }
     // Custom activities
     for (final entry in log.customActivityData.entries) {
@@ -479,16 +482,16 @@ class PdfReportService {
   //  CERTIFICATE PDF
   // ═════════════════════════════════════════════════════════
 
-  Future<void> shareCertificatePdf(String name, int year, int month) async {
-    final doc = await _buildCertificatePdf(name, year, month);
-    final fmtMonth = DateFormat('MMMM_yyyy');
+  Future<void> shareCertificatePdf(String name, int year, int month, S l) async {
+    final doc = await _buildCertificatePdf(name, year, month, l);
+    final fmtMonth = DateFormat('MMMM_yyyy', l.localeName);
     final fileName = 'Certificate_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
   }
 
-  Future<pw.Document> _buildCertificatePdf(String name, int year, int month) async {
+  Future<pw.Document> _buildCertificatePdf(String name, int year, int month, S l) async {
     final stats = await ReportService.instance.computeMonthStats(year, month);
-    final fmtMonth = DateFormat('MMMM yyyy');
+    final fmtMonth = DateFormat('MMMM yyyy', l.localeName);
     final monthLabel = fmtMonth.format(DateTime(year, month, 1));
     final pct = stats.totalDays > 0 ? (stats.avgCompletion * 100).round() : 0;
 
@@ -526,7 +529,7 @@ class PdfReportService {
                   ),
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    'CERTIFICATE OF FAITHFULNESS',
+                    l.certificateTitle.toUpperCase(),
                     style: pw.TextStyle(
                       fontSize: 28,
                       fontWeight: pw.FontWeight.bold,
@@ -542,7 +545,7 @@ class PdfReportService {
                   ),
                   pw.SizedBox(height: 20),
                   pw.Text(
-                    'This certifies that',
+                    l.pdfCertifiesThat,
                     style: pw.TextStyle(
                       fontSize: 14,
                       color: _sand,
@@ -560,7 +563,7 @@ class PdfReportService {
                   ),
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    'demonstrated faithful spiritual discipline during',
+                    l.pdfFaithfulDiscipline,
                     style: pw.TextStyle(
                       fontSize: 14,
                       color: _sand,
@@ -588,11 +591,11 @@ class PdfReportService {
                     child: pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
                       children: [
-                        _statCell('$pct%', 'Consistency'),
-                        _statCell('${stats.daysLogged}/${stats.totalDays}', 'Days Active'),
-                        _statCell('${stats.totalBibleChapters}', 'Chapters Read'),
-                        _statCell('${stats.totalEvangelismContacts}', 'Souls Reached'),
-                        _statCell('${stats.litItems}', 'Books Read'),
+                        _statCell('$pct%', l.pdfConsistency),
+                        _statCell('${stats.daysLogged}/${stats.totalDays}', l.pdfDaysActive),
+                        _statCell('${stats.totalBibleChapters}', l.pdfChaptersRead),
+                        _statCell('${stats.totalEvangelismContacts}', l.soulsReached),
+                        _statCell('${stats.litItems}', l.booksRead),
                       ],
                     ),
                   ),
@@ -615,11 +618,11 @@ class PdfReportService {
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text(
-                        'Generated: ${DateFormat('MMMM d, yyyy').format(DateTime.now())}',
+                        'Generated: ${DateFormat('MMMM d, yyyy', l.localeName).format(DateTime.now())}',
                         style: const pw.TextStyle(fontSize: 8, color: _sand),
                       ),
                       pw.Text(
-                        'Daily Account \u2022 CMFI Discipleship',
+                        l.pdfCertificateFooter,
                         style: const pw.TextStyle(fontSize: 8, color: _sand),
                       ),
                     ],

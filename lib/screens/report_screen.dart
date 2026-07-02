@@ -273,10 +273,11 @@ class _ReportScreenState extends State<ReportScreen> {
     if (_sending) return;
     setState(() => _sending = true);
     try {
+      final l = await _reportLocalizations();
       if (_isMonthly) {
-        await PdfReportService.instance.shareMonthlyPdf(_name, _weekRef.year, _weekRef.month);
+        await PdfReportService.instance.shareMonthlyPdf(_name, _weekRef.year, _weekRef.month, l);
       } else {
-        await PdfReportService.instance.shareWeeklyPdf(_name, _weekRef);
+        await PdfReportService.instance.shareWeeklyPdf(_name, _weekRef, l);
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -865,8 +866,9 @@ class _ReportScreenState extends State<ReportScreen> {
           if (eligible)
             GestureDetector(
               onTap: () async {
+                final l = await _reportLocalizations();
                 await PdfReportService.instance.shareCertificatePdf(
-                  _name, _weekRef.year, _weekRef.month,
+                  _name, _weekRef.year, _weekRef.month, l,
                 );
               },
               child: Container(

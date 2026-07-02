@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../utils/bible_books.dart';
 
 /// A single literature entry — a disciple may read from several books a day.
@@ -230,9 +231,9 @@ class DailyLog {
     ];
     final filled = checks.where((c) => c).length;
 
-    // Count custom activities that affect completeness
-    // Since DailyLog doesn't hold activity definitions, count based on
-    // customActivityData entries that have a 'countsForCompleteness' flag set to true.
+    // Count custom activities that affect completeness.
+    // Cap custom activity contribution to avoid diluting the progress ring
+    // when many custom activities are defined (max 4 extra sections).
     int customTotal = 0;
     int customFilled = 0;
     for (final entry in customActivityData.values) {
@@ -241,9 +242,12 @@ class DailyLog {
         if (entry['done'] == true) customFilled++;
       }
     }
+    const maxCustomSections = 4;
+    final cappedCustomTotal = customTotal.clamp(0, maxCustomSections);
+    final cappedCustomFilled = customFilled.clamp(0, cappedCustomTotal);
 
-    final totalSections = 11 + customTotal;
-    return totalSections > 0 ? (filled + customFilled) / totalSections : 0.0;
+    final totalSections = 11 + cappedCustomTotal;
+    return totalSections > 0 ? (filled + cappedCustomFilled) / totalSections : 0.0;
   }
 
   Map<String, dynamic> toMap() => {
@@ -318,7 +322,9 @@ class DailyLog {
         lit = decoded.map((e) => LiteratureEntry.fromMap(Map<String, dynamic>.from(e))).toList();
         if (lit.isEmpty) lit = [LiteratureEntry()];
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse literature: $e');
+    }
 
     List<BibleReadingEntry> sessions = [];
     try {
@@ -327,7 +333,9 @@ class DailyLog {
         final decoded = jsonDecode(rawSessions) as List;
         sessions = decoded.map((e) => BibleReadingEntry.fromMap(Map<String, dynamic>.from(e))).toList();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse bibleSessions: $e');
+    }
 
     Map<String, Map<String, dynamic>> customData = {};
     try {
@@ -337,7 +345,9 @@ class DailyLog {
         customData = decoded.map((k, v) =>
             MapEntry(k, Map<String, dynamic>.from(v as Map)));
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse custom_activity_data: $e');
+    }
 
     return DailyLog(
       dateKey: m['dateKey'] ?? '',
