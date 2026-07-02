@@ -820,5 +820,12 @@
     }
   },
   "longPressToDelete": "Appui long pour supprimer",
-  "longPressToDeleteActivity": "Appui long pour supprimer cette activité"
+  "longPressToDeleteActivity": "Appui long pour supprimer cette activité",
+
+  "reflectTitle": "Réflexion Quotidienne",
+  "reflectTapToExpand": "Touchez pour lire la suite",
+  "reflectNarrativeLabel": "VOTRE PARCOURS",
+  "reflectEncouragementLabel": "ENCOURAGEMENT",
+  "reflectSuggestionLabel": "PROCHAINE ÉTAPE",
+  "reflectVerseLabel": "ÉCRITURE"
 }

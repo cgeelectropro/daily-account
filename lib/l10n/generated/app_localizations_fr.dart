@@ -1905,4 +1905,22 @@ class SFr extends S {
   @override
   String get longPressToDeleteActivity =>
       'Appui long pour supprimer cette activité';
+
+  @override
+  String get reflectTitle => 'Réflexion Quotidienne';
+
+  @override
+  String get reflectTapToExpand => 'Touchez pour lire la suite';
+
+  @override
+  String get reflectNarrativeLabel => 'VOTRE PARCOURS';
+
+  @override
+  String get reflectEncouragementLabel => 'ENCOURAGEMENT';
+
+  @override
+  String get reflectSuggestionLabel => 'PROCHAINE ÉTAPE';
+
+  @override
+  String get reflectVerseLabel => 'ÉCRITURE';
 }

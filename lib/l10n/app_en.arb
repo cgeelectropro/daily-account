@@ -820,5 +820,12 @@
     }
   },
   "longPressToDelete": "Long press to delete",
-  "longPressToDeleteActivity": "Long press to delete this activity"
+  "longPressToDeleteActivity": "Long press to delete this activity",
+
+  "reflectTitle": "Daily Reflection",
+  "reflectTapToExpand": "Tap to read more",
+  "reflectNarrativeLabel": "YOUR JOURNEY",
+  "reflectEncouragementLabel": "ENCOURAGEMENT",
+  "reflectSuggestionLabel": "NEXT STEP",
+  "reflectVerseLabel": "SCRIPTURE"
 }

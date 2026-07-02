@@ -1883,4 +1883,22 @@ class SEn extends S {
 
   @override
   String get longPressToDeleteActivity => 'Long press to delete this activity';
+
+  @override
+  String get reflectTitle => 'Daily Reflection';
+
+  @override
+  String get reflectTapToExpand => 'Tap to read more';
+
+  @override
+  String get reflectNarrativeLabel => 'YOUR JOURNEY';
+
+  @override
+  String get reflectEncouragementLabel => 'ENCOURAGEMENT';
+
+  @override
+  String get reflectSuggestionLabel => 'NEXT STEP';
+
+  @override
+  String get reflectVerseLabel => 'SCRIPTURE';
 }

@@ -3420,6 +3420,42 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Long press to delete this activity'**
   String get longPressToDeleteActivity;
+
+  /// No description provided for @reflectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Reflection'**
+  String get reflectTitle;
+
+  /// No description provided for @reflectTapToExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to read more'**
+  String get reflectTapToExpand;
+
+  /// No description provided for @reflectNarrativeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'YOUR JOURNEY'**
+  String get reflectNarrativeLabel;
+
+  /// No description provided for @reflectEncouragementLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ENCOURAGEMENT'**
+  String get reflectEncouragementLabel;
+
+  /// No description provided for @reflectSuggestionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'NEXT STEP'**
+  String get reflectSuggestionLabel;
+
+  /// No description provided for @reflectVerseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SCRIPTURE'**
+  String get reflectVerseLabel;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {
