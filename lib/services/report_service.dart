@@ -2,8 +2,11 @@ import 'package:daily_account/models/daily_log.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../data/reading_plans.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/custom_activity.dart';
+import 'reading_plan_service.dart';
+import 'report_intelligence_service.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -470,6 +473,55 @@ class ReportService {
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
 
+    // ── Intelligence block ────────────────────────────────────────────────
+    final thisWeekCounts = await ReportIntelligenceService.instance
+        .computeWeekCounts(keyFor(dates.first), keyFor(dates.last));
+    final lastWeekStart = dates.first.subtract(const Duration(days: 7));
+    final lastWeekEnd = dates.first.subtract(const Duration(days: 1));
+    final lastWeekCounts = await ReportIntelligenceService.instance
+        .computeWeekCounts(keyFor(lastWeekStart), keyFor(lastWeekEnd));
+    final streak = await computeStreak();
+
+    // Narrative summary
+    final narrative = ReportIntelligenceService.instance.buildNarrativeSummary(
+      thisWeek: thisWeekCounts,
+      lastWeek: lastWeekCounts,
+      streak: streak,
+      locale: locale,
+    );
+    buf.writeln('\u2500\u2500 ${l.reportNarrativeHeader} \u2500\u2500');
+    buf.writeln(narrative);
+    buf.writeln('');
+
+    // Milestones
+    final allTimeStats =
+        await ReportIntelligenceService.instance.computeAllTimeStats();
+    final milestones = await ReportIntelligenceService.instance
+        .checkNewMilestones(
+      stats: allTimeStats,
+      currentStreak: streak,
+      daysLoggedThisWeek: thisWeekCounts.daysLogged,
+      locale: locale,
+    );
+    if (milestones.isNotEmpty) {
+      buf.writeln('\u2500\u2500 ${l.reportMilestoneHeader} \u2500\u2500');
+      for (final m in milestones) {
+        buf.writeln('\uD83C\uDF1F $m');
+      }
+      buf.writeln('');
+    }
+
+    // Reading plan progress
+    final activePlan = ReadingPlanService.instance.activePlan;
+    if (activePlan != null && !activePlan.isComplete) {
+      final planDef = ReadingPlans.getById(activePlan.planId);
+      if (planDef != null) {
+        final pct = (activePlan.progress * 100).round();
+        buf.writeln('\uD83D\uDCDA ${l.reportPlanProgress(planDef.name(locale), activePlan.currentDay, activePlan.totalDays, pct)}');
+        buf.writeln('');
+      }
+    }
+
     int activeDays = 0;
     int totalChapters = 0;
     int totalContacts = 0;
@@ -561,8 +613,21 @@ class ReportService {
     buf.writeln('\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501');
     buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
     buf.writeln(l.reportSummaryActiveDays(activeDays));
-    buf.writeln(l.reportSummaryBibleChapters(totalChapters));
-    buf.writeln(l.reportSummaryEvangelism(totalContacts));
+
+    // Trend-enhanced Bible chapters and evangelism lines
+    final trendSignals = ReportIntelligenceService.instance
+        .computeTrendSignals(thisWeekCounts, lastWeekCounts);
+    final bibleSignal =
+        trendSignals.firstWhere((s) => s.discipline == 'Bible',
+            orElse: () => const TrendSignal(
+                discipline: 'Bible', arrow: '→', thisWeek: 0, lastWeek: 0));
+    final evSignal =
+        trendSignals.firstWhere((s) => s.discipline == 'Evangelism',
+            orElse: () => const TrendSignal(
+                discipline: 'Evangelism', arrow: '→', thisWeek: 0, lastWeek: 0));
+    buf.writeln('${l.reportSummaryBibleChapters(totalChapters)} ${bibleSignal.arrow}');
+    buf.writeln('${l.reportSummaryEvangelism(totalContacts)} ${evSignal.arrow}');
+
     final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
     buf.writeln(l.reportSummaryCompletion(avgPct));
     final totalMins = _totalConsecratedMinutes(allLogs);
@@ -588,6 +653,55 @@ class ReportService {
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
+
+    // ── Intelligence block ────────────────────────────────────────────────
+    final thisWeekCounts = await ReportIntelligenceService.instance
+        .computeWeekCounts(keyFor(dates.first), keyFor(dates.last));
+    final lastWeekStart = dates.first.subtract(const Duration(days: 7));
+    final lastWeekEnd = dates.first.subtract(const Duration(days: 1));
+    final lastWeekCounts = await ReportIntelligenceService.instance
+        .computeWeekCounts(keyFor(lastWeekStart), keyFor(lastWeekEnd));
+    final streak = await computeStreak();
+
+    // Narrative summary
+    final narrative = ReportIntelligenceService.instance.buildNarrativeSummary(
+      thisWeek: thisWeekCounts,
+      lastWeek: lastWeekCounts,
+      streak: streak,
+      locale: locale,
+    );
+    buf.writeln('\u2500\u2500 ${l.reportNarrativeHeader} \u2500\u2500');
+    buf.writeln(narrative);
+    buf.writeln('');
+
+    // Milestones
+    final allTimeStats =
+        await ReportIntelligenceService.instance.computeAllTimeStats();
+    final milestones = await ReportIntelligenceService.instance
+        .checkNewMilestones(
+      stats: allTimeStats,
+      currentStreak: streak,
+      daysLoggedThisWeek: thisWeekCounts.daysLogged,
+      locale: locale,
+    );
+    if (milestones.isNotEmpty) {
+      buf.writeln('\u2500\u2500 ${l.reportMilestoneHeader} \u2500\u2500');
+      for (final m in milestones) {
+        buf.writeln('\uD83C\uDF1F $m');
+      }
+      buf.writeln('');
+    }
+
+    // Reading plan progress
+    final activePlan = ReadingPlanService.instance.activePlan;
+    if (activePlan != null && !activePlan.isComplete) {
+      final planDef = ReadingPlans.getById(activePlan.planId);
+      if (planDef != null) {
+        final pct = (activePlan.progress * 100).round();
+        buf.writeln('\uD83D\uDCDA ${l.reportPlanProgress(planDef.name(locale), activePlan.currentDay, activePlan.totalDays, pct)}');
+        buf.writeln('');
+      }
+    }
 
     // Summary first — the disciple maker sees this immediately
     int activeDays = 0;

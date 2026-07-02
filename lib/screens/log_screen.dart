@@ -12,6 +12,7 @@ import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
 import '../models/fasting_period.dart';
 import '../services/notification_service.dart';
+import '../services/reading_plan_service.dart';
 import '../services/reflection_service.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
@@ -81,6 +82,7 @@ class _LogScreenState extends State<LogScreen> {
     if (isNew) await _tryAutoFill();
     _timeConscious = (await StorageService.instance.getSetting('timeConscious', fallback: 'false')) == 'true';
     if (mounted) setState(() => _loading = false);
+    await ReadingPlanService.instance.load();
 
     // Load cached reflection or generate fresh
     if (_log.aiReflection.isNotEmpty) {
@@ -534,6 +536,7 @@ class _LogScreenState extends State<LogScreen> {
     _persistDebounce = Timer(const Duration(milliseconds: 500), () {
       StorageService.instance.saveLog(_log);
       widget.onChanged();
+      ReadingPlanService.instance.autoDetectCompletion(_log);
       _scheduleReflectionUpdate();
     });
   }
@@ -809,6 +812,9 @@ class _LogScreenState extends State<LogScreen> {
             ),
           ),
         const SizedBox(height: 10),
+
+        // Reading plan suggestion
+        _buildPlanSuggestionCard(t),
 
         // Bible (multi-session with auto-calculate)
         SectionCard(
@@ -2226,6 +2232,91 @@ class _LogScreenState extends State<LogScreen> {
     if (dotIndex > 0 && dotIndex < 120) return text.substring(0, dotIndex + 1);
     if (text.length > 100) return '${text.substring(0, 100)}...';
     return text;
+  }
+
+  // ── Plan suggestion card ─────────────────────────────────────────────────────
+
+  Widget _buildPlanSuggestionCard(S t) {
+    final plan = ReadingPlanService.instance.activePlan;
+    final reading = ReadingPlanService.instance.todayReading();
+    if (plan == null || reading == null) return const SizedBox.shrink();
+
+    final locale = Localizations.localeOf(context).languageCode;
+    final accent = AppTheme.accentGold(context);
+    final isDone = ReadingPlanService.instance.isReadingDoneToday(_log);
+    final percent = (plan.progress * 100).round();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('📖', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${t.planSuggestionToday}: ${reading.display(locale)}',
+                  style: AppTheme.serif(13, color: AppTheme.textColor(context)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: isDone
+                    ? null
+                    : () {
+                        final entry = BibleReadingEntry(
+                          startBook: reading.startBook,
+                          startChapter: reading.startChapter,
+                          endBook: reading.endBook,
+                          endChapter: reading.endChapter,
+                        )..recalculate();
+                        setState(() {
+                          // Replace the first empty session or append
+                          final emptyIdx = _log.bibleSessions.indexWhere((s) => s.isEmpty);
+                          if (emptyIdx >= 0) {
+                            _log.bibleSessions[emptyIdx] = entry;
+                          } else {
+                            _log.bibleSessions.add(entry);
+                          }
+                        });
+                        _persist();
+                        ReadingPlanService.instance.markComplete(reading.dayNumber);
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isDone
+                        ? AppTheme.green.withValues(alpha: 0.15)
+                        : accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    isDone ? t.planSuggestionDone : t.planSuggestionFill,
+                    style: AppTheme.label(
+                      11,
+                      color: isDone ? AppTheme.green : accent,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${t.planDayOf(plan.currentDay, plan.totalDays)} · ${t.planProgress(percent)}',
+            style: AppTheme.label(11, color: AppTheme.mutedColor(context)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Bible reading sessions (multi-session with auto-calculate) ──

@@ -4,8 +4,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
 import 'package:local_auth/local_auth.dart';
+import '../data/reading_plans.dart';
 import '../services/backup_service.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/reading_plan_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -45,6 +47,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _cloudEmail = '';
   String _cloudLastBackup = '';
   bool _cloudBusy = false;
+
+  // Reading plan
+  final ReadingPlanService _planService = ReadingPlanService.instance;
 
   // Goals
   String _goalFrequency = 'weekly'; // 'weekly' or 'daily'
@@ -126,6 +131,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     }
+    // Load reading plan state
+    await _planService.load();
     // Load cloud sync state
     final cloud = CloudSyncService.instance;
     _cloudSignedIn = cloud.isSignedIn;
@@ -815,6 +822,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           }),
         ]),
 
+        // ── Bible Reading Plan ──
+        SectionCard(icon: '📖', title: l.planSectionTitle, initiallyExpanded: false, children: [
+          _buildPlanSection(l),
+        ]),
+
         // ── Disciple Maker ──
         SectionCard(icon: '\uD83D\uDCE7', title: l.discipleMakerSection, children: [
           GoldField(
@@ -1472,6 +1484,176 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  // ── Bible Reading Plan ─────────────────────────────────────────────────────
+
+  Widget _buildPlanSection(dynamic l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final active = _planService.activePlan;
+
+    // Helper: list of all plans to browse
+    Widget planList() {
+      return Column(
+        children: ReadingPlans.all.map((plan) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withValues(alpha: 0.18)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plan.name(locale),
+                          style: AppTheme.serif(14,
+                              color: textCol,
+                              weight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          plan.description(locale),
+                          style: AppTheme.serif(12, color: mutedCol),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () async {
+                      await _planService.activate(plan.id);
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        l.planStart,
+                        style: AppTheme.serif(12,
+                            color: AppTheme.bg0,
+                            weight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    // ── No active plan ──
+    if (active == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.planNoActive, style: AppTheme.serif(13, color: mutedCol)),
+          const SizedBox(height: 12),
+          planList(),
+        ],
+      );
+    }
+
+    // ── Plan completed ──
+    if (active.isComplete) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l.planCompleted,
+                    style: AppTheme.serif(13, color: accent)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          planList(),
+        ],
+      );
+    }
+
+    // ── Active plan in progress ──
+    final plan = ReadingPlans.getById(active.planId);
+    final planName =
+        plan != null ? plan.name(locale) : active.planId;
+    final percent = (active.progress * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(planName,
+            style: AppTheme.serif(15,
+                color: textCol, weight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: active.progress,
+            minHeight: 7,
+            backgroundColor: accent.withValues(alpha: 0.15),
+            valueColor: AlwaysStoppedAnimation<Color>(accent),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${l.planDayOf(active.currentDay, active.totalDays)}  •  ${l.planProgress(percent)}',
+          style: AppTheme.serif(12, color: mutedCol),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await _planService.pause();
+                  if (mounted) setState(() {});
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: Text(l.planPause,
+                    style: AppTheme.serif(13, color: accent)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await _planService.reset();
+                  if (mounted) setState(() {});
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                      color: AppTheme.rust.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: Text(l.planReset,
+                    style: AppTheme.serif(13, color: AppTheme.rust)),
+              ),
+            ),
+          ],
         ),
       ],
     );
