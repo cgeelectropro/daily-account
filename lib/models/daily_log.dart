@@ -340,7 +340,7 @@ class DailyLog {
     } catch (_) {}
 
     return DailyLog(
-      dateKey: m['dateKey'],
+      dateKey: m['dateKey'] ?? '',
       bibleReference: m['bibleReference'] ?? '',
       bibleChapters: m['bibleChapters'] ?? '',
       bibleSessions: sessions,

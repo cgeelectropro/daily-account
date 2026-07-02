@@ -27,7 +27,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -154,6 +154,10 @@ class StorageService {
               await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
             }
           }
+          if (oldVersion < 11) {
+            await txn.execute("ALTER TABLE fasting_periods ADD COLUMN startHour INTEGER DEFAULT 0");
+            await txn.execute("ALTER TABLE fasting_periods ADD COLUMN endHour INTEGER DEFAULT 24");
+          }
         });
       },
     );
@@ -197,7 +201,9 @@ class StorageService {
         endDate TEXT,
         type TEXT,
         prayerFocus TEXT DEFAULT '',
-        completed INTEGER DEFAULT 0
+        completed INTEGER DEFAULT 0,
+        startHour INTEGER DEFAULT 0,
+        endHour INTEGER DEFAULT 24
       )
     ''');
   }
@@ -283,6 +289,18 @@ class StorageService {
   Future<void> saveLog(DailyLog log) async {
     final db = await database;
     await db.insert('logs', log.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Atomically read-modify-write a log entry inside a transaction.
+  /// Prevents race conditions between concurrent writers (timer vs manual edit).
+  Future<void> modifyLog(String dateKey, void Function(DailyLog log) modifier) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      final rows = await txn.query('logs', where: 'dateKey = ?', whereArgs: [dateKey]);
+      final log = rows.isEmpty ? DailyLog(dateKey: dateKey) : DailyLog.fromMap(rows.first);
+      modifier(log);
+      await txn.insert('logs', log.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    });
   }
 
   Future<DailyLog?> getLog(String dateKey) async {
@@ -452,6 +470,8 @@ class StorageService {
     final db = await database;
     await db.delete('logs');
     await db.delete('saved_reports');
+    await db.delete('fasting_periods');
+    await db.delete('prayer_requests');
     final p = await SharedPreferences.getInstance();
     await p.clear();
   }

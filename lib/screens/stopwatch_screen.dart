@@ -99,10 +99,17 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
             style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
         const SizedBox(height: 16),
 
-        // Active timer hero (if running)
+        // Active timer hero (if running or paused)
         if (runningKey != null) ...[
-          _activeTimerHero(runningKey, ts, accent),
+          _activeTimerHero(runningKey, ts, accent, paused: false),
           const SizedBox(height: 20),
+        ] else ...[
+          // Check for paused timer to show hero with Resume
+          for (final entry in ts.sessions.entries)
+            if (entry.value.paused) ...[
+              _activeTimerHero(entry.key, ts, accent, paused: true),
+              const SizedBox(height: 20),
+            ],
         ],
 
         // Today's total
@@ -115,7 +122,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     );
   }
 
-  Widget _activeTimerHero(TimerKey key, TimerService ts, Color accent) {
+  Widget _activeTimerHero(TimerKey key, TimerService ts, Color accent, {bool paused = false}) {
     final session = ts.getSession(key)!;
     final icon = key.isBuiltIn
         ? key.builtIn!.icon
@@ -154,10 +161,23 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _controlButton(
-                icon: Icons.pause_rounded,
-                color: AppTheme.goldSoft,
-                onTap: () => ts.pause(key),
+                icon: Icons.close_rounded,
+                color: Colors.grey,
+                onTap: () => _cancelTimer(key),
               ),
+              const SizedBox(width: 24),
+              if (!paused)
+                _controlButton(
+                  icon: Icons.pause_rounded,
+                  color: AppTheme.goldSoft,
+                  onTap: () => ts.pause(key),
+                )
+              else
+                _controlButton(
+                  icon: Icons.play_arrow_rounded,
+                  color: AppTheme.green,
+                  onTap: () => ts.start(key),
+                ),
               const SizedBox(width: 24),
               _controlButton(
                 icon: Icons.stop_rounded,
@@ -1035,6 +1055,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: AppTheme.surfaceColor(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1158,7 +1180,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                               if (dh > 0) {
                                 durationStr = '${dh}h ${dm}min';
                               } else {
-                                durationStr = '$dm minutes';
+                                durationStr = '${dm}min';
                               }
                             }
                             final dateKey = _todayKey;
@@ -1252,6 +1274,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         await _showBibleEndDialog(session);
       } else if (key.builtIn == ActivityType.literature) {
         await _showLiteratureEndDialog(session);
+      } else if (key.builtIn == ActivityType.ddeg) {
+        await _showDdegEndDialog(session);
       } else {
         await ts.stop(key);
       }
@@ -1587,6 +1611,139 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     );
   }
 
+  /// Show dialog after DDEG timer stops asking what God spoke.
+  Future<void> _showDdegEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    final scriptureCtrl =
+        TextEditingController(text: session.fields['ddegScripture'] ?? '');
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('\uD83D\uDD25',
+                      style: TextStyle(fontSize: 24)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text(l.sectionDDEG,
+                          style: AppTheme.display(18, color: accent))),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(l.timerStoppedDuration(duration),
+                  style: AppTheme.serif(13,
+                      color: AppTheme.mutedColor(context))),
+              const SizedBox(height: 16),
+              // Scripture field
+              TextField(
+                controller: scriptureCtrl,
+                style:
+                    AppTheme.serif(14, color: AppTheme.textColor(context)),
+                decoration: InputDecoration(
+                  labelText: l.ddegScriptureLabel,
+                  hintText: l.ddegScriptureHint,
+                  labelStyle: AppTheme.serif(12, color: accent),
+                  hintStyle: AppTheme.serif(12,
+                      color: AppTheme.faintColor(context)),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                          color: accent.withValues(alpha: 0.3))),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: accent)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Notes field — "What God Spoke to You"
+              TextField(
+                controller: notesCtrl,
+                autofocus: true,
+                maxLines: 4,
+                style:
+                    AppTheme.serif(14, color: AppTheme.textColor(context)),
+                decoration: InputDecoration(
+                  labelText: l.ddegNotesLabel,
+                  hintText: l.ddegNotesHint,
+                  labelStyle: AppTheme.serif(12, color: accent),
+                  hintStyle: AppTheme.serif(12,
+                      color: AppTheme.faintColor(context)),
+                  alignLabelWithHint: true,
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: accent.withValues(alpha: 0.3))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Done button
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () async {
+                    Navigator.pop(ctx);
+
+                    final dateKey = _todayKey;
+                    final log =
+                        await StorageService.instance.getLog(dateKey) ??
+                            DailyLog(dateKey: dateKey);
+
+                    final scripture = scriptureCtrl.text.trim();
+                    final notes = notesCtrl.text.trim();
+
+                    if (scripture.isNotEmpty) {
+                      log.ddegScripture = scripture;
+                    }
+                    if (notes.isNotEmpty) {
+                      log.ddegNotes = notes;
+                    }
+                    log.ddegTime = session.logDurationString;
+
+                    await StorageService.instance.saveLog(log);
+                    await ts.stop(TimerKey.builtIn(ActivityType.ddeg));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.goldGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(l.done,
+                        style: AppTheme.display(16, color: AppTheme.bg0)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _controlButton({
     required IconData icon,
     required Color color,
@@ -1614,13 +1771,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         onTap();
       },
       child: Container(
-        width: 36,
-        height: 36,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: color.withValues(alpha: 0.15),
         ),
-        child: Icon(icon, color: color, size: 22),
+        child: Icon(icon, color: color, size: 24),
       ),
     );
   }

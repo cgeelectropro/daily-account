@@ -24,8 +24,8 @@ class PdfReportService {
   // ═════════════════════════════════════════════════════════
 
   /// Build + show print/share dialog for a weekly report.
-  Future<void> printWeeklyReport(String name, DateTime ref) async {
-    final doc = await _buildWeeklyPdf(name, ref);
+  Future<void> printWeeklyReport(String name, DateTime ref, [String locale = 'en']) async {
+    final doc = await _buildWeeklyPdf(name, ref, locale);
     final dates = ReportService.instance.weekDates(ref);
     final fmtRange = DateFormat('MMM_d');
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
@@ -36,8 +36,8 @@ class PdfReportService {
   }
 
   /// Build + show print/share dialog for a monthly report.
-  Future<void> printMonthlyReport(String name, int year, int month) async {
-    final doc = await _buildMonthlyPdf(name, year, month);
+  Future<void> printMonthlyReport(String name, int year, int month, [String locale = 'en']) async {
+    final doc = await _buildMonthlyPdf(name, year, month, locale);
     final fmtMonth = DateFormat('MMMM_yyyy');
     final fileName = 'DailyAccount_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
     await Printing.layoutPdf(
@@ -47,16 +47,16 @@ class PdfReportService {
   }
 
   /// Share PDF bytes directly (for system share sheet).
-  Future<void> shareWeeklyPdf(String name, DateTime ref) async {
-    final doc = await _buildWeeklyPdf(name, ref);
+  Future<void> shareWeeklyPdf(String name, DateTime ref, [String locale = 'en']) async {
+    final doc = await _buildWeeklyPdf(name, ref, locale);
     final dates = ReportService.instance.weekDates(ref);
     final fmtRange = DateFormat('MMM_d');
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
   }
 
-  Future<void> shareMonthlyPdf(String name, int year, int month) async {
-    final doc = await _buildMonthlyPdf(name, year, month);
+  Future<void> shareMonthlyPdf(String name, int year, int month, [String locale = 'en']) async {
+    final doc = await _buildMonthlyPdf(name, year, month, locale);
     final fmtMonth = DateFormat('MMMM_yyyy');
     final fileName = 'DailyAccount_${fmtMonth.format(DateTime(year, month, 1))}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
@@ -66,7 +66,7 @@ class PdfReportService {
   //  WEEKLY PDF
   // ═════════════════════════════════════════════════════════
 
-  Future<pw.Document> _buildWeeklyPdf(String name, DateTime ref) async {
+  Future<pw.Document> _buildWeeklyPdf(String name, DateTime ref, [String locale = 'en']) async {
     final dates = ReportService.instance.weekDates(ref);
     final stats = await ReportService.instance.computeWeekStats(ref);
     final fmtRange = DateFormat('MMM d, yyyy');
@@ -104,7 +104,7 @@ class PdfReportService {
 
           // Day-by-day entries
           for (int i = 0; i < dates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i]));
+            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i], locale));
             if (i < dates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -120,7 +120,7 @@ class PdfReportService {
   //  MONTHLY PDF
   // ═════════════════════════════════════════════════════════
 
-  Future<pw.Document> _buildMonthlyPdf(String name, int year, int month) async {
+  Future<pw.Document> _buildMonthlyPdf(String name, int year, int month, [String locale = 'en']) async {
     final monthStats = await ReportService.instance.computeMonthStats(year, month);
     final fmtMonth = DateFormat('MMMM yyyy');
     final fmtLong = DateFormat('EEEE, MMM d');
@@ -163,7 +163,7 @@ class PdfReportService {
 
           // Full day-by-day entries — same format as weekly PDF
           for (int i = 0; i < dayDates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i]));
+            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i], locale));
             if (i < dayDates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -326,7 +326,7 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _dayEntry(String dayLabel, DailyLog? log) {
+  pw.Widget _dayEntry(String dayLabel, DailyLog? log, [String locale = 'en']) {
     final hasContent = log != null && log.completeness > 0;
 
     return pw.Container(
@@ -369,7 +369,7 @@ class PdfReportService {
               ),
             )
           else
-            ..._dayDetailRows(log),
+            ..._dayDetailRows(log, locale),
         ],
       ),
     );
@@ -395,10 +395,10 @@ class PdfReportService {
     );
   }
 
-  List<pw.Widget> _dayDetailRows(DailyLog log) {
+  List<pw.Widget> _dayDetailRows(DailyLog log, [String locale = 'en']) {
     final rows = <pw.Widget>[];
 
-    final bibleRef = log.combinedBibleReference('en');
+    final bibleRef = log.combinedBibleReference(locale);
     if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
       rows.add(_detailRow('Bible', '${bibleRef.isNotEmpty ? bibleRef : log.bibleReference} (${log.totalBibleChapters} ch.)'));
     }
@@ -425,12 +425,27 @@ class PdfReportService {
         if (log.evangelismNotes.isNotEmpty) log.evangelismNotes,
       ];
       rows.add(_detailRow('Evangelism', parts.join('. ')));
+      // Follow-up data
+      if (log.evangelismNewBelievers.isNotEmpty) {
+        rows.add(_detailRow('  New Believers', log.evangelismNewBelievers));
+      }
+      if (log.evangelismBeingDiscipled.isNotEmpty) {
+        rows.add(_detailRow('  Being Discipled', log.evangelismBeingDiscipled));
+      }
+      if (log.evangelismFollowUpNotes.isNotEmpty) {
+        rows.add(_detailRow('  Follow-up', log.evangelismFollowUpNotes));
+      }
     }
     if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
       rows.add(_detailRow('Fasting', '${log.fastingType} (${log.fastingDuration})${log.fastingPrayerFocus.isNotEmpty ? " — ${log.fastingPrayerFocus}" : ""}'));
     }
     if (log.givingType.isNotEmpty) {
-      rows.add(_detailRow('Giving', '${log.givingType}${log.givingPurpose.isNotEmpty ? " — ${log.givingPurpose}" : ""}'));
+      final givingParts = <String>[
+        log.givingType,
+        if (log.givingAmount.isNotEmpty) log.givingAmount,
+        if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+      ];
+      rows.add(_detailRow('Giving', givingParts.join(' — ')));
     }
     if (log.churchType.isNotEmpty) {
       rows.add(_detailRow('Church', '${log.churchType}${log.churchNotes.isNotEmpty ? " — ${log.churchNotes}" : ""}'));
@@ -443,6 +458,18 @@ class PdfReportService {
     }
     if (log.other.isNotEmpty) {
       rows.add(_detailRow('Other', log.other));
+    }
+    // Custom activities
+    for (final entry in log.customActivityData.entries) {
+      final actData = entry.value;
+      if (actData['done'] != true) continue;
+      final fields = actData['fields'] as Map<String, dynamic>? ?? {};
+      final parts = fields.entries
+          .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
+          .map((e) => '${e.key}: ${e.value}')
+          .join(', ');
+      final label = entry.key;
+      rows.add(_detailRow(label, parts.isNotEmpty ? parts : '\u2713'));
     }
 
     return rows;

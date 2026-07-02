@@ -367,7 +367,7 @@ class ReportService {
       }
 
       // Same detailed output as the weekly full report
-      final bibleRef = log.combinedBibleReference('en');
+      final bibleRef = log.combinedBibleReference(l.localeName);
       if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
         buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
       }
@@ -402,7 +402,11 @@ class ReportService {
         buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
       if (log.givingType.isNotEmpty) {
-        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+        final givingDetail = [
+          if (log.givingAmount.isNotEmpty) log.givingAmount,
+          if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+        ].join(' — ');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
       }
       if (log.churchType.isNotEmpty) {
         buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
@@ -474,7 +478,7 @@ class ReportService {
       totalContacts += int.tryParse(log.evangelismContacts) ?? 0;
       totalCompletion += log.completeness;
 
-      final bibleRef = log.combinedBibleReference('en');
+      final bibleRef = log.combinedBibleReference(l.localeName);
       if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
         buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
       }
@@ -509,7 +513,11 @@ class ReportService {
         buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
       if (log.givingType.isNotEmpty) {
-        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, log.givingPurpose)}');
+        final givingDetail = [
+          if (log.givingAmount.isNotEmpty) log.givingAmount,
+          if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+        ].join(' — ');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
       }
       if (log.churchType.isNotEmpty) {
         buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');

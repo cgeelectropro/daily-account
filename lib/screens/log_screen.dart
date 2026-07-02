@@ -161,6 +161,9 @@ class _LogScreenState extends State<LogScreen> {
     DateTime startDate = DateTime.now();
     DateTime endDate = DateTime.now().add(const Duration(days: 2));
     String prayerFocus = '';
+    int startHour = 0;
+    int endHour = 24;
+    String timePreset = 'extended'; // partial, fullDay, extended, custom
 
     final result = await showModalBottomSheet<FastingPeriod>(
       context: context,
@@ -173,6 +176,7 @@ class _LogScreenState extends State<LogScreen> {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.fromLTRB(
               20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,6 +286,120 @@ class _LogScreenState extends State<LogScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              // Daily fasting hours
+              Text(t.fastingTimeConfig,
+                  style: AppTheme.label(11, color: accent)),
+              const SizedBox(height: 8),
+              // Time presets
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _timePresetChip(t.fastingPresetPartial, 'partial', timePreset, accent, ctx, () {
+                    setSheetState(() { timePreset = 'partial'; startHour = 0; endHour = 18; });
+                  }),
+                  _timePresetChip(t.fastingPresetFullDay, 'fullDay', timePreset, accent, ctx, () {
+                    setSheetState(() { timePreset = 'fullDay'; startHour = 6; endHour = 18; });
+                  }),
+                  _timePresetChip(t.fastingPresetExtended, 'extended', timePreset, accent, ctx, () {
+                    setSheetState(() { timePreset = 'extended'; startHour = 0; endHour = 24; });
+                  }),
+                  _timePresetChip(t.fastingPresetCustom, 'custom', timePreset, accent, ctx, () {
+                    setSheetState(() { timePreset = 'custom'; });
+                  }),
+                ],
+              ),
+              if (timePreset == 'custom') ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(t.fastingStartHour, style: AppTheme.label(9, color: AppTheme.mutedColor(ctx))),
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: ctx,
+                                initialTime: TimeOfDay(hour: startHour, minute: 0),
+                                builder: (c, child) => MediaQuery(
+                                  data: MediaQuery.of(c).copyWith(alwaysUse24HourFormat: true),
+                                  child: child!,
+                                ),
+                              );
+                              if (picked != null) setSheetState(() => startHour = picked.hour);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: accent.withValues(alpha: 0.2)),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('${startHour.toString().padLeft(2, '0')}:00',
+                                  style: AppTheme.serif(16, color: AppTheme.textColor(ctx))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.arrow_forward, color: accent, size: 18),
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(t.fastingEndHour, style: AppTheme.label(9, color: AppTheme.mutedColor(ctx))),
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: ctx,
+                                initialTime: TimeOfDay(hour: endHour == 24 ? 0 : endHour, minute: 0),
+                                builder: (c, child) => MediaQuery(
+                                  data: MediaQuery.of(c).copyWith(alwaysUse24HourFormat: true),
+                                  child: child!,
+                                ),
+                              );
+                              if (picked != null) {
+                                setSheetState(() => endHour = picked.hour == 0 ? 24 : picked.hour);
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: accent.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: accent.withValues(alpha: 0.2)),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text('${(endHour == 24 ? 0 : endHour).toString().padLeft(2, '0')}:00',
+                                  style: AppTheme.serif(16, color: AppTheme.textColor(ctx))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              // Hours per day badge
+              if (endHour > startHour) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(t.fastingHoursPerDay(endHour - startHour),
+                      style: AppTheme.serif(12, color: AppTheme.green)),
+                ),
+              ],
               const SizedBox(height: 12),
               // Prayer focus
               TextField(
@@ -310,6 +428,8 @@ class _LogScreenState extends State<LogScreen> {
                     endDate: fmt(endDate),
                     type: selectedType,
                     prayerFocus: prayerFocus,
+                    startHour: startHour,
+                    endHour: endHour,
                   ));
                 },
                 child: Container(
@@ -325,6 +445,7 @@ class _LogScreenState extends State<LogScreen> {
               ),
             ],
           ),
+          ),
         ),
       ),
     );
@@ -337,7 +458,7 @@ class _LogScreenState extends State<LogScreen> {
           : t.fastingTypeEsther;
       setState(() {
         _log.fastingType = typeLabel;
-        _log.fastingDuration = '${result.totalDays} days';
+        _log.fastingDuration = '${t.fastingDaysCount(result.totalDays)} (${result.timeRangeDisplay})';
         _log.fastingPrayerFocus = result.prayerFocus;
       });
       _persist();
@@ -347,6 +468,24 @@ class _LogScreenState extends State<LogScreen> {
 
   Future<void> _endCurrentFast(S t) async {
     if (_activeFast?.id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.endFast),
+        content: Text(t.endFastConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.endFastCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.endFast, style: const TextStyle(color: AppTheme.rust)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     await StorageService.instance.endFastingPeriod(_activeFast!.id!);
     _loadActiveFast();
   }
@@ -387,7 +526,14 @@ class _LogScreenState extends State<LogScreen> {
   bool get _hasVoiceNote => _log.voiceNotePath.isNotEmpty && File(_log.voiceNotePath).existsSync();
 
   Future<void> _startRecording() async {
-    if (!await _recorder.hasPermission()) return;
+    if (!await _recorder.hasPermission()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).voiceNotePermissionDenied)),
+        );
+      }
+      return;
+    }
     final path = await _voiceNotePath();
     final voiceDir = Directory(path).parent;
     if (!voiceDir.existsSync()) voiceDir.createSync(recursive: true);
@@ -899,6 +1045,12 @@ class _LogScreenState extends State<LogScreen> {
                             : t.fastingTypeEsther,
                         style: AppTheme.label(11, color: AppTheme.accentGold(context)),
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Daily hours badge
+                    Text(
+                      '${_activeFast!.timeRangeDisplay}  •  ${t.fastingHoursPerDay(_activeFast!.dailyFastingHours)}',
+                      style: AppTheme.label(10, color: AppTheme.mutedColor(context)),
                     ),
                     const SizedBox(height: 10),
                     // Day counter with progress bar
@@ -2168,6 +2320,28 @@ class _LogScreenState extends State<LogScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _timePresetChip(String label, String value, String current,
+      Color accent, BuildContext ctx, VoidCallback onTap) {
+    final selected = current == value;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? accent : accent.withValues(alpha: 0.2),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(label,
+            style: AppTheme.serif(11,
+                color: selected ? accent : AppTheme.textColor(ctx))),
+      ),
     );
   }
 }

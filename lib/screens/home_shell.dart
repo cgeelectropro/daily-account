@@ -269,37 +269,47 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   /// Quick-toggle a discipline from the widget without opening the log screen.
+  /// Only toggles between empty ↔ checkmark. Never overwrites real user data.
   Future<void> _toggleDisciplineFromWidget(String discipline) async {
     final key = _key(DateTime.now());
     final storage = StorageService.instance;
     final existing = await storage.getLog(key);
     final log = existing ?? DailyLog(dateKey: key);
 
+    // Helper: toggle only if current value is empty or a checkmark placeholder.
+    // Protects real data (e.g. "Genesis 1-3") from being overwritten.
+    String toggle(String current, [String onVal = '\u2713']) {
+      if (current.isEmpty) return onVal;
+      if (current == '\u2713' || current == '1') return '';
+      return current; // real data — don't touch
+    }
+
     switch (discipline) {
       case 'bible':
-        log.bibleReference = log.bibleReference.isEmpty ? '\u2713' : '';
+        log.bibleReference = toggle(log.bibleReference);
       case 'literature':
         if (log.literature.every((l) => l.title.isEmpty)) {
           log.literature = [LiteratureEntry(title: '\u2713')];
-        } else {
+        } else if (log.literature.length == 1 && log.literature.first.title == '\u2713') {
           log.literature = [LiteratureEntry()];
         }
+        // else: real data — don't touch
       case 'ddeg':
-        log.ddegScripture = log.ddegScripture.isEmpty ? '\u2713' : '';
+        log.ddegScripture = toggle(log.ddegScripture);
       case 'prayerAlone':
-        log.prayerAloneDuration = log.prayerAloneDuration.isEmpty ? '\u2713' : '';
+        log.prayerAloneDuration = toggle(log.prayerAloneDuration);
       case 'evangelism':
-        log.evangelismContacts = log.evangelismContacts.isEmpty ? '1' : '';
+        log.evangelismContacts = toggle(log.evangelismContacts, '1');
       case 'fasting':
-        log.fastingType = log.fastingType.isEmpty ? '\u2713' : '';
+        log.fastingType = toggle(log.fastingType);
       case 'giving':
-        log.givingType = log.givingType.isEmpty ? '\u2713' : '';
+        log.givingType = toggle(log.givingType);
       case 'church':
-        log.churchType = log.churchType.isEmpty ? '\u2713' : '';
+        log.churchType = toggle(log.churchType);
       case 'discipleship':
-        log.discipleshipWho = log.discipleshipWho.isEmpty ? '\u2713' : '';
+        log.discipleshipWho = toggle(log.discipleshipWho);
       case 'proclamation':
-        log.proclamationCount = log.proclamationCount.isEmpty ? '1' : '';
+        log.proclamationCount = toggle(log.proclamationCount, '1');
     }
 
     await storage.saveLog(log);
@@ -929,81 +939,93 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           builder: (ctx, setSheetState) => Padding(
             padding: EdgeInsets.fromLTRB(
                 20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l.quickLogTitle, style: AppTheme.display(20, color: accent)),
-                const SizedBox(height: 4),
-                Text(l.quickLogSubtitle,
-                    style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
-                const SizedBox(height: 16),
-                ...disciplines.entries.map((e) {
-                  final key = e.key;
-                  final emoji = e.value.$1;
-                  final label = e.value.$2;
-                  final isChecked = checked[key] ?? false;
-                  return GestureDetector(
-                    onTap: () => setSheetState(() => checked[key] = !isChecked),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isChecked
-                            ? AppTheme.green.withValues(alpha: 0.1)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isChecked
-                              ? AppTheme.green.withValues(alpha: 0.4)
-                              : accent.withValues(alpha: 0.12),
-                        ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l.quickLogTitle, style: AppTheme.display(20, color: accent)),
+                  const SizedBox(height: 4),
+                  Text(l.quickLogSubtitle,
+                      style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: disciplines.entries.map((e) {
+                          final key = e.key;
+                          final emoji = e.value.$1;
+                          final label = e.value.$2;
+                          final isChecked = checked[key] ?? false;
+                          return GestureDetector(
+                            onTap: () => setSheetState(() => checked[key] = !isChecked),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isChecked
+                                    ? AppTheme.green.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isChecked
+                                      ? AppTheme.green.withValues(alpha: 0.4)
+                                      : accent.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(emoji, style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(label,
+                                        style: AppTheme.serif(13,
+                                            color: AppTheme.textColor(context))),
+                                  ),
+                                  Icon(
+                                    isChecked
+                                        ? Icons.check_circle
+                                        : Icons.circle_outlined,
+                                    color: isChecked
+                                        ? AppTheme.green
+                                        : AppTheme.faintColor(context),
+                                    size: 22,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
-                      child: Row(
-                        children: [
-                          Text(emoji, style: const TextStyle(fontSize: 18)),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(label,
-                                style: AppTheme.serif(13,
-                                    color: AppTheme.textColor(context))),
-                          ),
-                          Icon(
-                            isChecked
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
-                            color: isChecked
-                                ? AppTheme.green
-                                : AppTheme.faintColor(context),
-                            size: 22,
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: GestureDetector(
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      await _saveQuickLog(checked);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.goldGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text('\u2705 ${l.quickLogSaved}',
-                          style: AppTheme.display(16, color: AppTheme.bg0)),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await _saveQuickLog(checked);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.goldGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('\u2705 ${l.quickLogSaved}',
+                            style: AppTheme.display(16, color: AppTheme.bg0)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

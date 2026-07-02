@@ -510,6 +510,7 @@ class TimerService extends ChangeNotifier {
   }
 
   /// Parse a human-readable duration string into total minutes.
+  /// Handles formats: "1h 30min", "45 minutes", "2h", "30s", plain numbers.
   int _parseDurationMinutes(String s) {
     if (s.isEmpty) return 0;
     final cleaned = s.trim().toLowerCase();
@@ -529,6 +530,14 @@ class TimerService extends ChangeNotifier {
     final hOnly = RegExp(r'(\d+)\s*h(?:ours?)?$');
     final hMatch = hOnly.firstMatch(cleaned);
     if (hMatch != null) return (int.tryParse(hMatch.group(1)!) ?? 0) * 60;
+
+    // Seconds-only format (e.g. "45s") — round up to 1 minute minimum
+    final sOnly = RegExp(r'(\d+)\s*s(?:ec(?:ond)?s?)?$');
+    final sMatch = sOnly.firstMatch(cleaned);
+    if (sMatch != null) {
+      final seconds = int.tryParse(sMatch.group(1)!) ?? 0;
+      return seconds > 0 ? 1 : 0; // At least 1 minute if any seconds
+    }
 
     final plain = int.tryParse(cleaned);
     if (plain != null) return plain;

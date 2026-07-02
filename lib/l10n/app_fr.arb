@@ -637,6 +637,7 @@
   "voiceNoteDelete": "Supprimer l'enregistrement",
   "voiceNoteDeleteConfirm": "Supprimer cette note vocale ?",
   "voiceNoteSaved": "Note vocale enregistr\u00e9e",
+  "voiceNotePermissionDenied": "L\u2019autorisation du microphone est requise pour enregistrer des notes vocales. Veuillez l\u2019activer dans les param\u00e8tres de votre appareil.",
 
   "fastingPeriod": "P\u00e9riode de je\u00fbne",
   "fastingStartDate": "Date de d\u00e9but",
@@ -653,6 +654,19 @@
   "fastingNone": "Pas de je\u00fbne actif",
   "startFast": "Commencer un je\u00fbne",
   "endFast": "Terminer le je\u00fbne",
+  "endFastConfirm": "\u00cates-vous s\u00fbr de vouloir terminer votre je\u00fbne actuel ? Cette action est irr\u00e9versible.",
+  "endFastCancel": "Continuer le je\u00fbne",
+  "fastingTimeConfig": "Heures de je\u00fbne quotidiennes",
+  "fastingStartHour": "De",
+  "fastingEndHour": "\u00c0",
+  "fastingPresetPartial": "Partiel (00:00\u201318:00)",
+  "fastingPresetFullDay": "Journ\u00e9e (06:00\u201318:00)",
+  "fastingPresetExtended": "24h (00:00\u201300:00)",
+  "fastingPresetCustom": "Personnalis\u00e9",
+  "fastingHoursPerDay": "{hours}h par jour",
+  "@fastingHoursPerDay": { "placeholders": { "hours": { "type": "int" } } },
+  "fastingDaysCount": "{count, plural, =1{1 jour} other{{count} jours}}",
+  "@fastingDaysCount": { "placeholders": { "count": { "type": "int" } } },
 
   "certificateTitle": "Certificat de fid\u00e9lit\u00e9",
   "certificateSubtitle": "R\u00e9alisation spirituelle mensuelle",
@@ -731,5 +745,48 @@
     }
   },
   "cancelTimerKeep": "Continuer",
-  "cancelTimerDiscard": "Abandonner"
+  "cancelTimerDiscard": "Abandonner",
+
+  "notificationSoundLabel": "SON DE NOTIFICATION",
+  "soundPlaying": "En lecture",
+  "notificationsHealthy": "Notifications en bon état",
+  "notificationIssuesDetected": "Problèmes de notifications détectés",
+  "diagPermissionGranted": "Permission accordée",
+  "diagExactAlarms": "Alarmes exactes",
+  "diagBatteryOptimized": "Batterie optimisée",
+  "diagFix": "Corriger",
+  "diagScheduledFailed": "Planifiées : {scheduled} | Échouées : {failed}",
+  "@diagScheduledFailed": {
+    "placeholders": {
+      "scheduled": { "type": "int" },
+      "failed": { "type": "int" }
+    }
+  },
+  "pendingNotificationsTitle": "{count} notifications en attente",
+  "@pendingNotificationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noneScheduled": "Aucune planifiée",
+  "tapToSeePending": "Appuyez pour voir les notifications en attente",
+  "testNotifSent": "Notification de test envoyée !",
+  "testNotifFailed": "Échec de l'envoi de la notification de test",
+  "testNotifButton": "Tester la notification",
+  "rescheduleAll": "Tout replanifier",
+  "allNotificationsRescheduled": "Toutes les notifications replanifiées",
+  "replaceData": "Remplacer",
+  "ok": "OK",
+  "notifNameDaily": "Rappel quotidien",
+  "notifNameSunday": "Envoi du dimanche",
+  "notifNameAutoSend": "Envoi automatique",
+  "notifNameDailyFollowUp1": "Suivi quotidien 1",
+  "notifNameDailyFollowUp2": "Suivi quotidien 2",
+  "notifNameDailyFollowUp3": "Suivi quotidien 3",
+  "notifNameSundayFollowUp1": "Suivi du dimanche 1",
+  "notifNameSundayFollowUp2": "Suivi du dimanche 2",
+  "notifNameMidWeekNudge": "Rappel de mi-semaine",
+  "notifNameSaturdaySummary": "Résumé du samedi",
+  "notifNameDiscipline": "Discipline {id}",
+  "@notifNameDiscipline": {
+    "placeholders": { "id": { "type": "int" } }
+  }
 }

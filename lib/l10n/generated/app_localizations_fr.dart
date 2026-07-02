@@ -1447,6 +1447,10 @@ class SFr extends S {
   String get voiceNoteSaved => 'Note vocale enregistrée';
 
   @override
+  String get voiceNotePermissionDenied =>
+      'L’autorisation du microphone est requise pour enregistrer des notes vocales. Veuillez l’activer dans les paramètres de votre appareil.';
+
+  @override
   String get fastingPeriod => 'Période de jeûne';
 
   @override
@@ -1488,6 +1492,50 @@ class SFr extends S {
 
   @override
   String get endFast => 'Terminer le jeûne';
+
+  @override
+  String get endFastConfirm =>
+      'Êtes-vous sûr de vouloir terminer votre jeûne actuel ? Cette action est irréversible.';
+
+  @override
+  String get endFastCancel => 'Continuer le jeûne';
+
+  @override
+  String get fastingTimeConfig => 'Heures de jeûne quotidiennes';
+
+  @override
+  String get fastingStartHour => 'De';
+
+  @override
+  String get fastingEndHour => 'À';
+
+  @override
+  String get fastingPresetPartial => 'Partiel (00:00–18:00)';
+
+  @override
+  String get fastingPresetFullDay => 'Journée (06:00–18:00)';
+
+  @override
+  String get fastingPresetExtended => '24h (00:00–00:00)';
+
+  @override
+  String get fastingPresetCustom => 'Personnalisé';
+
+  @override
+  String fastingHoursPerDay(int hours) {
+    return '${hours}h par jour';
+  }
+
+  @override
+  String fastingDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours',
+      one: '1 jour',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get certificateTitle => 'Certificat de fidélité';
@@ -1679,4 +1727,103 @@ class SFr extends S {
 
   @override
   String get cancelTimerDiscard => 'Abandonner';
+
+  @override
+  String get notificationSoundLabel => 'SON DE NOTIFICATION';
+
+  @override
+  String get soundPlaying => 'En lecture';
+
+  @override
+  String get notificationsHealthy => 'Notifications en bon état';
+
+  @override
+  String get notificationIssuesDetected =>
+      'Problèmes de notifications détectés';
+
+  @override
+  String get diagPermissionGranted => 'Permission accordée';
+
+  @override
+  String get diagExactAlarms => 'Alarmes exactes';
+
+  @override
+  String get diagBatteryOptimized => 'Batterie optimisée';
+
+  @override
+  String get diagFix => 'Corriger';
+
+  @override
+  String diagScheduledFailed(int scheduled, int failed) {
+    return 'Planifiées : $scheduled | Échouées : $failed';
+  }
+
+  @override
+  String pendingNotificationsTitle(int count) {
+    return '$count notifications en attente';
+  }
+
+  @override
+  String get noneScheduled => 'Aucune planifiée';
+
+  @override
+  String get tapToSeePending =>
+      'Appuyez pour voir les notifications en attente';
+
+  @override
+  String get testNotifSent => 'Notification de test envoyée !';
+
+  @override
+  String get testNotifFailed => 'Échec de l\'envoi de la notification de test';
+
+  @override
+  String get testNotifButton => 'Tester la notification';
+
+  @override
+  String get rescheduleAll => 'Tout replanifier';
+
+  @override
+  String get allNotificationsRescheduled =>
+      'Toutes les notifications replanifiées';
+
+  @override
+  String get replaceData => 'Remplacer';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get notifNameDaily => 'Rappel quotidien';
+
+  @override
+  String get notifNameSunday => 'Envoi du dimanche';
+
+  @override
+  String get notifNameAutoSend => 'Envoi automatique';
+
+  @override
+  String get notifNameDailyFollowUp1 => 'Suivi quotidien 1';
+
+  @override
+  String get notifNameDailyFollowUp2 => 'Suivi quotidien 2';
+
+  @override
+  String get notifNameDailyFollowUp3 => 'Suivi quotidien 3';
+
+  @override
+  String get notifNameSundayFollowUp1 => 'Suivi du dimanche 1';
+
+  @override
+  String get notifNameSundayFollowUp2 => 'Suivi du dimanche 2';
+
+  @override
+  String get notifNameMidWeekNudge => 'Rappel de mi-semaine';
+
+  @override
+  String get notifNameSaturdaySummary => 'Résumé du samedi';
+
+  @override
+  String notifNameDiscipline(int id) {
+    return 'Discipline $id';
+  }
 }

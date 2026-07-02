@@ -2605,6 +2605,12 @@ abstract class S {
   /// **'Voice note saved'**
   String get voiceNoteSaved;
 
+  /// No description provided for @voiceNotePermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone permission is required to record voice notes. Please enable it in your device settings.'**
+  String get voiceNotePermissionDenied;
+
   /// No description provided for @fastingPeriod.
   ///
   /// In en, this message translates to:
@@ -2682,6 +2688,72 @@ abstract class S {
   /// In en, this message translates to:
   /// **'End fast'**
   String get endFast;
+
+  /// No description provided for @endFastConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to end your current fast? This cannot be undone.'**
+  String get endFastConfirm;
+
+  /// No description provided for @endFastCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep fasting'**
+  String get endFastCancel;
+
+  /// No description provided for @fastingTimeConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily fasting hours'**
+  String get fastingTimeConfig;
+
+  /// No description provided for @fastingStartHour.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get fastingStartHour;
+
+  /// No description provided for @fastingEndHour.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get fastingEndHour;
+
+  /// No description provided for @fastingPresetPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial (00:00–18:00)'**
+  String get fastingPresetPartial;
+
+  /// No description provided for @fastingPresetFullDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Full day (06:00–18:00)'**
+  String get fastingPresetFullDay;
+
+  /// No description provided for @fastingPresetExtended.
+  ///
+  /// In en, this message translates to:
+  /// **'24h (00:00–00:00)'**
+  String get fastingPresetExtended;
+
+  /// No description provided for @fastingPresetCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get fastingPresetCustom;
+
+  /// No description provided for @fastingHoursPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h per day'**
+  String fastingHoursPerDay(int hours);
+
+  /// No description provided for @fastingDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String fastingDaysCount(int count);
 
   /// No description provided for @certificateTitle.
   ///
@@ -3018,6 +3090,186 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Discard'**
   String get cancelTimerDiscard;
+
+  /// No description provided for @notificationSoundLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'NOTIFICATION SOUND'**
+  String get notificationSoundLabel;
+
+  /// No description provided for @soundPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get soundPlaying;
+
+  /// No description provided for @notificationsHealthy.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications healthy'**
+  String get notificationsHealthy;
+
+  /// No description provided for @notificationIssuesDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification issues detected'**
+  String get notificationIssuesDetected;
+
+  /// No description provided for @diagPermissionGranted.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission granted'**
+  String get diagPermissionGranted;
+
+  /// No description provided for @diagExactAlarms.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact alarms'**
+  String get diagExactAlarms;
+
+  /// No description provided for @diagBatteryOptimized.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery optimized'**
+  String get diagBatteryOptimized;
+
+  /// No description provided for @diagFix.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix'**
+  String get diagFix;
+
+  /// No description provided for @diagScheduledFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled: {scheduled} | Failed: {failed}'**
+  String diagScheduledFailed(int scheduled, int failed);
+
+  /// No description provided for @pendingNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} pending notifications'**
+  String pendingNotificationsTitle(int count);
+
+  /// No description provided for @noneScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'None scheduled'**
+  String get noneScheduled;
+
+  /// No description provided for @tapToSeePending.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to see pending notifications'**
+  String get tapToSeePending;
+
+  /// No description provided for @testNotifSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Test notification sent!'**
+  String get testNotifSent;
+
+  /// No description provided for @testNotifFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send test notification'**
+  String get testNotifFailed;
+
+  /// No description provided for @testNotifButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test notification'**
+  String get testNotifButton;
+
+  /// No description provided for @rescheduleAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule all'**
+  String get rescheduleAll;
+
+  /// No description provided for @allNotificationsRescheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'All notifications rescheduled'**
+  String get allNotificationsRescheduled;
+
+  /// No description provided for @replaceData.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get replaceData;
+
+  /// No description provided for @ok.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// No description provided for @notifNameDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminder'**
+  String get notifNameDaily;
+
+  /// No description provided for @notifNameSunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday send'**
+  String get notifNameSunday;
+
+  /// No description provided for @notifNameAutoSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-send'**
+  String get notifNameAutoSend;
+
+  /// No description provided for @notifNameDailyFollowUp1.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily follow-up 1'**
+  String get notifNameDailyFollowUp1;
+
+  /// No description provided for @notifNameDailyFollowUp2.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily follow-up 2'**
+  String get notifNameDailyFollowUp2;
+
+  /// No description provided for @notifNameDailyFollowUp3.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily follow-up 3'**
+  String get notifNameDailyFollowUp3;
+
+  /// No description provided for @notifNameSundayFollowUp1.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday follow-up 1'**
+  String get notifNameSundayFollowUp1;
+
+  /// No description provided for @notifNameSundayFollowUp2.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday follow-up 2'**
+  String get notifNameSundayFollowUp2;
+
+  /// No description provided for @notifNameMidWeekNudge.
+  ///
+  /// In en, this message translates to:
+  /// **'Mid-week nudge'**
+  String get notifNameMidWeekNudge;
+
+  /// No description provided for @notifNameSaturdaySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday summary'**
+  String get notifNameSaturdaySummary;
+
+  /// No description provided for @notifNameDiscipline.
+  ///
+  /// In en, this message translates to:
+  /// **'Discipline {id}'**
+  String notifNameDiscipline(int id);
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

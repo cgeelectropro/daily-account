@@ -1435,6 +1435,10 @@ class SEn extends S {
   String get voiceNoteSaved => 'Voice note saved';
 
   @override
+  String get voiceNotePermissionDenied =>
+      'Microphone permission is required to record voice notes. Please enable it in your device settings.';
+
+  @override
   String get fastingPeriod => 'Fasting period';
 
   @override
@@ -1476,6 +1480,50 @@ class SEn extends S {
 
   @override
   String get endFast => 'End fast';
+
+  @override
+  String get endFastConfirm =>
+      'Are you sure you want to end your current fast? This cannot be undone.';
+
+  @override
+  String get endFastCancel => 'Keep fasting';
+
+  @override
+  String get fastingTimeConfig => 'Daily fasting hours';
+
+  @override
+  String get fastingStartHour => 'From';
+
+  @override
+  String get fastingEndHour => 'To';
+
+  @override
+  String get fastingPresetPartial => 'Partial (00:00–18:00)';
+
+  @override
+  String get fastingPresetFullDay => 'Full day (06:00–18:00)';
+
+  @override
+  String get fastingPresetExtended => '24h (00:00–00:00)';
+
+  @override
+  String get fastingPresetCustom => 'Custom';
+
+  @override
+  String fastingHoursPerDay(int hours) {
+    return '${hours}h per day';
+  }
+
+  @override
+  String fastingDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get certificateTitle => 'Certificate of Faithfulness';
@@ -1661,4 +1709,100 @@ class SEn extends S {
 
   @override
   String get cancelTimerDiscard => 'Discard';
+
+  @override
+  String get notificationSoundLabel => 'NOTIFICATION SOUND';
+
+  @override
+  String get soundPlaying => 'Playing';
+
+  @override
+  String get notificationsHealthy => 'Notifications healthy';
+
+  @override
+  String get notificationIssuesDetected => 'Notification issues detected';
+
+  @override
+  String get diagPermissionGranted => 'Permission granted';
+
+  @override
+  String get diagExactAlarms => 'Exact alarms';
+
+  @override
+  String get diagBatteryOptimized => 'Battery optimized';
+
+  @override
+  String get diagFix => 'Fix';
+
+  @override
+  String diagScheduledFailed(int scheduled, int failed) {
+    return 'Scheduled: $scheduled | Failed: $failed';
+  }
+
+  @override
+  String pendingNotificationsTitle(int count) {
+    return '$count pending notifications';
+  }
+
+  @override
+  String get noneScheduled => 'None scheduled';
+
+  @override
+  String get tapToSeePending => 'Tap to see pending notifications';
+
+  @override
+  String get testNotifSent => 'Test notification sent!';
+
+  @override
+  String get testNotifFailed => 'Failed to send test notification';
+
+  @override
+  String get testNotifButton => 'Test notification';
+
+  @override
+  String get rescheduleAll => 'Reschedule all';
+
+  @override
+  String get allNotificationsRescheduled => 'All notifications rescheduled';
+
+  @override
+  String get replaceData => 'Replace';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get notifNameDaily => 'Daily reminder';
+
+  @override
+  String get notifNameSunday => 'Sunday send';
+
+  @override
+  String get notifNameAutoSend => 'Auto-send';
+
+  @override
+  String get notifNameDailyFollowUp1 => 'Daily follow-up 1';
+
+  @override
+  String get notifNameDailyFollowUp2 => 'Daily follow-up 2';
+
+  @override
+  String get notifNameDailyFollowUp3 => 'Daily follow-up 3';
+
+  @override
+  String get notifNameSundayFollowUp1 => 'Sunday follow-up 1';
+
+  @override
+  String get notifNameSundayFollowUp2 => 'Sunday follow-up 2';
+
+  @override
+  String get notifNameMidWeekNudge => 'Mid-week nudge';
+
+  @override
+  String get notifNameSaturdaySummary => 'Saturday summary';
+
+  @override
+  String notifNameDiscipline(int id) {
+    return 'Discipline $id';
+  }
 }

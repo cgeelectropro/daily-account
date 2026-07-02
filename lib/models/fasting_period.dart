@@ -9,6 +9,8 @@ class FastingPeriod {
   FastType type;
   String prayerFocus;
   bool completed; // manually ended or date passed
+  int startHour; // 0–23, hour fasting begins each day
+  int endHour;   // 0–23, hour fasting ends each day (24 = midnight next day)
 
   FastingPeriod({
     this.id,
@@ -17,7 +19,21 @@ class FastingPeriod {
     required this.type,
     this.prayerFocus = '',
     this.completed = false,
+    this.startHour = 0,
+    this.endHour = 24,
   });
+
+  /// Daily fasting hours (e.g. 18 for midnight-to-6PM, handles overnight).
+  int get dailyFastingHours {
+    if (endHour >= startHour) return endHour - startHour;
+    return (24 - startHour) + endHour; // overnight fast
+  }
+
+  /// Formatted time range string (e.g. "00:00 – 18:00").
+  String get timeRangeDisplay {
+    String fmt(int h) => '${h.toString().padLeft(2, '0')}:00';
+    return '${fmt(startHour)} – ${fmt(endHour == 24 ? 0 : endHour)}';
+  }
 
   Map<String, dynamic> toMap() => {
     if (id != null) 'id': id,
@@ -26,6 +42,8 @@ class FastingPeriod {
     'type': type.name,
     'prayerFocus': prayerFocus,
     'completed': completed ? 1 : 0,
+    'startHour': startHour,
+    'endHour': endHour,
   };
 
   factory FastingPeriod.fromMap(Map<String, dynamic> m) => FastingPeriod(
@@ -38,6 +56,8 @@ class FastingPeriod {
     ),
     prayerFocus: m['prayerFocus'] ?? '',
     completed: (m['completed'] ?? 0) == 1,
+    startHour: (m['startHour'] as int?) ?? 0,
+    endHour: (m['endHour'] as int?) ?? 24,
   );
 
   /// Total days of the fast (inclusive).

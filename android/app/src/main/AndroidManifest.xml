@@ -104,7 +104,7 @@
 
         <!-- Discipline Bar widget (4x2) — interactive toggles via broadcast -->
         <receiver android:name=".DisciplineBarWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
                 <action android:name="com.jilengineering.dailyaccount.WIDGET_ACTION"/>
@@ -116,7 +116,7 @@
 
         <!-- Full Altar widget (4x3) — interactive toggles via broadcast -->
         <receiver android:name=".FullAltarWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
                 <action android:name="com.jilengineering.dailyaccount.WIDGET_ACTION"/>
@@ -128,7 +128,7 @@
 
         <!-- Proclamation Counter widget (2x2) — interactive "+" via broadcast -->
         <receiver android:name=".ProclamationWidgetProvider"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
                 <action android:name="com.jilengineering.dailyaccount.WIDGET_ACTION"/>

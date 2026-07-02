@@ -166,8 +166,8 @@ class GoldField extends StatelessWidget {
             Text(label.toUpperCase(),
                 style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
             const SizedBox(height: 6),
-            TextFormField(
-              initialValue: value,
+            _GoldTextFormField(
+              value: value,
               onChanged: onChanged,
               keyboardType: keyboardType,
               maxLines: maxLines,
@@ -177,6 +177,68 @@ class GoldField extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A TextFormField that stays in sync when the parent rebuilds with a new value.
+/// Solves the stale-initialValue problem: if the parent pushes a new [value]
+/// (e.g. Copy-from-Yesterday, auto-fill, undo), the displayed text updates.
+class _GoldTextFormField extends StatefulWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  final TextInputType? keyboardType;
+  final int maxLines;
+  final TextStyle style;
+  final InputDecoration decoration;
+
+  const _GoldTextFormField({
+    required this.value,
+    required this.onChanged,
+    required this.style,
+    required this.decoration,
+    this.keyboardType,
+    this.maxLines = 1,
+  });
+
+  @override
+  State<_GoldTextFormField> createState() => _GoldTextFormFieldState();
+}
+
+class _GoldTextFormFieldState extends State<_GoldTextFormField> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(_GoldTextFormField old) {
+    super.didUpdateWidget(old);
+    // Only update the controller if the parent pushed a genuinely new value
+    // (not one triggered by the user's own typing via onChanged).
+    if (widget.value != old.value && widget.value != _ctrl.text) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      onChanged: widget.onChanged,
+      keyboardType: widget.keyboardType,
+      maxLines: widget.maxLines,
+      style: widget.style,
+      decoration: widget.decoration,
     );
   }
 }

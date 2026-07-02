@@ -463,7 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Replace', style: TextStyle(color: AppTheme.rust)),
+            child: Text(l.replaceData, style: const TextStyle(color: AppTheme.rust)),
           ),
         ],
       ),
@@ -951,7 +951,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
             // ── Notification sound picker ──
-            Text('NOTIFICATION SOUND',
+            Text(l.notificationSoundLabel,
                 style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
             const SizedBox(height: 6),
             ...NotificationService.notificationSounds.entries.map((entry) {
@@ -993,7 +993,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const Spacer(),
                         if (selected)
-                          Text('Playing', style: AppTheme.label(10, color: accent)),
+                          Text(l.soundPlaying, style: AppTheme.label(10, color: accent)),
                       ],
                     ),
                   ),
@@ -1024,17 +1024,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Text(allGood ? '\u2705' : '\u26A0\uFE0F', style: const TextStyle(fontSize: 16)),
                         const SizedBox(width: 8),
                         Text(
-                          allGood ? 'Notifications healthy' : 'Notification issues detected',
+                          allGood ? l.notificationsHealthy : l.notificationIssuesDetected,
                           style: AppTheme.serif(13, color: textCol),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    _diagRow('Permission granted', diag['notificationPermission'] ?? false),
-                    _diagRow('Exact alarms', diag['exactAlarmPermission'] ?? false),
+                    _diagRow(l.diagPermissionGranted, diag['notificationPermission'] ?? false),
+                    _diagRow(l.diagExactAlarms, diag['exactAlarmPermission'] ?? false),
                     Row(
                       children: [
-                        Expanded(child: _diagRow('Battery optimized', diag['batteryOptExempt'] ?? false)),
+                        Expanded(child: _diagRow(l.diagBatteryOptimized, diag['batteryOptExempt'] ?? false)),
                         if (!(diag['batteryOptExempt'] ?? false))
                           GestureDetector(
                             onTap: () async {
@@ -1048,13 +1048,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
                               ),
-                              child: Text('Fix', style: AppTheme.label(10, color: Colors.orange)),
+                              child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
                             ),
                           ),
                       ],
                     ),
                     Text(
-                      'Scheduled: ${stats.$1} | Failed: ${stats.$2}',
+                      l.diagScheduledFailed(stats.$1, stats.$2),
                       style: AppTheme.label(10, color: mutedCol),
                     ),
                     const SizedBox(height: 4),
@@ -1063,20 +1063,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         final pending = await NotificationService.instance.getPendingNotifications();
                         if (!mounted) return;
                         final names = {
-                          1: 'Daily reminder',
-                          2: 'Sunday send',
-                          3: 'Auto-send',
-                          11: 'Daily follow-up 1',
-                          12: 'Daily follow-up 2',
-                          13: 'Daily follow-up 3',
-                          21: 'Sunday follow-up 1',
-                          22: 'Sunday follow-up 2',
-                          30: 'Mid-week nudge',
-                          40: 'Saturday summary',
+                          1: l.notifNameDaily,
+                          2: l.notifNameSunday,
+                          3: l.notifNameAutoSend,
+                          11: l.notifNameDailyFollowUp1,
+                          12: l.notifNameDailyFollowUp2,
+                          13: l.notifNameDailyFollowUp3,
+                          21: l.notifNameSundayFollowUp1,
+                          22: l.notifNameSundayFollowUp2,
+                          30: l.notifNameMidWeekNudge,
+                          40: l.notifNameSaturdaySummary,
                         };
                         final lines = pending.map((n) {
                           final label = names[n.id] ?? (n.id >= 110 && n.id <= 120
-                              ? 'Discipline ${n.id - 110}'
+                              ? l.notifNameDiscipline(n.id - 110)
                               : '#${n.id}');
                           return '$label (${n.id})';
                         }).toList()
@@ -1085,25 +1085,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             backgroundColor: AppTheme.surfaceColor(context),
-                            title: Text('${pending.length} pending notifications',
+                            title: Text(l.pendingNotificationsTitle(pending.length),
                                 style: AppTheme.display(16, color: accent)),
                             content: SingleChildScrollView(
                               child: Text(
-                                lines.isEmpty ? 'None scheduled' : lines.join('\n'),
+                                lines.isEmpty ? l.noneScheduled : lines.join('\n'),
                                 style: AppTheme.serif(13, color: textCol),
                               ),
                             ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx),
-                                child: Text('OK', style: TextStyle(color: accent)),
+                                child: Text(l.ok, style: TextStyle(color: accent)),
                               ),
                             ],
                           ),
                         );
                       },
                       child: Text(
-                        'Tap to see pending notifications',
+                        l.tapToSeePending,
                         style: AppTheme.label(10, color: accent.withValues(alpha: 0.7)),
                       ),
                     ),
@@ -1114,7 +1114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: GestureDetector(
                             onTap: () async {
                               final ok = await NotificationService.instance.testNotification();
-                              if (mounted) _toast(ok ? 'Test notification sent!' : 'Failed to send test notification');
+                              if (mounted) _toast(ok ? l.testNotifSent : l.testNotifFailed);
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1123,7 +1123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               alignment: Alignment.center,
-                              child: Text('Test notification', style: AppTheme.label(11, color: accent)),
+                              child: Text(l.testNotifButton, style: AppTheme.label(11, color: accent)),
                             ),
                           ),
                         ),
@@ -1134,7 +1134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               await NotificationService.instance.rescheduleAll();
                               if (mounted) {
                                 setState(() {});
-                                _toast('All notifications rescheduled');
+                                _toast(l.allNotificationsRescheduled);
                               }
                             },
                             child: Container(
@@ -1144,7 +1144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               alignment: Alignment.center,
-                              child: Text('Reschedule all', style: AppTheme.label(11, color: accent)),
+                              child: Text(l.rescheduleAll, style: AppTheme.label(11, color: accent)),
                             ),
                           ),
                         ),

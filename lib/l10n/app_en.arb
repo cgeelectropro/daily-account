@@ -637,6 +637,7 @@
   "voiceNoteDelete": "Delete recording",
   "voiceNoteDeleteConfirm": "Delete this voice note?",
   "voiceNoteSaved": "Voice note saved",
+  "voiceNotePermissionDenied": "Microphone permission is required to record voice notes. Please enable it in your device settings.",
 
   "fastingPeriod": "Fasting period",
   "fastingStartDate": "Start date",
@@ -653,6 +654,19 @@
   "fastingNone": "No active fast",
   "startFast": "Start a fast",
   "endFast": "End fast",
+  "endFastConfirm": "Are you sure you want to end your current fast? This cannot be undone.",
+  "endFastCancel": "Keep fasting",
+  "fastingTimeConfig": "Daily fasting hours",
+  "fastingStartHour": "From",
+  "fastingEndHour": "To",
+  "fastingPresetPartial": "Partial (00:00–18:00)",
+  "fastingPresetFullDay": "Full day (06:00–18:00)",
+  "fastingPresetExtended": "24h (00:00–00:00)",
+  "fastingPresetCustom": "Custom",
+  "fastingHoursPerDay": "{hours}h per day",
+  "@fastingHoursPerDay": { "placeholders": { "hours": { "type": "int" } } },
+  "fastingDaysCount": "{count, plural, =1{1 day} other{{count} days}}",
+  "@fastingDaysCount": { "placeholders": { "count": { "type": "int" } } },
 
   "certificateTitle": "Certificate of Faithfulness",
   "certificateSubtitle": "Monthly Spiritual Achievement",
@@ -731,5 +745,48 @@
     }
   },
   "cancelTimerKeep": "Keep timing",
-  "cancelTimerDiscard": "Discard"
+  "cancelTimerDiscard": "Discard",
+
+  "notificationSoundLabel": "NOTIFICATION SOUND",
+  "soundPlaying": "Playing",
+  "notificationsHealthy": "Notifications healthy",
+  "notificationIssuesDetected": "Notification issues detected",
+  "diagPermissionGranted": "Permission granted",
+  "diagExactAlarms": "Exact alarms",
+  "diagBatteryOptimized": "Battery optimized",
+  "diagFix": "Fix",
+  "diagScheduledFailed": "Scheduled: {scheduled} | Failed: {failed}",
+  "@diagScheduledFailed": {
+    "placeholders": {
+      "scheduled": { "type": "int" },
+      "failed": { "type": "int" }
+    }
+  },
+  "pendingNotificationsTitle": "{count} pending notifications",
+  "@pendingNotificationsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "noneScheduled": "None scheduled",
+  "tapToSeePending": "Tap to see pending notifications",
+  "testNotifSent": "Test notification sent!",
+  "testNotifFailed": "Failed to send test notification",
+  "testNotifButton": "Test notification",
+  "rescheduleAll": "Reschedule all",
+  "allNotificationsRescheduled": "All notifications rescheduled",
+  "replaceData": "Replace",
+  "ok": "OK",
+  "notifNameDaily": "Daily reminder",
+  "notifNameSunday": "Sunday send",
+  "notifNameAutoSend": "Auto-send",
+  "notifNameDailyFollowUp1": "Daily follow-up 1",
+  "notifNameDailyFollowUp2": "Daily follow-up 2",
+  "notifNameDailyFollowUp3": "Daily follow-up 3",
+  "notifNameSundayFollowUp1": "Sunday follow-up 1",
+  "notifNameSundayFollowUp2": "Sunday follow-up 2",
+  "notifNameMidWeekNudge": "Mid-week nudge",
+  "notifNameSaturdaySummary": "Saturday summary",
+  "notifNameDiscipline": "Discipline {id}",
+  "@notifNameDiscipline": {
+    "placeholders": { "id": { "type": "int" } }
+  }
 }
