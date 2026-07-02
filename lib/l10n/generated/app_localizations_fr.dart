@@ -1868,6 +1868,58 @@ class SFr extends S {
       'Appui long pour supprimer cette activité';
 
   @override
+  String get planSectionTitle => 'Plan de Lecture Biblique';
+
+  @override
+  String get planNoActive =>
+      'Aucun plan actif. Choisissez-en un pour commencer :';
+
+  @override
+  String get planStart => 'Commencer';
+
+  @override
+  String get planPause => 'Mettre en pause';
+
+  @override
+  String get planReset => 'Réinitialiser';
+
+  @override
+  String planProgress(int percent) {
+    return '$percent% complété';
+  }
+
+  @override
+  String planDayOf(int current, int total) {
+    return 'Jour $current sur $total';
+  }
+
+  @override
+  String get planCompleted => 'Plan terminé ! Choisissez-en un autre :';
+
+  @override
+  String get planSuggestionFill => 'Remplir';
+
+  @override
+  String get planSuggestionDone => 'Fait';
+
+  @override
+  String get planSuggestionToday => 'Aujourd\'hui';
+
+  @override
+  String get reportNarrativeHeader => 'Résumé de la semaine';
+
+  @override
+  String get reportMilestoneHeader => 'Jalons';
+
+  @override
+  String get reportTrendHeader => 'Tendances';
+
+  @override
+  String reportPlanProgress(String name, int current, int total, int percent) {
+    return 'Plan de lecture : $name — Jour $current/$total ($percent%)';
+  }
+
+  @override
   String get reflectTitle => 'Réflexion Quotidienne';
 
   @override

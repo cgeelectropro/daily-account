@@ -3367,6 +3367,96 @@ abstract class S {
   /// **'Long press to delete this activity'**
   String get longPressToDeleteActivity;
 
+  /// No description provided for @planSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible Reading Plan'**
+  String get planSectionTitle;
+
+  /// No description provided for @planNoActive.
+  ///
+  /// In en, this message translates to:
+  /// **'No active plan. Choose one to get started:'**
+  String get planNoActive;
+
+  /// No description provided for @planStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get planStart;
+
+  /// No description provided for @planPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause Plan'**
+  String get planPause;
+
+  /// No description provided for @planReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get planReset;
+
+  /// No description provided for @planProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% complete'**
+  String planProgress(int percent);
+
+  /// No description provided for @planDayOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {current} of {total}'**
+  String planDayOf(int current, int total);
+
+  /// No description provided for @planCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan completed! Choose another:'**
+  String get planCompleted;
+
+  /// No description provided for @planSuggestionFill.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill'**
+  String get planSuggestionFill;
+
+  /// No description provided for @planSuggestionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get planSuggestionDone;
+
+  /// No description provided for @planSuggestionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get planSuggestionToday;
+
+  /// No description provided for @reportNarrativeHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Week Summary'**
+  String get reportNarrativeHeader;
+
+  /// No description provided for @reportMilestoneHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Milestones'**
+  String get reportMilestoneHeader;
+
+  /// No description provided for @reportTrendHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Trends'**
+  String get reportTrendHeader;
+
+  /// No description provided for @reportPlanProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible Reading Plan: {name} — Day {current}/{total} ({percent}%)'**
+  String reportPlanProgress(String name, int current, int total, int percent);
+
   /// No description provided for @reflectTitle.
   ///
   /// In en, this message translates to:

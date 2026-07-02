@@ -1846,6 +1846,57 @@ class SEn extends S {
   String get longPressToDeleteActivity => 'Long press to delete this activity';
 
   @override
+  String get planSectionTitle => 'Bible Reading Plan';
+
+  @override
+  String get planNoActive => 'No active plan. Choose one to get started:';
+
+  @override
+  String get planStart => 'Start';
+
+  @override
+  String get planPause => 'Pause Plan';
+
+  @override
+  String get planReset => 'Reset';
+
+  @override
+  String planProgress(int percent) {
+    return '$percent% complete';
+  }
+
+  @override
+  String planDayOf(int current, int total) {
+    return 'Day $current of $total';
+  }
+
+  @override
+  String get planCompleted => 'Plan completed! Choose another:';
+
+  @override
+  String get planSuggestionFill => 'Fill';
+
+  @override
+  String get planSuggestionDone => 'Done';
+
+  @override
+  String get planSuggestionToday => 'Today';
+
+  @override
+  String get reportNarrativeHeader => 'Week Summary';
+
+  @override
+  String get reportMilestoneHeader => 'Milestones';
+
+  @override
+  String get reportTrendHeader => 'Trends';
+
+  @override
+  String reportPlanProgress(String name, int current, int total, int percent) {
+    return 'Bible Reading Plan: $name — Day $current/$total ($percent%)';
+  }
+
+  @override
   String get reflectTitle => 'Daily Reflection';
 
   @override
