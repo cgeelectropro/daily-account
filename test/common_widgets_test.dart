@@ -233,7 +233,7 @@ void main() {
           onChanged: (v) => changed = v,
         ),
       ));
-      await tester.enterText(find.byType(TextFormField), 'Hello');
+      await tester.enterText(find.byType(TextField), 'Hello');
       expect(changed, 'Hello');
     });
 
