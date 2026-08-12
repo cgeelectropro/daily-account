@@ -24,7 +24,10 @@
   "bibleSessionChapter": "Ch.",
   "bibleSessionChaptersResult": "= {count} chapitre(s)",
   "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
+  "unknownBibleBook": "Livre inconnu — choisissez-en un dans la liste",
   "addReadingSession": "Ajouter une session de lecture",
+  "addDdegSession": "Ajouter une session RDQD",
+  "addPrayerSession": "Ajouter une session de prière",
   "removeSession": "Supprimer",
   "durationCustom": "Personnalis\u00e9",
 
@@ -215,7 +218,7 @@
       "unit": { "type": "String" }
     }
   },
-  "reportDDEG": "RDQ \u2014 Rencontre avec Dieu :",
+  "reportDDEG": "RDQD \u2014 Rencontre avec Dieu :",
   "reportDDEGScripture": "   Passage : {scripture}",
   "@reportDDEGScripture": {
     "placeholders": { "scripture": { "type": "String" } }
@@ -722,6 +725,7 @@
   "customFieldTypeDuration": "Dur\u00e9e",
   "customFieldTypeYesNo": "Oui/Non",
   "customFieldTypeNotes": "Notes",
+  "customFieldTypeCounter": "Compteur",
   "customActivityMaxFields": "Maximum 8 champs",
   "cancelTimerTitle": "Annuler le minuteur ?",
   "cancelTimerContent": "Abandonner {elapsed} de {name} ?",

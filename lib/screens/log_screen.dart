@@ -133,7 +133,12 @@ class _LogScreenState extends State<LogScreen> {
       final freq = <String, int>{};
       for (final d in prayerDurations) freq[d] = (freq[d] ?? 0) + 1;
       final top = freq.entries.reduce((a, b) => a.value >= b.value ? a : b);
-      if (top.value >= 3) _log.prayerAloneDuration = top.key;
+      if (top.value >= 3) {
+        _log.prayerAloneDuration = top.key;
+        if (_log.prayerAloneSessions.isEmpty) {
+          _log.prayerAloneSessions = [PrayerSession(duration: top.key)];
+        }
+      }
     }
 
     // Pre-fill DDEG scripture pattern
@@ -148,7 +153,12 @@ class _LogScreenState extends State<LogScreen> {
       if (bookMatch != null) {
         final book = bookMatch.group(0)!.trim();
         final sameBook = ddegScriptures.where((s) => s.startsWith(book)).length;
-        if (sameBook >= 2) _log.ddegScripture = book;
+        if (sameBook >= 2) {
+          _log.ddegScripture = book;
+          if (_log.ddegSessions.isEmpty) {
+            _log.ddegSessions = [DdegSession(scripture: book)];
+          }
+        }
       }
     }
 
@@ -689,9 +699,18 @@ class _LogScreenState extends State<LogScreen> {
       _log.literature = prev.literature.map((e) => LiteratureEntry(title: e.title, amount: e.amount, unit: e.unit)).toList();
       _log.ddegScripture = prev.ddegScripture;
       _log.ddegTime = prev.ddegTime;
+      _log.ddegSessions = prev.ddegSessions.map((s) => DdegSession(
+        scripture: s.scripture, time: s.time,
+      )).toList();
       _log.prayerAloneDuration = prev.prayerAloneDuration;
+      _log.prayerAloneSessions = prev.prayerAloneSessions.map((s) => PrayerSession(
+        duration: s.duration,
+      )).toList();
       _log.prayerOthersDuration = prev.prayerOthersDuration;
       _log.prayerOthersContext = prev.prayerOthersContext;
+      _log.prayerOthersSessions = prev.prayerOthersSessions.map((s) => PrayerSession(
+        duration: s.duration, notes: s.notes,
+      )).toList();
       _log.fastingType = prev.fastingType;
       _log.fastingDuration = prev.fastingDuration;
       _log.givingType = prev.givingType;
@@ -932,76 +951,31 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ).animate().fadeIn(delay: 120.ms),
 
-        // DDEG
+        // DDEG (multi-session)
         SectionCard(
           icon: '\u{1F525}',
           title: t.sectionDDEG,
-          initiallyExpanded: _log.ddegScripture.isNotEmpty || _log.ddegNotes.isNotEmpty,
-          children: [
-            GoldField(
-              label: t.ddegScriptureLabel,
-              hint: t.ddegScriptureHint,
-              value: _log.ddegScripture,
-              suggestions: bibleBookNames,
-              onChanged: (v) { _log.ddegScripture = v; _persist(); },
-            ),
-            DurationQuickPick(
-              label: t.ddegTimeLabel,
-              customLabel: t.durationCustom,
-              value: _log.ddegTime,
-              onChanged: (v) { _log.ddegTime = v; _persist(); },
-            ),
-            GoldField(
-              label: t.ddegNotesLabel,
-              hint: t.ddegNotesHint,
-              value: _log.ddegNotes,
-              maxLines: 4,
-              onChanged: (v) { _log.ddegNotes = v; _persist(); },
-            ),
-          ],
+          initiallyExpanded: _log.ddegSessions.any((s) => s.isNotEmpty) ||
+              _log.ddegScripture.isNotEmpty || _log.ddegNotes.isNotEmpty,
+          children: _ddegSessionWidgets(t, bibleBookNames),
         ).animate().fadeIn(delay: 160.ms),
 
-        // Prayer alone
+        // Prayer alone (multi-session)
         SectionCard(
           icon: '\u{1F64F}',
           title: t.sectionPrayerAlone,
-          initiallyExpanded: _log.prayerAloneDuration.isNotEmpty || _log.prayerAloneNotes.isNotEmpty,
-          children: [
-            DurationQuickPick(
-              label: t.durationLabel,
-              customLabel: t.durationCustom,
-              value: _log.prayerAloneDuration,
-              onChanged: (v) { _log.prayerAloneDuration = v; _persist(); },
-            ),
-            GoldField(
-              label: t.prayerAloneNotesLabel,
-              hint: t.prayerAloneNotesHint,
-              value: _log.prayerAloneNotes,
-              maxLines: 3,
-              onChanged: (v) { _log.prayerAloneNotes = v; _persist(); },
-            ),
-          ],
+          initiallyExpanded: _log.prayerAloneSessions.any((s) => s.isNotEmpty) ||
+              _log.prayerAloneDuration.isNotEmpty || _log.prayerAloneNotes.isNotEmpty,
+          children: _prayerAloneSessionWidgets(t),
         ).animate().fadeIn(delay: 200.ms),
 
-        // Prayer with others
+        // Prayer with others (multi-session)
         SectionCard(
           icon: '\u{1F91D}',
           title: t.sectionPrayerOthers,
-          initiallyExpanded: _log.prayerOthersDuration.isNotEmpty || _log.prayerOthersContext.isNotEmpty,
-          children: [
-            DurationQuickPick(
-              label: t.durationLabel,
-              customLabel: t.durationCustom,
-              value: _log.prayerOthersDuration,
-              onChanged: (v) { _log.prayerOthersDuration = v; _persist(); },
-            ),
-            GoldField(
-              label: t.prayerOthersContextLabel,
-              hint: t.prayerOthersContextHint,
-              value: _log.prayerOthersContext,
-              onChanged: (v) { _log.prayerOthersContext = v; _persist(); },
-            ),
-          ],
+          initiallyExpanded: _log.prayerOthersSessions.any((s) => s.isNotEmpty) ||
+              _log.prayerOthersDuration.isNotEmpty || _log.prayerOthersContext.isNotEmpty,
+          children: _prayerOthersSessionWidgets(t),
         ).animate().fadeIn(delay: 240.ms),
 
         // Evangelism
@@ -1424,6 +1398,48 @@ class _LogScreenState extends State<LogScreen> {
                       maxLines: 3,
                       onChanged: (v) => _updateCustomField(activity.id, field.label, v),
                     );
+                  case CustomFieldType.counter:
+                    final currentCount = int.tryParse(
+                        fieldValues[field.label]?.toString() ?? '') ?? 0;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(field.label,
+                              style: AppTheme.label(11,
+                                  color: AppTheme.accentGold(context)
+                                      .withValues(alpha: 0.7))),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _counterButton(
+                                icon: Icons.remove,
+                                onTap: currentCount > 0
+                                    ? () => _updateCustomField(
+                                        activity.id,
+                                        field.label,
+                                        '${currentCount - 1}')
+                                    : null,
+                              ),
+                              const SizedBox(width: 24),
+                              Text('$currentCount',
+                                  style: AppTheme.display(36,
+                                      color: AppTheme.accentGold(context))),
+                              const SizedBox(width: 24),
+                              _counterButton(
+                                icon: Icons.add,
+                                onTap: () => _updateCustomField(
+                                    activity.id,
+                                    field.label,
+                                    '${currentCount + 1}'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
                 }
               }),
               // Time-conscious mode: append duration field if the activity has none
@@ -1486,6 +1502,32 @@ class _LogScreenState extends State<LogScreen> {
       _log.customActivityData[activityId] = Map<String, dynamic>.from(data);
     });
     _persist();
+  }
+
+  Widget _counterButton({required IconData icon, VoidCallback? onTap}) {
+    final accent = AppTheme.accentGold(context);
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: enabled
+              ? accent.withValues(alpha: 0.15)
+              : AppTheme.mutedColor(context).withValues(alpha: 0.1),
+          border: Border.all(
+            color: enabled
+                ? accent.withValues(alpha: 0.4)
+                : AppTheme.mutedColor(context).withValues(alpha: 0.2),
+          ),
+        ),
+        child: Icon(icon,
+            color: enabled ? accent : AppTheme.mutedColor(context),
+            size: 24),
+      ),
+    );
   }
 
   /// A compact row for each custom activity — shows icon, name, and a check toggle.
@@ -1651,7 +1693,7 @@ class _LogScreenState extends State<LogScreen> {
                       CustomField(label: 'Notes', type: CustomFieldType.notes),
                     ], fields, setModalState),
                     _templateChip(t.customActivityTemplateCounted, [
-                      CustomField(label: 'Count', type: CustomFieldType.number),
+                      CustomField(label: 'Count', type: CustomFieldType.counter),
                       CustomField(label: 'Notes', type: CustomFieldType.notes),
                     ], fields, setModalState),
                     _templateChip(t.customActivityTemplateFull, [
@@ -1806,6 +1848,8 @@ class _LogScreenState extends State<LogScreen> {
         return t.customFieldTypeYesNo;
       case CustomFieldType.notes:
         return t.customFieldTypeNotes;
+      case CustomFieldType.counter:
+        return t.customFieldTypeCounter;
     }
   }
 
@@ -1814,9 +1858,9 @@ class _LogScreenState extends State<LogScreen> {
     final disciplines = <(String, String, bool)>[
       ('\uD83D\uDCD6', t.sectionBible, _log.bibleReference.isNotEmpty || _log.bibleChapters.isNotEmpty || _log.bibleSessions.any((s) => s.isNotEmpty)),
       ('\uD83D\uDCDA', t.sectionLiterature, _log.literature.any((l) => l.title.isNotEmpty)),
-      ('\uD83D\uDD25', t.sectionDDEG, _log.ddegScripture.isNotEmpty || _log.ddegNotes.isNotEmpty),
-      ('\uD83D\uDE4F', t.sectionPrayerAlone, _log.prayerAloneDuration.isNotEmpty),
-      ('\uD83E\uDD1D', t.sectionPrayerOthers, _log.prayerOthersDuration.isNotEmpty),
+      ('\uD83D\uDD25', t.sectionDDEG, _log.ddegSessions.any((s) => s.isNotEmpty) || _log.ddegScripture.isNotEmpty || _log.ddegNotes.isNotEmpty),
+      ('\uD83D\uDE4F', t.sectionPrayerAlone, _log.prayerAloneSessions.any((s) => s.isNotEmpty) || _log.prayerAloneDuration.isNotEmpty),
+      ('\uD83E\uDD1D', t.sectionPrayerOthers, _log.prayerOthersSessions.any((s) => s.isNotEmpty) || _log.prayerOthersDuration.isNotEmpty),
       ('\uD83D\uDCE2', t.sectionEvangelism, _log.evangelismContacts.isNotEmpty),
       ('\uD83C\uDF7D\uFE0F', t.sectionFasting, _log.fastingType.isNotEmpty || _log.fastingDuration.isNotEmpty),
       ('\uD83D\uDCB0', t.sectionGiving, _log.givingType.isNotEmpty),
@@ -2331,17 +2375,32 @@ class _LogScreenState extends State<LogScreen> {
   /// Recalculate a session and sync legacy fields for backward compat.
   void _recalcSession(BibleReadingEntry session) {
     session.recalculate();
-    // Sync legacy fields so reports/widgets still work
+    // Sync legacy fields so reports/widgets still work. Mirror the session
+    // total directly — do NOT read back through totalBibleChapters (which
+    // adds bibleChapters' own current value), or repeated recalculation
+    // would snowball the count on every keystroke.
     final locale = Localizations.localeOf(context).languageCode;
-    _log.bibleChapters = '${_log.totalBibleChapters}';
+    _log.bibleChapters = '${_log.totalSessionChapters}';
     _log.bibleReference = _log.combinedBibleReference(locale);
     _persist();
   }
 
   /// Resolve a user-typed book name (possibly localized) to the English canonical name.
+  /// Returns '' if [typed] doesn't match any real Bible book — an unrecognized
+  /// book must never be stored as if it were valid (it would silently count
+  /// as 1 chapter read in BibleReadingEntry.recalculate).
   String _resolveBookName(String typed) {
     final book = BibleBooks.findBook(typed);
-    return book?.nameEn ?? typed;
+    return book?.nameEn ?? '';
+  }
+
+  /// Error text to show under a Bible book field when the user has typed
+  /// something that doesn't resolve to a real book. [typed] is the raw
+  /// text currently in the field; [resolved] is what it resolved to.
+  String? _bookErrorText(S t, String typed, String resolved) {
+    if (typed.trim().isEmpty) return null;
+    if (resolved.isNotEmpty) return null;
+    return t.unknownBibleBook;
   }
 
   /// Get the localized display name for a canonical English book name.
@@ -2389,15 +2448,22 @@ class _LogScreenState extends State<LogScreen> {
                     child: GoldField(
                       label: t.bibleSessionBook,
                       hint: '',
-                      value: _localizedBookName(session.startBook),
+                      value: session.startBook.isNotEmpty
+                          ? _localizedBookName(session.startBook)
+                          : session.startBookRaw,
                       suggestions: bibleBookNames,
+                      errorText: _bookErrorText(t, session.startBookRaw, session.startBook),
                       onChanged: (v) {
-                        session.startBook = _resolveBookName(v);
-                        // Auto-fill end book with same book for convenience
-                        if (session.endBook.isEmpty) {
-                          session.endBook = session.startBook;
-                        }
-                        _recalcSession(session);
+                        setState(() {
+                          session.startBookRaw = v;
+                          session.startBook = _resolveBookName(v);
+                          // Auto-fill end book with same book for convenience
+                          if (session.endBook.isEmpty && session.startBook.isNotEmpty) {
+                            session.endBook = session.startBook;
+                            session.endBookRaw = session.startBook;
+                          }
+                          _recalcSession(session);
+                        });
                       },
                     ),
                   ),
@@ -2410,12 +2476,14 @@ class _LogScreenState extends State<LogScreen> {
                       value: session.startChapter > 0 ? '${session.startChapter}' : '',
                       keyboardType: TextInputType.number,
                       onChanged: (v) {
-                        session.startChapter = int.tryParse(v) ?? 0;
-                        // If single-chapter entry, sync end chapter
-                        if (session.endChapter < 1) {
-                          session.endChapter = session.startChapter;
-                        }
-                        _recalcSession(session);
+                        setState(() {
+                          session.startChapter = int.tryParse(v) ?? 0;
+                          // If single-chapter entry, sync end chapter
+                          if (session.endChapter < 1) {
+                            session.endChapter = session.startChapter;
+                          }
+                          _recalcSession(session);
+                        });
                       },
                     ),
                   ),
@@ -2433,11 +2501,17 @@ class _LogScreenState extends State<LogScreen> {
                     child: GoldField(
                       label: t.bibleSessionBook,
                       hint: '',
-                      value: _localizedBookName(session.endBook),
+                      value: session.endBook.isNotEmpty
+                          ? _localizedBookName(session.endBook)
+                          : session.endBookRaw,
                       suggestions: bibleBookNames,
+                      errorText: _bookErrorText(t, session.endBookRaw, session.endBook),
                       onChanged: (v) {
-                        session.endBook = _resolveBookName(v);
-                        _recalcSession(session);
+                        setState(() {
+                          session.endBookRaw = v;
+                          session.endBook = _resolveBookName(v);
+                          _recalcSession(session);
+                        });
                       },
                     ),
                   ),
@@ -2517,6 +2591,307 @@ class _LogScreenState extends State<LogScreen> {
           },
           icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
           label: Text(t.addReadingSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
+  }
+
+  // ── DDEG sessions (multi-session) ──────────────────────────
+
+  void _ensureDdegSession() {
+    if (_log.ddegSessions.isEmpty) {
+      _log.ddegSessions = [DdegSession()];
+    }
+  }
+
+  void _syncDdegLegacy() {
+    if (_log.ddegSessions.isNotEmpty) {
+      final first = _log.ddegSessions.first;
+      _log.ddegScripture = first.scripture;
+      _log.ddegTime = first.time;
+      _log.ddegNotes = first.notes;
+    }
+    _persist();
+  }
+
+  List<Widget> _ddegSessionWidgets(S t, List<String> bibleBookNames) {
+    _ensureDdegSession();
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+
+    return [
+      ..._log.ddegSessions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final session = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_log.ddegSessions.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('${t.sectionDDEG} ${i + 1}',
+                      style: AppTheme.label(10,
+                          color: AppTheme.mutedColor(context))),
+                ),
+              GoldField(
+                label: t.ddegScriptureLabel,
+                hint: t.ddegScriptureHint,
+                value: session.scripture,
+                suggestions: bibleBookNames,
+                onChanged: (v) {
+                  session.scripture = v;
+                  _syncDdegLegacy();
+                },
+              ),
+              DurationQuickPick(
+                label: t.ddegTimeLabel,
+                customLabel: t.durationCustom,
+                value: session.time,
+                onChanged: (v) {
+                  session.time = v;
+                  _syncDdegLegacy();
+                },
+              ),
+              GoldField(
+                label: t.ddegNotesLabel,
+                hint: t.ddegNotesHint,
+                value: session.notes,
+                maxLines: 4,
+                onChanged: (v) {
+                  session.notes = v;
+                  _syncDdegLegacy();
+                },
+              ),
+              if (_log.ddegSessions.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.ddegSessions.removeAt(i));
+                      _syncDdegLegacy();
+                    },
+                    icon: const Icon(Icons.remove_circle_outline,
+                        size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession,
+                        style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _log.ddegSessions.add(DdegSession()));
+          },
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addDdegSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
+  }
+
+  // ── Prayer alone sessions (multi-session) ──────────────────
+
+  void _ensurePrayerAloneSession() {
+    if (_log.prayerAloneSessions.isEmpty) {
+      _log.prayerAloneSessions = [PrayerSession()];
+    }
+  }
+
+  void _syncPrayerAloneLegacy() {
+    if (_log.prayerAloneSessions.isNotEmpty) {
+      final first = _log.prayerAloneSessions.first;
+      _log.prayerAloneDuration = first.duration;
+      _log.prayerAloneNotes = first.notes;
+    }
+    _persist();
+  }
+
+  List<Widget> _prayerAloneSessionWidgets(S t) {
+    _ensurePrayerAloneSession();
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+
+    return [
+      ..._log.prayerAloneSessions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final session = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_log.prayerAloneSessions.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('${t.sectionPrayerAlone} ${i + 1}',
+                      style: AppTheme.label(10,
+                          color: AppTheme.mutedColor(context))),
+                ),
+              DurationQuickPick(
+                label: t.durationLabel,
+                customLabel: t.durationCustom,
+                value: session.duration,
+                onChanged: (v) {
+                  session.duration = v;
+                  _syncPrayerAloneLegacy();
+                },
+              ),
+              GoldField(
+                label: t.prayerAloneNotesLabel,
+                hint: t.prayerAloneNotesHint,
+                value: session.notes,
+                maxLines: 3,
+                onChanged: (v) {
+                  session.notes = v;
+                  _syncPrayerAloneLegacy();
+                },
+              ),
+              if (_log.prayerAloneSessions.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.prayerAloneSessions.removeAt(i));
+                      _syncPrayerAloneLegacy();
+                    },
+                    icon: const Icon(Icons.remove_circle_outline,
+                        size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession,
+                        style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _log.prayerAloneSessions.add(PrayerSession()));
+          },
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addPrayerSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
+  }
+
+  // ── Prayer with others sessions (multi-session) ────────────
+
+  void _ensurePrayerOthersSession() {
+    if (_log.prayerOthersSessions.isEmpty) {
+      _log.prayerOthersSessions = [PrayerSession()];
+    }
+  }
+
+  void _syncPrayerOthersLegacy() {
+    if (_log.prayerOthersSessions.isNotEmpty) {
+      final first = _log.prayerOthersSessions.first;
+      _log.prayerOthersDuration = first.duration;
+      _log.prayerOthersContext = first.notes;
+    }
+    _persist();
+  }
+
+  List<Widget> _prayerOthersSessionWidgets(S t) {
+    _ensurePrayerOthersSession();
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+
+    return [
+      ..._log.prayerOthersSessions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final session = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark
+                ? Colors.white.withValues(alpha: 0.03)
+                : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_log.prayerOthersSessions.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('${t.sectionPrayerOthers} ${i + 1}',
+                      style: AppTheme.label(10,
+                          color: AppTheme.mutedColor(context))),
+                ),
+              DurationQuickPick(
+                label: t.durationLabel,
+                customLabel: t.durationCustom,
+                value: session.duration,
+                onChanged: (v) {
+                  session.duration = v;
+                  _syncPrayerOthersLegacy();
+                },
+              ),
+              GoldField(
+                label: t.prayerOthersContextLabel,
+                hint: t.prayerOthersContextHint,
+                value: session.notes,
+                onChanged: (v) {
+                  session.notes = v;
+                  _syncPrayerOthersLegacy();
+                },
+              ),
+              if (_log.prayerOthersSessions.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.prayerOthersSessions.removeAt(i));
+                      _syncPrayerOthersLegacy();
+                    },
+                    icon: const Icon(Icons.remove_circle_outline,
+                        size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession,
+                        style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _log.prayerOthersSessions.add(PrayerSession()));
+          },
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addPrayerSession, style: AppTheme.serif(13, color: accent)),
         ),
       ),
     ];

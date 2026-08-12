@@ -27,7 +27,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -71,7 +71,10 @@ class StorageService {
             evangelismDuration TEXT DEFAULT '',
             givingDuration TEXT DEFAULT '',
             churchDuration TEXT DEFAULT '',
-            custom_activity_data TEXT DEFAULT ''
+            custom_activity_data TEXT DEFAULT '',
+            ddegSessions TEXT DEFAULT '',
+            prayerAloneSessions TEXT DEFAULT '',
+            prayerOthersSessions TEXT DEFAULT ''
           )
         ''');
         await _createSavedReportsTable(db);
@@ -157,6 +160,13 @@ class StorageService {
           if (oldVersion < 11) {
             await txn.execute("ALTER TABLE fasting_periods ADD COLUMN startHour INTEGER DEFAULT 0");
             await txn.execute("ALTER TABLE fasting_periods ADD COLUMN endHour INTEGER DEFAULT 24");
+          }
+          if (oldVersion < 12) {
+            for (final col in [
+              'ddegSessions', 'prayerAloneSessions', 'prayerOthersSessions',
+            ]) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
           }
         });
       },

@@ -208,12 +208,26 @@ class ReportIntelligenceService {
       if (hasBible) bibleDays++;
       bibleChapters += log.totalBibleChapters;
 
-      // Prayer
-      final hasPrayer = log.prayerAloneDuration.isNotEmpty ||
+      // Prayer (session-aware)
+      final hasPrayer = log.prayerAloneSessions.any((s) => s.isNotEmpty) ||
+          log.prayerOthersSessions.any((s) => s.isNotEmpty) ||
+          log.prayerAloneDuration.isNotEmpty ||
           log.prayerOthersDuration.isNotEmpty;
       if (hasPrayer) prayerDays++;
-      prayerMinutes += _parseMinutes(log.prayerAloneDuration);
-      prayerMinutes += _parseMinutes(log.prayerOthersDuration);
+      if (log.prayerAloneSessions.any((s) => s.isNotEmpty)) {
+        for (final s in log.prayerAloneSessions) {
+          prayerMinutes += _parseMinutes(s.duration);
+        }
+      } else {
+        prayerMinutes += _parseMinutes(log.prayerAloneDuration);
+      }
+      if (log.prayerOthersSessions.any((s) => s.isNotEmpty)) {
+        for (final s in log.prayerOthersSessions) {
+          prayerMinutes += _parseMinutes(s.duration);
+        }
+      } else {
+        prayerMinutes += _parseMinutes(log.prayerOthersDuration);
+      }
 
       // Evangelism
       final contactCount = int.tryParse(log.evangelismContacts) ?? 0;
@@ -238,8 +252,9 @@ class ReportIntelligenceService {
       literatureItems +=
           log.literature.where((e) => e.title.isNotEmpty).length;
 
-      // DDEG
-      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
+      // DDEG (session-aware)
+      if (log.ddegSessions.any((s) => s.isNotEmpty) ||
+          log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
         ddegDays++;
       }
 
@@ -616,7 +631,7 @@ class ReportIntelligenceService {
       'bible': 'Lecture de la Bible',
       'prayer': 'Prière',
       'evangelism': 'Évangélisation',
-      'ddeg': 'DDEG',
+      'ddeg': 'RDQD',
       'fasting': 'Jeûne',
       'literature': 'Lecture',
       'discipleship': 'Discipulat',

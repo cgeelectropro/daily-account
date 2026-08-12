@@ -72,7 +72,16 @@ class SFr extends S {
   }
 
   @override
+  String get unknownBibleBook => 'Livre inconnu — choisissez-en un dans la liste';
+
+  @override
   String get addReadingSession => 'Ajouter une session de lecture';
+
+  @override
+  String get addDdegSession => 'Ajouter une session RDQD';
+
+  @override
+  String get addPrayerSession => 'Ajouter une session de prière';
 
   @override
   String get removeSession => 'Supprimer';
@@ -529,7 +538,7 @@ class SFr extends S {
   }
 
   @override
-  String get reportDDEG => 'RDQ — Rencontre avec Dieu :';
+  String get reportDDEG => 'RDQD — Rencontre avec Dieu :';
 
   @override
   String reportDDEGScripture(String scripture) {
@@ -1671,6 +1680,9 @@ class SFr extends S {
 
   @override
   String get customFieldTypeNotes => 'Notes';
+
+  @override
+  String get customFieldTypeCounter => 'Compteur';
 
   @override
   String get customActivityMaxFields => 'Maximum 8 champs';

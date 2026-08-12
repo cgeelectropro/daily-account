@@ -95,6 +95,8 @@ class GoldField extends StatelessWidget {
   /// Optional list of suggestion strings. When provided, the field shows
   /// autocomplete proposals as the user types.
   final List<String>? suggestions;
+  /// Optional inline validation message shown under the field (e.g. "Unknown book").
+  final String? errorText;
 
   const GoldField({
     super.key,
@@ -105,12 +107,14 @@ class GoldField extends StatelessWidget {
     this.keyboardType,
     this.maxLines = 1,
     this.suggestions,
+    this.errorText,
   });
 
   InputDecoration _decoration(BuildContext context, Color accent, bool dark) {
     return InputDecoration(
       hintText: hint,
       hintStyle: AppTheme.serif(14, color: AppTheme.faintColor(context)),
+      errorText: errorText,
       filled: true,
       fillColor: dark
           ? Colors.white.withValues(alpha: 0.05)

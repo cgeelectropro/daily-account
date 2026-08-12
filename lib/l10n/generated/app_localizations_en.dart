@@ -72,7 +72,16 @@ class SEn extends S {
   }
 
   @override
+  String get unknownBibleBook => 'Unknown book — pick one from the list';
+
+  @override
   String get addReadingSession => 'Add reading session';
+
+  @override
+  String get addDdegSession => 'Add DDEG session';
+
+  @override
+  String get addPrayerSession => 'Add prayer session';
 
   @override
   String get removeSession => 'Remove';
@@ -1653,6 +1662,9 @@ class SEn extends S {
 
   @override
   String get customFieldTypeNotes => 'Notes';
+
+  @override
+  String get customFieldTypeCounter => 'Counter';
 
   @override
   String get customActivityMaxFields => 'Maximum 8 fields';

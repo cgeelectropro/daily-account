@@ -102,17 +102,13 @@ class BibleBooks {
         return b;
       }
     }
-    // Try prefix match
+    // Try prefix match (covers common abbreviations like "Gen", "Rev", "Ps").
+    // Deliberately no "contains" fallback: matching an arbitrary substring
+    // anywhere in a book name (e.g. "ame" -> "James") produces silent
+    // wrong-book matches instead of correctly reporting "not found".
     for (final b in all) {
       if (b.nameEn.toLowerCase().startsWith(lower) ||
           b.nameFr.toLowerCase().startsWith(lower)) {
-        return b;
-      }
-    }
-    // Try contains match
-    for (final b in all) {
-      if (b.nameEn.toLowerCase().contains(lower) ||
-          b.nameFr.toLowerCase().contains(lower)) {
         return b;
       }
     }

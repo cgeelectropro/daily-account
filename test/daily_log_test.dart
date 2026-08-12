@@ -98,6 +98,20 @@ void main() {
       expect(entry.chaptersRead, 0);
     });
 
+    test('recalculate — unresolvable book returns 0, never guesses 1', () {
+      // startBook holds garbage that shouldn't be possible to store via the
+      // UI anymore, but the model must still fail safe if it happens.
+      final entry = BibleReadingEntry(startBook: 'Not A Real Book', startChapter: 1);
+      entry.recalculate();
+      expect(entry.chaptersRead, 0);
+    });
+
+    test('recalculate — chapter number beyond the book\'s range returns 0', () {
+      final entry = BibleReadingEntry(startBook: 'Jude', startChapter: 5); // Jude has 1 chapter
+      entry.recalculate();
+      expect(entry.chaptersRead, 0);
+    });
+
     test('recalculate — end book empty defaults to start book', () {
       final entry = BibleReadingEntry(
         startBook: 'Genesis',
@@ -224,22 +238,48 @@ void main() {
       expect(log.totalSessionChapters, 8);
     });
 
-    test('totalBibleChapters — combines sessions and legacy', () {
+    test('totalBibleChapters — sessions take priority over legacy when present', () {
+      // Sessions are authoritative once they exist. bibleChapters is only a
+      // mirror of the session total (kept in sync by log_screen.dart's
+      // _recalcSession) — adding both would double-count the same reading.
       final log = DailyLog(
         dateKey: '2025-01-01',
         bibleChapters: '2',
         bibleSessions: [BibleReadingEntry(chaptersRead: 3)],
       );
-      expect(log.totalBibleChapters, 5);
+      expect(log.totalBibleChapters, 3);
     });
 
-    test('totalBibleChapters — non-numeric legacy ignored', () {
+    test('totalBibleChapters — falls back to legacy when no sessions exist', () {
+      final log = DailyLog(dateKey: '2025-01-01', bibleChapters: '4');
+      expect(log.totalBibleChapters, 4);
+    });
+
+    test('totalBibleChapters — non-numeric legacy ignored when no sessions exist', () {
       final log = DailyLog(
         dateKey: '2025-01-01',
         bibleChapters: 'abc',
-        bibleSessions: [BibleReadingEntry(chaptersRead: 3)],
       );
-      expect(log.totalBibleChapters, 3);
+      expect(log.totalBibleChapters, 0);
+    });
+
+    test('regression: repeatedly mirroring bibleChapters from totalSessionChapters must not snowball', () {
+      // log_screen.dart _recalcSession used to run
+      // `_log.bibleChapters = '${_log.totalBibleChapters}'` on every keystroke.
+      // Since totalBibleChapters = totalSessionChapters + bibleChapters, that
+      // fed the legacy field's own prior value back into itself, so 6
+      // actually-read chapters could snowball past 500 after repeated edits.
+      // The fix mirrors totalSessionChapters directly (no self-reference), so
+      // repeated recalculation must stay at the true session total.
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        bibleSessions: [BibleReadingEntry(startBook: 'Genesis', startChapter: 1, endChapter: 6, chaptersRead: 6)],
+      );
+      for (int i = 0; i < 10; i++) {
+        log.bibleChapters = '${log.totalSessionChapters}';
+      }
+      // bibleChapters must settle on the session total and stay there.
+      expect(log.bibleChapters, '6');
     });
 
     test('combinedBibleReference — sessions only', () {
@@ -418,6 +458,175 @@ void main() {
       expect(map['bibleSessions'], isA<String>());
       final decoded = jsonDecode(map['bibleSessions']);
       expect(decoded[0]['startBook'], 'Genesis');
+    });
+  });
+
+  group('DdegSession', () {
+    test('default constructor', () {
+      final session = DdegSession();
+      expect(session.scripture, '');
+      expect(session.time, '');
+      expect(session.notes, '');
+    });
+
+    test('toMap / fromMap round-trip', () {
+      final session = DdegSession(
+          scripture: 'Ps 23', time: '30m', notes: 'Peace of God');
+      final map = session.toMap();
+      final restored = DdegSession.fromMap(map);
+      expect(restored.scripture, 'Ps 23');
+      expect(restored.time, '30m');
+      expect(restored.notes, 'Peace of God');
+    });
+
+    test('isEmpty / isNotEmpty', () {
+      expect(DdegSession().isEmpty, true);
+      expect(DdegSession(scripture: 'Ps 1').isNotEmpty, true);
+      expect(DdegSession(notes: 'something').isNotEmpty, true);
+      expect(DdegSession(time: '30m').isNotEmpty, true);
+    });
+  });
+
+  group('PrayerSession', () {
+    test('default constructor', () {
+      final session = PrayerSession();
+      expect(session.duration, '');
+      expect(session.notes, '');
+    });
+
+    test('toMap / fromMap round-trip', () {
+      final session = PrayerSession(duration: '45m', notes: 'Intercession');
+      final map = session.toMap();
+      final restored = PrayerSession.fromMap(map);
+      expect(restored.duration, '45m');
+      expect(restored.notes, 'Intercession');
+    });
+
+    test('isEmpty / isNotEmpty', () {
+      expect(PrayerSession().isEmpty, true);
+      expect(PrayerSession(duration: '30m').isNotEmpty, true);
+      expect(PrayerSession(notes: 'context').isNotEmpty, true);
+    });
+  });
+
+  group('DailyLog sessions', () {
+    test('toMap / fromMap round-trips ddegSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        ddegSessions: [
+          DdegSession(scripture: 'Ps 23', time: '30m', notes: 'Peace'),
+          DdegSession(scripture: 'John 3:16', time: '15m', notes: 'Love'),
+        ],
+      );
+      final map = log.toMap();
+      expect(map['ddegSessions'], isA<String>());
+      final restored = DailyLog.fromMap(map);
+      expect(restored.ddegSessions.length, 2);
+      expect(restored.ddegSessions[0].scripture, 'Ps 23');
+      expect(restored.ddegSessions[1].notes, 'Love');
+    });
+
+    test('toMap / fromMap round-trips prayerAloneSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        prayerAloneSessions: [
+          PrayerSession(duration: '30m', notes: 'Praise'),
+        ],
+      );
+      final map = log.toMap();
+      final restored = DailyLog.fromMap(map);
+      expect(restored.prayerAloneSessions.length, 1);
+      expect(restored.prayerAloneSessions[0].duration, '30m');
+    });
+
+    test('toMap / fromMap round-trips prayerOthersSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        prayerOthersSessions: [
+          PrayerSession(duration: '20m', notes: 'Cell group'),
+        ],
+      );
+      final map = log.toMap();
+      final restored = DailyLog.fromMap(map);
+      expect(restored.prayerOthersSessions.length, 1);
+      expect(restored.prayerOthersSessions[0].notes, 'Cell group');
+    });
+
+    test('fromMap auto-migrates old ddeg single fields to session list', () {
+      final log = DailyLog.fromMap({
+        'dateKey': '2025-01-01',
+        'ddegScripture': 'Ps 23',
+        'ddegTime': '30m',
+        'ddegNotes': 'Great encounter',
+        'ddegSessions': '',
+      });
+      expect(log.ddegSessions.length, 1);
+      expect(log.ddegSessions[0].scripture, 'Ps 23');
+      expect(log.ddegSessions[0].time, '30m');
+      expect(log.ddegSessions[0].notes, 'Great encounter');
+    });
+
+    test('fromMap auto-migrates old prayerAlone fields to session list', () {
+      final log = DailyLog.fromMap({
+        'dateKey': '2025-01-01',
+        'prayerAloneDuration': '45m',
+        'prayerAloneNotes': 'Worship',
+        'prayerAloneSessions': '',
+      });
+      expect(log.prayerAloneSessions.length, 1);
+      expect(log.prayerAloneSessions[0].duration, '45m');
+      expect(log.prayerAloneSessions[0].notes, 'Worship');
+    });
+
+    test('fromMap auto-migrates old prayerOthers fields to session list', () {
+      final log = DailyLog.fromMap({
+        'dateKey': '2025-01-01',
+        'prayerOthersDuration': '20m',
+        'prayerOthersContext': 'Cell group',
+        'prayerOthersSessions': '',
+      });
+      expect(log.prayerOthersSessions.length, 1);
+      expect(log.prayerOthersSessions[0].duration, '20m');
+      expect(log.prayerOthersSessions[0].notes, 'Cell group');
+    });
+
+    test('fromMap does NOT auto-migrate if session list already has data', () {
+      final existingSessions = jsonEncode([
+        {'scripture': 'Rom 8', 'time': '15m', 'notes': 'Freedom'}
+      ]);
+      final log = DailyLog.fromMap({
+        'dateKey': '2025-01-01',
+        'ddegScripture': 'Ps 23',
+        'ddegTime': '30m',
+        'ddegNotes': 'Old data',
+        'ddegSessions': existingSessions,
+      });
+      expect(log.ddegSessions.length, 1);
+      expect(log.ddegSessions[0].scripture, 'Rom 8');
+    });
+
+    test('completeness counts ddegSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        ddegSessions: [DdegSession(scripture: 'Ps 1')],
+      );
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts prayerAloneSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        prayerAloneSessions: [PrayerSession(duration: '30m')],
+      );
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts prayerOthersSessions', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        prayerOthersSessions: [PrayerSession(duration: '20m')],
+      );
+      expect(log.completeness, closeTo(1 / 11, 0.01));
     });
   });
 }

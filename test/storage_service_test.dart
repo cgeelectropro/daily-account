@@ -11,11 +11,11 @@ void main() {
     databaseFactory = databaseFactoryFfi;
   });
 
-  /// Helper: open an in-memory database with the same schema as the app (v10).
+  /// Helper: open an in-memory database with the same schema as the app (v12).
   Future<Database> openTestDb() async {
     return openDatabase(
       inMemoryDatabasePath,
-      version: 10,
+      version: 12,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -59,7 +59,10 @@ void main() {
             evangelismDuration TEXT DEFAULT '',
             givingDuration TEXT DEFAULT '',
             churchDuration TEXT DEFAULT '',
-            custom_activity_data TEXT DEFAULT ''
+            custom_activity_data TEXT DEFAULT '',
+            ddegSessions TEXT DEFAULT '',
+            prayerAloneSessions TEXT DEFAULT '',
+            prayerOthersSessions TEXT DEFAULT ''
           )
         ''');
         await db.execute('''
@@ -93,7 +96,9 @@ void main() {
             endDate TEXT,
             type TEXT,
             prayerFocus TEXT DEFAULT '',
-            completed INTEGER DEFAULT 0
+            completed INTEGER DEFAULT 0,
+            startHour INTEGER DEFAULT 0,
+            endHour INTEGER DEFAULT 24
           )
         ''');
       },
@@ -296,11 +301,11 @@ void main() {
   });
 
   group('Migration simulation', () {
-    test('v1 to v10 migration adds all columns', () async {
+    test('v1 to v12 migration adds all columns', () async {
       // Create a v1-like database (minimal schema)
       final db = await openDatabase(
         inMemoryDatabasePath,
-        version: 10,
+        version: 12,
         onCreate: (db, version) async {
           // Simulate v1 schema
           await db.execute('''
@@ -376,6 +381,15 @@ void main() {
             for (final col in [
               'bibleDuration', 'literatureDuration', 'evangelismDuration',
               'givingDuration', 'churchDuration', 'custom_activity_data',
+            ]) {
+              await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
+            }
+            // v11 columns
+            await txn.execute("ALTER TABLE fasting_periods ADD COLUMN startHour INTEGER DEFAULT 0");
+            await txn.execute("ALTER TABLE fasting_periods ADD COLUMN endHour INTEGER DEFAULT 24");
+            // v12 columns
+            for (final col in [
+              'ddegSessions', 'prayerAloneSessions', 'prayerOthersSessions',
             ]) {
               await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
             }

@@ -294,16 +294,32 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
           : '${log.totalBibleChapters} chapters today — you\'re devouring the Word!'));
     }
 
-    // DDEG depth
-    if (log.ddegNotes.length > 50) {
+    // DDEG depth (check sessions first, fall back to legacy)
+    final ddegNotesLen = log.ddegSessions.isNotEmpty
+        ? log.ddegSessions.fold(0, (sum, s) => sum + s.notes.length)
+        : log.ddegNotes.length;
+    if (ddegNotesLen > 50) {
       signals.add((3, isFr
           ? 'Vos notes RDQD montrent une réflexion profonde. Dieu parle à ceux qui écoutent.'
           : 'Your DDEG notes show deep reflection. God speaks to those who listen.'));
     }
 
-    // Prayer duration
-    final prayerMin = _parseMinutes(log.prayerAloneDuration) +
-        _parseMinutes(log.prayerOthersDuration);
+    // Prayer duration (session-aware)
+    int prayerMin = 0;
+    if (log.prayerAloneSessions.any((s) => s.isNotEmpty)) {
+      for (final s in log.prayerAloneSessions) {
+        prayerMin += _parseMinutes(s.duration);
+      }
+    } else {
+      prayerMin += _parseMinutes(log.prayerAloneDuration);
+    }
+    if (log.prayerOthersSessions.any((s) => s.isNotEmpty)) {
+      for (final s in log.prayerOthersSessions) {
+        prayerMin += _parseMinutes(s.duration);
+      }
+    } else {
+      prayerMin += _parseMinutes(log.prayerOthersDuration);
+    }
     if (prayerMin >= 30) {
       final avgPrayer = ctx.totalPrayerMinutesThisWeek ~/
           max(1, ctx.weekDaysFilled);

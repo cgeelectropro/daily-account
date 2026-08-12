@@ -479,6 +479,12 @@ class TimerService extends ChangeNotifier {
 
       // Merge extra fields captured before start (accumulate, don't overwrite)
       for (final entry in session.fields.entries) {
+        if (entry.key == 'bibleChapters' &&
+            !_hasBibleReference(session.fields, log)) {
+          // Never record a chapter count without a matching reference —
+          // otherwise reports show a chapter tally with no book/verse.
+          continue;
+        }
         _mergeLogField(log, entry.key, entry.value);
       }
     } else {
@@ -582,6 +588,14 @@ class TimerService extends ChangeNotifier {
     final b = int.tryParse(added) ?? 0;
     final sum = a + b;
     return sum > 0 ? '$sum' : (added.isNotEmpty ? added : existing);
+  }
+
+  /// Whether a Bible reference exists (or is about to be merged) for [log],
+  /// so a 'bibleChapters' value in [fields] has something to attach to.
+  static bool _hasBibleReference(Map<String, String> fields, DailyLog log) {
+    if (log.bibleReference.isNotEmpty) return true;
+    if ((fields['bibleReference'] ?? '').isNotEmpty) return true;
+    return log.bibleSessions.any((s) => s.isNotEmpty);
   }
 
   void _mergeLogField(DailyLog log, String key, String value) {

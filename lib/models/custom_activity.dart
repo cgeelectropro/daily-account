@@ -1,5 +1,5 @@
 /// Field types available for custom activities.
-enum CustomFieldType { text, number, duration, yesNo, notes }
+enum CustomFieldType { text, number, duration, yesNo, notes, counter }
 
 /// A single configurable field within a custom activity.
 class CustomField {

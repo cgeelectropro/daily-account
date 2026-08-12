@@ -91,6 +91,15 @@ void main() {
     test('returns null for nonsense', () {
       expect(BibleBooks.findBook('xyzzy'), isNull);
     });
+
+    test('does not fuzzy-match an arbitrary substring to the wrong book', () {
+      // Regression: findBook used to fall back to a "contains" match, so a
+      // substring like "ame" would silently resolve to "James" even though
+      // it isn't a prefix of any book name. That let mistyped/unintended
+      // text resolve to a real-but-wrong book instead of failing to match.
+      expect(BibleBooks.findBook('ame'), isNull);
+      expect(BibleBooks.findBook('alm'), isNull); // substring of "Psalms"
+    });
   });
 
   group('BibleBooks.parseReference', () {

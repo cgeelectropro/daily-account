@@ -217,11 +217,29 @@ abstract class S {
   /// **'= {count} chapter(s)'**
   String bibleSessionChaptersResult(int count);
 
+  /// No description provided for @unknownBibleBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown book — pick one from the list'**
+  String get unknownBibleBook;
+
   /// No description provided for @addReadingSession.
   ///
   /// In en, this message translates to:
   /// **'Add reading session'**
   String get addReadingSession;
+
+  /// No description provided for @addDdegSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Add DDEG session'**
+  String get addDdegSession;
+
+  /// No description provided for @addPrayerSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Add prayer session'**
+  String get addPrayerSession;
 
   /// No description provided for @removeSession.
   ///
@@ -3006,6 +3024,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Notes'**
   String get customFieldTypeNotes;
+
+  /// No description provided for @customFieldTypeCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'Counter'**
+  String get customFieldTypeCounter;
 
   /// No description provided for @customActivityMaxFields.
   ///

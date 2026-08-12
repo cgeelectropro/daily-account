@@ -6,7 +6,6 @@ import '../data/reading_plans.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/custom_activity.dart';
 import 'reading_plan_service.dart';
-import 'report_intelligence_service.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -93,8 +92,22 @@ class ReportService {
       chapters += l.totalBibleChapters;
       contacts += int.tryParse(l.evangelismContacts) ?? 0;
       lit += l.literature.where((e) => e.title.isNotEmpty).length;
-      prayerMins += _parseDurationMinutes(l.prayerAloneDuration);
-      prayerMins += _parseDurationMinutes(l.prayerOthersDuration);
+      final paSess = l.prayerAloneSessions.where((s) => s.isNotEmpty);
+      if (paSess.isNotEmpty) {
+        for (final s in paSess) {
+          prayerMins += _parseDurationMinutes(s.duration);
+        }
+      } else {
+        prayerMins += _parseDurationMinutes(l.prayerAloneDuration);
+      }
+      final poSess = l.prayerOthersSessions.where((s) => s.isNotEmpty);
+      if (poSess.isNotEmpty) {
+        for (final s in poSess) {
+          prayerMins += _parseDurationMinutes(s.duration);
+        }
+      } else {
+        prayerMins += _parseDurationMinutes(l.prayerOthersDuration);
+      }
     }
     return WeekStats(days, chapters, contacts, lit, prayerMins);
   }
@@ -131,9 +144,6 @@ class ReportService {
     int total = 0;
     for (final log in logs) {
       for (final d in [
-        log.ddegTime,
-        log.prayerAloneDuration,
-        log.prayerOthersDuration,
         log.discipleshipDuration,
         log.proclamationDuration,
         log.bibleDuration,
@@ -143,6 +153,33 @@ class ReportService {
         log.churchDuration,
       ]) {
         total += _parseDurationMinutes(d);
+      }
+      // Session-aware DDEG time
+      final ddegSessions = log.ddegSessions.where((s) => s.isNotEmpty);
+      if (ddegSessions.isNotEmpty) {
+        for (final s in ddegSessions) {
+          total += _parseDurationMinutes(s.time);
+        }
+      } else {
+        total += _parseDurationMinutes(log.ddegTime);
+      }
+      // Session-aware prayer alone duration
+      final paSessions = log.prayerAloneSessions.where((s) => s.isNotEmpty);
+      if (paSessions.isNotEmpty) {
+        for (final s in paSessions) {
+          total += _parseDurationMinutes(s.duration);
+        }
+      } else {
+        total += _parseDurationMinutes(log.prayerAloneDuration);
+      }
+      // Session-aware prayer with others duration
+      final poSessions = log.prayerOthersSessions.where((s) => s.isNotEmpty);
+      if (poSessions.isNotEmpty) {
+        for (final s in poSessions) {
+          total += _parseDurationMinutes(s.duration);
+        }
+      } else {
+        total += _parseDurationMinutes(log.prayerOthersDuration);
       }
       // Custom activity duration fields
       for (final actData in log.customActivityData.values) {
@@ -213,9 +250,9 @@ class ReportService {
   static List<bool> _disciplineChecks(DailyLog l) => [
     l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty || l.bibleSessions.any((s) => s.isNotEmpty),
     l.literature.any((e) => e.title.isNotEmpty),
-    l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
-    l.prayerAloneDuration.isNotEmpty,
-    l.prayerOthersDuration.isNotEmpty,
+    l.ddegSessions.any((s) => s.isNotEmpty) || l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
+    l.prayerAloneSessions.any((s) => s.isNotEmpty) || l.prayerAloneDuration.isNotEmpty,
+    l.prayerOthersSessions.any((s) => s.isNotEmpty) || l.prayerOthersDuration.isNotEmpty,
     l.evangelismContacts.isNotEmpty,
     l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
     l.givingType.isNotEmpty,
@@ -390,18 +427,9 @@ class ReportService {
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
       }
-      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
-        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
-        if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
-        if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
-        if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
-      }
-      if (log.prayerAloneDuration.isNotEmpty) {
-        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
-      }
-      if (log.prayerOthersDuration.isNotEmpty) {
-        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
-      }
+      _writeDdegSessions(buf, log, l);
+      _writePrayerAloneSessions(buf, log, l);
+      _writePrayerOthersSessions(buf, log, l);
       if (log.evangelismContacts.isNotEmpty) {
         buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
         if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
@@ -454,6 +482,58 @@ class ReportService {
   }
 
   // ═══════════════════════════════════════════════════════════
+  //  SESSION-AWARE REPORT HELPERS
+  // ═══════════════════════════════════════════════════════════
+
+  /// Write DDEG sessions (or legacy single fields) to the report buffer.
+  static void _writeDdegSessions(StringBuffer buf, DailyLog log, S l) {
+    final sessions = log.ddegSessions.where((s) => s.isNotEmpty).toList();
+    if (sessions.isNotEmpty) {
+      for (int i = 0; i < sessions.length; i++) {
+        final s = sessions[i];
+        final suffix = sessions.length > 1 ? ' #${i + 1}' : '';
+        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}$suffix');
+        if (s.scripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(s.scripture));
+        if (s.time.isNotEmpty) buf.writeln(l.reportDDEGTime(s.time));
+        if (s.notes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(s.notes));
+      }
+    } else if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
+      buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
+      if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
+      if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
+      if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
+    }
+  }
+
+  /// Write prayer-alone sessions (or legacy single fields) to the report buffer.
+  static void _writePrayerAloneSessions(StringBuffer buf, DailyLog log, S l) {
+    final sessions = log.prayerAloneSessions.where((s) => s.isNotEmpty).toList();
+    if (sessions.isNotEmpty) {
+      for (int i = 0; i < sessions.length; i++) {
+        final s = sessions[i];
+        final suffix = sessions.length > 1 ? ' #${i + 1}' : '';
+        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(s.duration, s.notes)}$suffix');
+      }
+    } else if (log.prayerAloneDuration.isNotEmpty) {
+      buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
+    }
+  }
+
+  /// Write prayer-with-others sessions (or legacy single fields) to the report buffer.
+  static void _writePrayerOthersSessions(StringBuffer buf, DailyLog log, S l) {
+    final sessions = log.prayerOthersSessions.where((s) => s.isNotEmpty).toList();
+    if (sessions.isNotEmpty) {
+      for (int i = 0; i < sessions.length; i++) {
+        final s = sessions[i];
+        final suffix = sessions.length > 1 ? ' #${i + 1}' : '';
+        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(s.duration, s.notes)}$suffix');
+      }
+    } else if (log.prayerOthersDuration.isNotEmpty) {
+      buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════
   //  FULL REPORT — detailed day-by-day (email, clipboard)
   // ═══════════════════════════════════════════════════════════
 
@@ -472,44 +552,6 @@ class ReportService {
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
-
-    // ── Intelligence block ────────────────────────────────────────────────
-    final thisWeekCounts = await ReportIntelligenceService.instance
-        .computeWeekCounts(keyFor(dates.first), keyFor(dates.last));
-    final lastWeekStart = dates.first.subtract(const Duration(days: 7));
-    final lastWeekEnd = dates.first.subtract(const Duration(days: 1));
-    final lastWeekCounts = await ReportIntelligenceService.instance
-        .computeWeekCounts(keyFor(lastWeekStart), keyFor(lastWeekEnd));
-    final streak = await computeStreak();
-
-    // Narrative summary
-    final narrative = ReportIntelligenceService.instance.buildNarrativeSummary(
-      thisWeek: thisWeekCounts,
-      lastWeek: lastWeekCounts,
-      streak: streak,
-      locale: locale,
-    );
-    buf.writeln('\u2500\u2500 ${l.reportNarrativeHeader} \u2500\u2500');
-    buf.writeln(narrative);
-    buf.writeln('');
-
-    // Milestones
-    final allTimeStats =
-        await ReportIntelligenceService.instance.computeAllTimeStats();
-    final milestones = await ReportIntelligenceService.instance
-        .checkNewMilestones(
-      stats: allTimeStats,
-      currentStreak: streak,
-      daysLoggedThisWeek: thisWeekCounts.daysLogged,
-      locale: locale,
-    );
-    if (milestones.isNotEmpty) {
-      buf.writeln('\u2500\u2500 ${l.reportMilestoneHeader} \u2500\u2500');
-      for (final m in milestones) {
-        buf.writeln('\uD83C\uDF1F $m');
-      }
-      buf.writeln('');
-    }
 
     // Reading plan progress
     final activePlan = ReadingPlanService.instance.activePlan;
@@ -551,18 +593,9 @@ class ReportService {
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
       }
-      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) {
-        buf.writeln('\uD83D\uDD25 ${l.reportDDEG}');
-        if (log.ddegScripture.isNotEmpty) buf.writeln(l.reportDDEGScripture(log.ddegScripture));
-        if (log.ddegTime.isNotEmpty) buf.writeln(l.reportDDEGTime(log.ddegTime));
-        if (log.ddegNotes.isNotEmpty) buf.writeln(l.reportDDEGMeditation(log.ddegNotes));
-      }
-      if (log.prayerAloneDuration.isNotEmpty) {
-        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
-      }
-      if (log.prayerOthersDuration.isNotEmpty) {
-        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
-      }
+      _writeDdegSessions(buf, log, l);
+      _writePrayerAloneSessions(buf, log, l);
+      _writePrayerOthersSessions(buf, log, l);
       if (log.evangelismContacts.isNotEmpty) {
         buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
         if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
@@ -614,19 +647,8 @@ class ReportService {
     buf.writeln('\uD83D\uDCCA ${l.reportSummaryHeader}');
     buf.writeln(l.reportSummaryActiveDays(activeDays));
 
-    // Trend-enhanced Bible chapters and evangelism lines
-    final trendSignals = ReportIntelligenceService.instance
-        .computeTrendSignals(thisWeekCounts, lastWeekCounts);
-    final bibleSignal =
-        trendSignals.firstWhere((s) => s.discipline == 'Bible',
-            orElse: () => const TrendSignal(
-                discipline: 'Bible', arrow: '→', thisWeek: 0, lastWeek: 0));
-    final evSignal =
-        trendSignals.firstWhere((s) => s.discipline == 'Evangelism',
-            orElse: () => const TrendSignal(
-                discipline: 'Evangelism', arrow: '→', thisWeek: 0, lastWeek: 0));
-    buf.writeln('${l.reportSummaryBibleChapters(totalChapters)} ${bibleSignal.arrow}');
-    buf.writeln('${l.reportSummaryEvangelism(totalContacts)} ${evSignal.arrow}');
+    buf.writeln(l.reportSummaryBibleChapters(totalChapters));
+    buf.writeln(l.reportSummaryEvangelism(totalContacts));
 
     final avgPct = activeDays > 0 ? (totalCompletion / activeDays * 100).round() : 0;
     buf.writeln(l.reportSummaryCompletion(avgPct));
@@ -653,44 +675,6 @@ class ReportService {
     buf.writeln('\u271D\uFE0F ${l.reportHeader(name.isEmpty ? "Disciple" : name)}');
     buf.writeln(l.reportWeekOf(fmtRange.format(dates.first), fmtRange.format(dates.last)));
     buf.writeln('');
-
-    // ── Intelligence block ────────────────────────────────────────────────
-    final thisWeekCounts = await ReportIntelligenceService.instance
-        .computeWeekCounts(keyFor(dates.first), keyFor(dates.last));
-    final lastWeekStart = dates.first.subtract(const Duration(days: 7));
-    final lastWeekEnd = dates.first.subtract(const Duration(days: 1));
-    final lastWeekCounts = await ReportIntelligenceService.instance
-        .computeWeekCounts(keyFor(lastWeekStart), keyFor(lastWeekEnd));
-    final streak = await computeStreak();
-
-    // Narrative summary
-    final narrative = ReportIntelligenceService.instance.buildNarrativeSummary(
-      thisWeek: thisWeekCounts,
-      lastWeek: lastWeekCounts,
-      streak: streak,
-      locale: locale,
-    );
-    buf.writeln('\u2500\u2500 ${l.reportNarrativeHeader} \u2500\u2500');
-    buf.writeln(narrative);
-    buf.writeln('');
-
-    // Milestones
-    final allTimeStats =
-        await ReportIntelligenceService.instance.computeAllTimeStats();
-    final milestones = await ReportIntelligenceService.instance
-        .checkNewMilestones(
-      stats: allTimeStats,
-      currentStreak: streak,
-      daysLoggedThisWeek: thisWeekCounts.daysLogged,
-      locale: locale,
-    );
-    if (milestones.isNotEmpty) {
-      buf.writeln('\u2500\u2500 ${l.reportMilestoneHeader} \u2500\u2500');
-      for (final m in milestones) {
-        buf.writeln('\uD83C\uDF1F $m');
-      }
-      buf.writeln('');
-    }
 
     // Reading plan progress
     final activePlan = ReadingPlanService.instance.activePlan;
@@ -731,9 +715,14 @@ class ReportService {
         final ch = log.totalBibleChapters;
         parts.add('\uD83D\uDCD6${ch > 0 ? "$ch" : ""}ch');
       }
-      if (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) parts.add('\uD83D\uDD25${l.ddegShort}');
-      if (log.prayerAloneDuration.isNotEmpty) parts.add('\uD83D\uDE4F${log.prayerAloneDuration}');
-      if (log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
+      if (log.ddegSessions.any((s) => s.isNotEmpty) || log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty) parts.add('\uD83D\uDD25${l.ddegShort}');
+      if (log.prayerAloneSessions.any((s) => s.isNotEmpty) || log.prayerAloneDuration.isNotEmpty) {
+        final dur = log.prayerAloneSessions.any((s) => s.isNotEmpty)
+            ? log.prayerAloneSessions.where((s) => s.isNotEmpty).map((s) => s.duration).where((d) => d.isNotEmpty).join('+')
+            : log.prayerAloneDuration;
+        parts.add('\uD83D\uDE4F${dur.isNotEmpty ? dur : ""}');
+      }
+      if (log.prayerOthersSessions.any((s) => s.isNotEmpty) || log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
       if (log.evangelismContacts.isNotEmpty) parts.add('\uD83D\uDCE2${log.evangelismContacts}');
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
       if (log.givingType.isNotEmpty) parts.add('\uD83D\uDCB0');

@@ -24,7 +24,10 @@
   "bibleSessionChapter": "Ch.",
   "bibleSessionChaptersResult": "= {count} chapter(s)",
   "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
+  "unknownBibleBook": "Unknown book — pick one from the list",
   "addReadingSession": "Add reading session",
+  "addDdegSession": "Add DDEG session",
+  "addPrayerSession": "Add prayer session",
   "removeSession": "Remove",
   "durationCustom": "Custom",
 
@@ -722,6 +725,7 @@
   "customFieldTypeDuration": "Duration",
   "customFieldTypeYesNo": "Yes/No",
   "customFieldTypeNotes": "Notes",
+  "customFieldTypeCounter": "Counter",
   "customActivityMaxFields": "Maximum 8 fields",
   "cancelTimerTitle": "Cancel timer?",
   "cancelTimerContent": "Discard {elapsed} of {name}?",

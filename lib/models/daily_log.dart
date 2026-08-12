@@ -27,13 +27,22 @@ class BibleReadingEntry {
   int endChapter;
   int chaptersRead;    // auto-calculated
 
+  // Transient UI-only state (not persisted): last text the user typed into
+  // the book fields, kept so an unrecognized book name can still be shown
+  // back to the user alongside an inline error, instead of being discarded.
+  String startBookRaw;
+  String endBookRaw;
+
   BibleReadingEntry({
     this.startBook = '',
     this.startChapter = 0,
     this.endBook = '',
     this.endChapter = 0,
     this.chaptersRead = 0,
-  });
+    String? startBookRaw,
+    String? endBookRaw,
+  })  : startBookRaw = startBookRaw ?? startBook,
+        endBookRaw = endBookRaw ?? endBook;
 
   Map<String, dynamic> toMap() => {
     'startBook': startBook,
@@ -61,7 +70,9 @@ class BibleReadingEntry {
     final effectiveEndChapter = endChapter < 1 ? startChapter : endChapter;
     final startRef = '$startBook $startChapter';
     final endRef = '$effectiveEndBook $effectiveEndChapter';
-    chaptersRead = BibleBooks.calculateChapters(startRef, endRef) ?? 1;
+    // If the reference can't be resolved (e.g. unknown book), record 0 —
+    // never silently guess 1 chapter for data that couldn't be verified.
+    chaptersRead = BibleBooks.calculateChapters(startRef, endRef) ?? 0;
   }
 
   /// Localized display string (e.g. "Genèse 1 – Exode 3" in French).
@@ -90,6 +101,51 @@ class BibleReadingEntry {
   bool get isNotEmpty => startBook.isNotEmpty;
 }
 
+/// A single DDEG (Daily Dynamic Encounter with God) session.
+class DdegSession {
+  String scripture;
+  String time;
+  String notes;
+
+  DdegSession({this.scripture = '', this.time = '', this.notes = ''});
+
+  Map<String, dynamic> toMap() => {
+    'scripture': scripture,
+    'time': time,
+    'notes': notes,
+  };
+
+  factory DdegSession.fromMap(Map<String, dynamic> m) => DdegSession(
+    scripture: m['scripture'] ?? '',
+    time: m['time'] ?? '',
+    notes: m['notes'] ?? '',
+  );
+
+  bool get isEmpty => scripture.isEmpty && time.isEmpty && notes.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+}
+
+/// A single prayer session (used for both Prayer Alone and Prayer With Others).
+class PrayerSession {
+  String duration;
+  String notes; // for alone: notes; for others: context/who
+
+  PrayerSession({this.duration = '', this.notes = ''});
+
+  Map<String, dynamic> toMap() => {
+    'duration': duration,
+    'notes': notes,
+  };
+
+  factory PrayerSession.fromMap(Map<String, dynamic> m) => PrayerSession(
+    duration: m['duration'] ?? '',
+    notes: m['notes'] ?? '',
+  );
+
+  bool get isEmpty => duration.isEmpty && notes.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+}
+
 /// The complete daily account for a single date.
 class DailyLog {
   String dateKey; // yyyy-MM-dd  (primary key)
@@ -108,12 +164,15 @@ class DailyLog {
   String ddegScripture;
   String ddegTime;
   String ddegNotes;
+  List<DdegSession> ddegSessions;
 
   // Prayer
   String prayerAloneDuration;
   String prayerAloneNotes;
   String prayerOthersDuration;
   String prayerOthersContext;
+  List<PrayerSession> prayerAloneSessions;
+  List<PrayerSession> prayerOthersSessions;
 
   // Evangelism
   String evangelismContacts;
@@ -176,10 +235,13 @@ class DailyLog {
     this.ddegScripture = '',
     this.ddegTime = '',
     this.ddegNotes = '',
+    List<DdegSession>? ddegSessions,
     this.prayerAloneDuration = '',
     this.prayerAloneNotes = '',
     this.prayerOthersDuration = '',
     this.prayerOthersContext = '',
+    List<PrayerSession>? prayerAloneSessions,
+    List<PrayerSession>? prayerOthersSessions,
     this.evangelismContacts = '',
     this.evangelismOutcome = '',
     this.evangelismNotes = '',
@@ -211,6 +273,9 @@ class DailyLog {
     this.completed = false,
   }) : bibleSessions = bibleSessions ?? [],
        literature = literature ?? [LiteratureEntry()],
+       ddegSessions = ddegSessions ?? [],
+       prayerAloneSessions = prayerAloneSessions ?? [],
+       prayerOthersSessions = prayerOthersSessions ?? [],
        customActivityData = customActivityData ?? {};
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
@@ -219,9 +284,9 @@ class DailyLog {
     final checks = <bool>[
       bibleReference.isNotEmpty || bibleChapters.isNotEmpty || bibleSessions.any((s) => s.isNotEmpty),
       literature.any((l) => l.title.isNotEmpty),
-      ddegScripture.isNotEmpty || ddegNotes.isNotEmpty,
-      prayerAloneDuration.isNotEmpty,
-      prayerOthersDuration.isNotEmpty,
+      ddegSessions.any((s) => s.isNotEmpty) || ddegScripture.isNotEmpty || ddegNotes.isNotEmpty,
+      prayerAloneSessions.any((s) => s.isNotEmpty) || prayerAloneDuration.isNotEmpty,
+      prayerOthersSessions.any((s) => s.isNotEmpty) || prayerOthersDuration.isNotEmpty,
       evangelismContacts.isNotEmpty,
       fastingType.isNotEmpty || fastingDuration.isNotEmpty,
       givingType.isNotEmpty,
@@ -259,10 +324,13 @@ class DailyLog {
         'ddegScripture': ddegScripture,
         'ddegTime': ddegTime,
         'ddegNotes': ddegNotes,
+        'ddegSessions': jsonEncode(ddegSessions.map((s) => s.toMap()).toList()),
         'prayerAloneDuration': prayerAloneDuration,
         'prayerAloneNotes': prayerAloneNotes,
         'prayerOthersDuration': prayerOthersDuration,
         'prayerOthersContext': prayerOthersContext,
+        'prayerAloneSessions': jsonEncode(prayerAloneSessions.map((s) => s.toMap()).toList()),
+        'prayerOthersSessions': jsonEncode(prayerOthersSessions.map((s) => s.toMap()).toList()),
         'evangelismContacts': evangelismContacts,
         'evangelismOutcome': evangelismOutcome,
         'evangelismNotes': evangelismNotes,
@@ -298,9 +366,12 @@ class DailyLog {
   int get totalSessionChapters =>
       bibleSessions.fold(0, (sum, s) => sum + s.chaptersRead);
 
-  /// Total bible chapters: sessions + legacy field.
-  int get totalBibleChapters =>
-      totalSessionChapters + (int.tryParse(bibleChapters) ?? 0);
+  /// Total bible chapters: sessions if present, else the legacy field.
+  /// When sessions exist, `bibleChapters` mirrors their total (see
+  /// log_screen.dart's `_recalcSession`), so adding both would double-count.
+  int get totalBibleChapters => bibleSessions.isNotEmpty
+      ? totalSessionChapters
+      : (int.tryParse(bibleChapters) ?? 0);
 
   /// Combined reference display for reports.
   String combinedBibleReference(String locale) {
@@ -337,6 +408,74 @@ class DailyLog {
       debugPrint('DailyLog.fromMap: failed to parse bibleSessions: $e');
     }
 
+    // DDEG sessions
+    List<DdegSession> ddegSessions = [];
+    try {
+      final rawDdeg = m['ddegSessions'];
+      if (rawDdeg != null && rawDdeg.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawDdeg) as List;
+        ddegSessions = decoded
+            .map((e) => DdegSession.fromMap(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse ddegSessions: $e');
+    }
+    // Auto-migrate from old single fields
+    if (ddegSessions.isEmpty) {
+      final oldScripture = (m['ddegScripture'] ?? '').toString();
+      final oldTime = (m['ddegTime'] ?? '').toString();
+      final oldNotes = (m['ddegNotes'] ?? '').toString();
+      if (oldScripture.isNotEmpty || oldNotes.isNotEmpty) {
+        ddegSessions = [DdegSession(
+            scripture: oldScripture, time: oldTime, notes: oldNotes)];
+      }
+    }
+
+    // Prayer alone sessions
+    List<PrayerSession> prayerAloneSessions = [];
+    try {
+      final rawPa = m['prayerAloneSessions'];
+      if (rawPa != null && rawPa.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawPa) as List;
+        prayerAloneSessions = decoded
+            .map((e) => PrayerSession.fromMap(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse prayerAloneSessions: $e');
+    }
+    if (prayerAloneSessions.isEmpty) {
+      final oldDuration = (m['prayerAloneDuration'] ?? '').toString();
+      final oldNotes = (m['prayerAloneNotes'] ?? '').toString();
+      if (oldDuration.isNotEmpty) {
+        prayerAloneSessions = [PrayerSession(
+            duration: oldDuration, notes: oldNotes)];
+      }
+    }
+
+    // Prayer with others sessions
+    List<PrayerSession> prayerOthersSessions = [];
+    try {
+      final rawPo = m['prayerOthersSessions'];
+      if (rawPo != null && rawPo.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawPo) as List;
+        prayerOthersSessions = decoded
+            .map((e) => PrayerSession.fromMap(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse prayerOthersSessions: $e');
+    }
+    if (prayerOthersSessions.isEmpty) {
+      final oldDuration = (m['prayerOthersDuration'] ?? '').toString();
+      final oldContext = (m['prayerOthersContext'] ?? '').toString();
+      if (oldDuration.isNotEmpty) {
+        prayerOthersSessions = [PrayerSession(
+            duration: oldDuration, notes: oldContext)];
+      }
+    }
+
     Map<String, Map<String, dynamic>> customData = {};
     try {
       final rawCustom = m['custom_activity_data'];
@@ -358,10 +497,13 @@ class DailyLog {
       ddegScripture: m['ddegScripture'] ?? '',
       ddegTime: m['ddegTime'] ?? '',
       ddegNotes: m['ddegNotes'] ?? '',
+      ddegSessions: ddegSessions,
       prayerAloneDuration: m['prayerAloneDuration'] ?? '',
       prayerAloneNotes: m['prayerAloneNotes'] ?? '',
       prayerOthersDuration: m['prayerOthersDuration'] ?? '',
       prayerOthersContext: m['prayerOthersContext'] ?? '',
+      prayerAloneSessions: prayerAloneSessions,
+      prayerOthersSessions: prayerOthersSessions,
       evangelismContacts: m['evangelismContacts'] ?? '',
       evangelismOutcome: m['evangelismOutcome'] ?? '',
       evangelismNotes: m['evangelismNotes'] ?? '',
