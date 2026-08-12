@@ -110,7 +110,7 @@ void main() {
     });
 
     test('lightFaint has expected hex value', () {
-      expect(AppTheme.lightFaint, const Color(0xFF8A7C64));
+      expect(AppTheme.lightFaint, const Color(0xFF6B5E48));
     });
 
     test('lightGold has expected hex value', () {

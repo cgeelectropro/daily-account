@@ -36,16 +36,7 @@ void main() {
 
     group('serialKey — all 10 built-in types', () {
       final expectations = {
-        ActivityType.bibleReading: 'b:0',
-        ActivityType.literature: 'b:1',
-        ActivityType.ddeg: 'b:2',
-        ActivityType.prayerAlone: 'b:3',
-        ActivityType.prayerOthers: 'b:4',
-        ActivityType.evangelism: 'b:5',
-        ActivityType.fasting: 'b:6',
-        ActivityType.discipleship: 'b:7',
-        ActivityType.church: 'b:8',
-        ActivityType.proclamation: 'b:9',
+        for (final type in ActivityType.values) type: 'b:${type.name}',
       };
 
       for (final entry in expectations.entries) {
