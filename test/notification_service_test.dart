@@ -12,9 +12,9 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 ///
 /// What we verify:
 /// 1. _nextInstanceOfTime always returns a FUTURE time
-/// 2. _nextInstanceOfSunday always lands on a Sunday
+/// 2. _nextInstanceOfWeekday correctly targets any weekday (including Sunday)
 /// 3. _nextInstanceOfSaturday always lands on a Saturday
-/// 4. _nextInstanceOfWeekday correctly targets any weekday
+/// 4. _nextInstanceOfMonthlyDay correctly targets a day-of-month (including "last")
 /// 5. _addMinutesToTime handles midnight wraparound
 /// 6. Follow-up IDs and timing are correct
 /// 7. Discipline reminder IDs are in the correct range
@@ -34,9 +34,16 @@ tz.TZDateTime nextInstanceOfTime(int hour, int minute, {tz.TZDateTime? now}) {
   return scheduled;
 }
 
-tz.TZDateTime nextInstanceOfSunday(int hour, int minute, {tz.TZDateTime? now}) {
+int _lastDayOf(int year, int month) => DateTime(year, month + 1, 0).day;
+
+tz.TZDateTime nextInstanceOfMonthlyDay(String configuredDay, int hour, int minute, {tz.TZDateTime? now}) {
   var scheduled = nextInstanceOfTime(hour, minute, now: now);
-  while (scheduled.weekday != DateTime.sunday) {
+  int resolve(int year, int month) {
+    if (configuredDay == 'last') return _lastDayOf(year, month);
+    final parsed = int.tryParse(configuredDay) ?? _lastDayOf(year, month);
+    return parsed.clamp(1, _lastDayOf(year, month));
+  }
+  while (scheduled.day != resolve(scheduled.year, scheduled.month)) {
     scheduled = scheduled.add(const Duration(days: 1));
   }
   return scheduled;
@@ -140,12 +147,12 @@ void main() {
     });
   });
 
-  group('nextInstanceOfSunday — Sunday reminders', () {
+  group('nextInstanceOfWeekday — generic weekday targeting (Sunday case)', () {
     test('returns this Sunday if today is before Sunday and time is ahead', () {
       // Tuesday July 1, 2026 at 10:00 → schedule for Sunday July 5 at 18:00
       final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0);
       // July 1, 2026 is a Wednesday. Next Sunday is July 5.
-      final result = nextInstanceOfSunday(18, 0, now: now);
+      final result = nextInstanceOfWeekday(DateTime.sunday, 18, 0, now: now);
 
       expect(result.weekday, DateTime.sunday);
       expect(result.hour, 18);
@@ -157,7 +164,7 @@ void main() {
       // Sunday at 19:00, schedule for 18:00 → next Sunday
       // Find a known Sunday: July 5, 2026
       final now = tz.TZDateTime(tz.local, 2026, 7, 5, 19, 0);
-      final result = nextInstanceOfSunday(18, 0, now: now);
+      final result = nextInstanceOfWeekday(DateTime.sunday, 18, 0, now: now);
 
       expect(result.weekday, DateTime.sunday);
       expect(result.isAfter(now), isTrue);
@@ -168,20 +175,58 @@ void main() {
     test('returns this Sunday if today is Sunday and time is ahead', () {
       // Sunday at 10:00, schedule for 18:00 → same Sunday
       final now = tz.TZDateTime(tz.local, 2026, 7, 5, 10, 0);
-      final result = nextInstanceOfSunday(18, 0, now: now);
+      final result = nextInstanceOfWeekday(DateTime.sunday, 18, 0, now: now);
 
       expect(result.weekday, DateTime.sunday);
       expect(result.day, 5);
       expect(result.hour, 18);
     });
 
-    test('result is always a Sunday', () {
+    test('result is always a Sunday when targeting Sunday', () {
       final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0);
       for (int h = 0; h < 24; h++) {
-        final result = nextInstanceOfSunday(h, 30, now: now);
+        final result = nextInstanceOfWeekday(DateTime.sunday, h, 30, now: now);
         expect(result.weekday, DateTime.sunday,
             reason: 'Schedule for $h:30 should be on Sunday');
       }
+    });
+  });
+
+  group('nextInstanceOfMonthlyDay — monthly reminders', () {
+    test('returns this month\'s day if it hasn\'t passed yet', () {
+      final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0); // July 1
+      final result = nextInstanceOfMonthlyDay('15', 18, 0, now: now);
+      expect(result.day, 15);
+      expect(result.month, 7);
+      expect(result.hour, 18);
+    });
+
+    test('rolls to next month if the configured day already passed', () {
+      final now = tz.TZDateTime(tz.local, 2026, 7, 20, 10, 0); // July 20
+      final result = nextInstanceOfMonthlyDay('15', 18, 0, now: now);
+      expect(result.day, 15);
+      expect(result.month, 8);
+    });
+
+    test('"last" resolves to each month\'s actual last day, including February', () {
+      final now = tz.TZDateTime(tz.local, 2026, 1, 1, 10, 0); // Jan 1, 2026 (not a leap year)
+      final result = nextInstanceOfMonthlyDay('last', 18, 0, now: now);
+      expect(result.day, 31);
+      expect(result.month, 1);
+    });
+
+    test('a day beyond the month length clamps to that month\'s last day', () {
+      // Configured day "31" but starting search in February (28 days in 2026)
+      final now = tz.TZDateTime(tz.local, 2026, 2, 1, 10, 0);
+      final result = nextInstanceOfMonthlyDay('31', 18, 0, now: now);
+      expect(result.day, 28);
+      expect(result.month, 2);
+    });
+
+    test('result is always in the future', () {
+      final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0);
+      final result = nextInstanceOfMonthlyDay('15', 18, 0, now: now);
+      expect(result.isAfter(now), isTrue);
     });
   });
 
@@ -346,28 +391,45 @@ void main() {
     });
   });
 
-  group('Sunday reminder follow-up schedule', () {
-    test('primary + 2 follow-ups all land on Sunday', () {
+  group('Report reminder follow-up schedule', () {
+    test('primary + 2 follow-ups all land on the configured weekday (Sunday case)', () {
       final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0); // Wednesday
 
       const primaryHour = 18;
       const primaryMinute = 0;
 
-      final primary = nextInstanceOfSunday(primaryHour, primaryMinute, now: now);
+      final primary = nextInstanceOfWeekday(DateTime.sunday, primaryHour, primaryMinute, now: now);
       expect(primary.weekday, DateTime.sunday);
       expect(primary.hour, 18);
 
       final f1Time = addMinutesToTime(primaryHour, primaryMinute, 30);
-      final f1 = nextInstanceOfSunday(f1Time.hour, f1Time.minute, now: now);
+      final f1 = nextInstanceOfWeekday(DateTime.sunday, f1Time.hour, f1Time.minute, now: now);
       expect(f1.weekday, DateTime.sunday);
       expect(f1.hour, 18);
       expect(f1.minute, 30);
 
       final f2Time = addMinutesToTime(primaryHour, primaryMinute, 60);
-      final f2 = nextInstanceOfSunday(f2Time.hour, f2Time.minute, now: now);
+      final f2 = nextInstanceOfWeekday(DateTime.sunday, f2Time.hour, f2Time.minute, now: now);
       expect(f2.weekday, DateTime.sunday);
       expect(f2.hour, 19);
       expect(f2.minute, 0);
+    });
+
+    test('primary + 2 follow-ups all land on the configured day of month', () {
+      final now = tz.TZDateTime(tz.local, 2026, 7, 1, 10, 0); // July 1
+
+      const primaryHour = 18;
+      const primaryMinute = 0;
+
+      final primary = nextInstanceOfMonthlyDay('25', primaryHour, primaryMinute, now: now);
+      expect(primary.day, 25);
+      expect(primary.hour, 18);
+
+      final f1Time = addMinutesToTime(primaryHour, primaryMinute, 30);
+      final f1 = nextInstanceOfMonthlyDay('25', f1Time.hour, f1Time.minute, now: now);
+      expect(f1.day, 25);
+      expect(f1.hour, 18);
+      expect(f1.minute, 30);
     });
   });
 
@@ -443,7 +505,7 @@ void main() {
       final now = tz.TZDateTime(tz.local, 2026, 7, 6, 10, 0);
       expect(now.weekday, DateTime.monday);
 
-      final scheduled = nextInstanceOfSunday(18, 0, now: now);
+      final scheduled = nextInstanceOfWeekday(DateTime.sunday, 18, 0, now: now);
 
       expect(scheduled.weekday, DateTime.sunday);
       expect(scheduled.difference(now).inDays, 6);

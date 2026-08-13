@@ -7,6 +7,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'storage_service.dart';
+import 'report_cadence_service.dart';
 
 /// Top-level handler for notification actions when the app is in the
 /// background or terminated. Must be top-level (not an instance method)
@@ -392,7 +393,7 @@ class NotificationService {
     if (enabled.isEmpty) {
       // First launch — set defaults and schedule
       await scheduleDailyReminder(20, 0);
-      await scheduleSundayReminder(18, 0);
+      await scheduleReportReminder(18, 0);
       await scheduleMidWeekNudge(18, 0);
       await scheduleSaturdaySummary(18, 0,
         title: 'Your week so far',
@@ -424,7 +425,7 @@ class NotificationService {
       title: dailyTitle.isNotEmpty ? dailyTitle : null,
       body: dailyBody.isNotEmpty ? dailyBody : null,
     );
-    await scheduleSundayReminder(sh, sm,
+    await scheduleReportReminder(sh, sm,
       followUpCount: sundayFollowUps,
       title: sundayTitle.isNotEmpty ? sundayTitle : null,
       body: sundayBody.isNotEmpty ? sundayBody : null,
@@ -675,29 +676,34 @@ class NotificationService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  //  SUNDAY SEND REMINDER (alarm-style + follow-ups)
+  //  REPORT SEND REMINDER (alarm-style + follow-ups)
   // ═════════════════════════════════════════════════════════════
 
-  /// Schedule the Sunday send reminder + follow-ups.
+  /// Schedule the report send reminder + follow-ups, on whichever day the
+  /// user's configured cadence (weekly/monthly) lands.
   /// [followUpCount] controls how many follow-ups (0–2), default 2.
-  Future<void> scheduleSundayReminder(int hour, int minute, {String? title, String? body, int followUpCount = 2}) async {
+  Future<void> scheduleReportReminder(int hour, int minute, {String? title, String? body, int followUpCount = 2}) async {
     await init();
 
-    final t = title ?? 'Sunday — Send Your Account';
+    final t = title ?? 'Time to Send Your Account';
+    final cadence = await ReportCadenceService.instance.getCadence();
+    final matchComponents = cadence == ReportCadence.weekly
+        ? DateTimeComponents.dayOfWeekAndTime
+        : null; // no monthly-recurrence equivalent — see plan notes; one-shot only
 
-    // Cancel all existing Sunday notifications
+    // Cancel all existing report notifications
     for (final id in [2, 21, 22]) {
       await _plugin.cancel(id);
     }
 
-    // Primary Sunday reminder
+    // Primary reminder
     await _safeZonedSchedule(
       2,
       t,
-      body ?? 'It\'s time to send your weekly account to your disciple maker.',
-      _nextInstanceOfSunday(hour, minute),
+      body ?? 'It\'s time to send your account to your disciple maker.',
+      await _nextReportOccurrence(hour, minute),
       _alarmDetails,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      matchDateTimeComponents: matchComponents,
       payload: 'navigate_report',
     );
 
@@ -707,10 +713,10 @@ class NotificationService {
       await _safeZonedSchedule(
         21,
         '\u23F0 $t',
-        'Your disciple maker is waiting! Send your weekly report now.',
-        _nextInstanceOfSunday(followUp1.hour, followUp1.minute),
+        'Your disciple maker is waiting! Send your report now.',
+        await _nextReportOccurrence(followUp1.hour, followUp1.minute),
         _alarmDetails,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        matchDateTimeComponents: matchComponents,
       );
     }
 
@@ -720,10 +726,10 @@ class NotificationService {
       await _safeZonedSchedule(
         22,
         '\u26A0\uFE0F $t',
-        'Last chance today! Send your account before the week ends.',
-        _nextInstanceOfSunday(followUp2.hour, followUp2.minute),
+        'Last chance today! Send your account before the day ends.',
+        await _nextReportOccurrence(followUp2.hour, followUp2.minute),
         _alarmDetails,
-        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        matchDateTimeComponents: matchComponents,
       );
     }
   }
@@ -735,13 +741,15 @@ class NotificationService {
   Future<void> scheduleAutoSendReminder(int hour, int minute, {String? title, String? body}) async {
     await init();
     await _plugin.cancel(3);
+    final cadence = await ReportCadenceService.instance.getCadence();
     await _safeZonedSchedule(
       3,
       title ?? 'Time to Send Your Account',
-      body ?? 'Your weekly report is ready. Tap to review and send it now.',
-      _nextInstanceOfSunday(hour, minute),
+      body ?? 'Your report is ready. Tap to review and send it now.',
+      await _nextReportOccurrence(hour, minute),
       _alarmDetails,
-      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      matchDateTimeComponents:
+          cadence == ReportCadence.weekly ? DateTimeComponents.dayOfWeekAndTime : null,
       payload: 'navigate_report',
     );
   }
@@ -788,31 +796,34 @@ class NotificationService {
     }
   }
 
-  /// Call this when the user sends their Sunday report.
-  /// Cancels follow-up reminders for today, then re-schedules for next Sunday.
-  Future<void> cancelSundayFollowUps() async {
+  /// Call this when the user sends their report.
+  /// Cancels follow-up reminders for today, then re-schedules for the next occurrence.
+  Future<void> cancelReportFollowUps() async {
     for (final id in [21, 22]) {
       await _plugin.cancel(id);
     }
-    // Re-schedule so they fire again next Sunday
+    // Re-schedule so they fire again next time
     final s = StorageService.instance;
     final sh = int.tryParse(await s.getSetting('sundayHour', fallback: '18')) ?? 18;
     final sm = int.tryParse(await s.getSetting('sundayMin', fallback: '0')) ?? 0;
     final count = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    final cadence = await ReportCadenceService.instance.getCadence();
+    final matchComponents =
+        cadence == ReportCadence.weekly ? DateTimeComponents.dayOfWeekAndTime : null;
 
     if (count >= 1) {
       final f1 = _addMinutesToTime(sh, sm, 30);
-      await _safeZonedSchedule(21, '\u23F0 Sunday — Send Your Account',
-        'Your disciple maker is waiting! Send your weekly report now.',
-        _nextInstanceOfSunday(f1.hour, f1.minute),
-        _alarmDetails, matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime);
+      await _safeZonedSchedule(21, '\u23F0 Time to Send Your Account',
+        'Your disciple maker is waiting! Send your report now.',
+        await _nextReportOccurrence(f1.hour, f1.minute),
+        _alarmDetails, matchDateTimeComponents: matchComponents);
     }
     if (count >= 2) {
       final f2 = _addMinutesToTime(sh, sm, 60);
-      await _safeZonedSchedule(22, '\u26A0\uFE0F Sunday — Send Your Account',
-        'Last chance today! Send your account before the week ends.',
-        _nextInstanceOfSunday(f2.hour, f2.minute),
-        _alarmDetails, matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime);
+      await _safeZonedSchedule(22, '\u26A0\uFE0F Time to Send Your Account',
+        'Last chance today! Send your account before the day ends.',
+        await _nextReportOccurrence(f2.hour, f2.minute),
+        _alarmDetails, matchDateTimeComponents: matchComponents);
     }
   }
 
@@ -1052,20 +1063,43 @@ class NotificationService {
     return scheduled;
   }
 
+  /// Next occurrence of day-of-month [day] (already resolved — e.g. from
+  /// ReportCadenceService.resolveMonthlyDay) at [hour]:[minute]. Walks
+  /// forward day-by-day like _nextInstanceOfWeekday, re-resolving [day]
+  /// against each candidate month in case the walk crosses into a new
+  /// month with a different last-day (for "last day" configurations).
+  tz.TZDateTime _nextInstanceOfMonthlyDay(int Function(int year, int month) resolveDay, int hour, int minute) {
+    var scheduled = _nextInstanceOfTime(hour, minute);
+    while (scheduled.day != resolveDay(scheduled.year, scheduled.month)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
+  }
+
+  /// Next occurrence of the user's configured report day at [hour]:[minute],
+  /// whether that's weekly (a fixed weekday) or monthly (a specific day or
+  /// the last day of the month).
+  Future<tz.TZDateTime> _nextReportOccurrence(int hour, int minute) async {
+    final cadenceSvc = ReportCadenceService.instance;
+    final cadence = await cadenceSvc.getCadence();
+    if (cadence == ReportCadence.weekly) {
+      final weekday = await cadenceSvc.getWeeklyDay();
+      return _nextInstanceOfWeekday(weekday, hour, minute);
+    }
+    final monthlyDay = await cadenceSvc.getMonthlyDay();
+    return _nextInstanceOfMonthlyDay(
+      (year, month) => cadenceSvc.resolveMonthlyDay(year, month, monthlyDay),
+      hour,
+      minute,
+    );
+  }
+
   // ── Time helpers ──────────────────────────────────────────
 
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
-    return scheduled;
-  }
-
-  tz.TZDateTime _nextInstanceOfSunday(int hour, int minute) {
-    var scheduled = _nextInstanceOfTime(hour, minute);
-    while (scheduled.weekday != DateTime.sunday) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
     return scheduled;
