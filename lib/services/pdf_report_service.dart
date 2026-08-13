@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/daily_log.dart';
+import 'report_cadence_service.dart';
 import 'report_service.dart';
 import 'storage_service.dart';
 
@@ -27,7 +28,8 @@ class PdfReportService {
   /// Build + show print/share dialog for a weekly report.
   Future<void> printWeeklyReport(String name, DateTime ref, S l, [String locale = 'en']) async {
     final doc = await _buildWeeklyPdf(name, ref, l, locale);
-    final dates = ReportService.instance.weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = ReportService.instance.weekDates(ref, endWeekday);
     final fmtRange = DateFormat('MMM_d', locale);
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
     await Printing.layoutPdf(
@@ -50,7 +52,8 @@ class PdfReportService {
   /// Share PDF bytes directly (for system share sheet).
   Future<void> shareWeeklyPdf(String name, DateTime ref, S l, [String locale = 'en']) async {
     final doc = await _buildWeeklyPdf(name, ref, l, locale);
-    final dates = ReportService.instance.weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = ReportService.instance.weekDates(ref, endWeekday);
     final fmtRange = DateFormat('MMM_d', locale);
     final fileName = 'DailyAccount_${fmtRange.format(dates.first)}-${fmtRange.format(dates.last)}.pdf';
     await Printing.sharePdf(bytes: await doc.save(), filename: fileName);
@@ -68,7 +71,8 @@ class PdfReportService {
   // ═════════════════════════════════════════════════════════
 
   Future<pw.Document> _buildWeeklyPdf(String name, DateTime ref, S l, [String locale = 'en']) async {
-    final dates = ReportService.instance.weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = ReportService.instance.weekDates(ref, endWeekday);
     final stats = await ReportService.instance.computeWeekStats(ref);
     final fmtRange = DateFormat('MMM d, yyyy', locale);
     final fmtLong = DateFormat('EEEE, MMM d', locale);

@@ -269,8 +269,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await StorageService.instance.setSetting('autoSendMin', '${_autoSendTime.minute}');
       await NotificationService.instance.scheduleAutoSendReminder(
         _autoSendTime.hour, _autoSendTime.minute,
-        title: l.notifSundayTitle,
-        body: l.notifSundayBody,
+        title: _reportReminderTitle(l),
+        body: l.notifReportBody,
       );
     } else {
       await NotificationService.instance.cancel(3);
@@ -291,8 +291,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (_autoSendEnabled && _notificationsEnabled) {
         await NotificationService.instance.scheduleAutoSendReminder(
           picked.hour, picked.minute,
-          title: l.notifSundayTitle,
-          body: l.notifSundayBody,
+          title: _reportReminderTitle(l),
+          body: l.notifReportBody,
         );
       }
     }

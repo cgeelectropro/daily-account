@@ -346,9 +346,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final ok = await ReportService.instance.sendByWhatsApp(whatsapp, report);
     if (ok) {
       await s.clearPendingReport();
-      // Mark week as sent
-      final weekKey = _key(_mondayOf(DateTime.now()));
-      await s.setSetting('lastAutoSend', weekKey);
+      // Mark period as sent (weekly or monthly key, matching current cadence)
+      final periodKey = await ReportCadenceService.instance.currentPeriodKey();
+      await s.setSetting('lastAutoSend', periodKey);
     }
     _checkPendingReport();
   }
@@ -368,9 +368,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
     // Check if we already auto-sent this period (week or month)
     final cadence = await ReportCadenceService.instance.getCadence();
-    final periodKey = cadence == ReportCadence.monthly
-        ? '${now.year}-${now.month.toString().padLeft(2, '0')}'
-        : _key(_mondayOf(now));
+    final periodKey = await ReportCadenceService.instance.currentPeriodKey(now);
     final alreadySent = await s.getSetting('lastAutoSend', fallback: '');
     if (alreadySent == periodKey) return;
 

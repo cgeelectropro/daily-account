@@ -48,6 +48,20 @@ class ReportCadenceService {
     return parsed.clamp(1, lastDayOfMonth);
   }
 
+  /// The dedup key identifying the current report period (used to detect
+  /// "already auto-sent this period"). Weekly: the Monday-of-week date key
+  /// (yyyy-MM-dd, unchanged format for backward compatibility). Monthly:
+  /// a yyyy-MM key.
+  Future<String> currentPeriodKey([DateTime? date]) async {
+    final d = date ?? DateTime.now();
+    final cadence = await getCadence();
+    if (cadence == ReportCadence.monthly) {
+      return '${d.year}-${d.month.toString().padLeft(2, '0')}';
+    }
+    final monday = d.subtract(Duration(days: (d.weekday - 1) % 7));
+    return '${monday.year.toString().padLeft(4, '0')}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
+  }
+
   /// True if [date] (default: today) is the configured report/send day.
   Future<bool> isReportDay([DateTime? date]) async {
     final d = date ?? DateTime.now();
