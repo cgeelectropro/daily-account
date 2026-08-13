@@ -306,7 +306,7 @@ class _ReportScreenState extends State<ReportScreen> {
       sentVia: channel,
     );
     // Cancel Sunday follow-up reminders — report has been sent
-    NotificationService.instance.cancelSundayFollowUps();
+    NotificationService.instance.cancelReportFollowUps();
   }
 
   @override
