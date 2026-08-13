@@ -32,6 +32,7 @@ class _ReportScreenState extends State<ReportScreen> {
   bool _loading = true;
   bool _isMonthly = false;
   bool _isReportDay = false;
+  int _weeklyEndDay = DateTime.sunday; // configured week-ending weekday
   bool _sending = false; // prevent double-tap sends
 
   // Week navigation
@@ -78,6 +79,7 @@ class _ReportScreenState extends State<ReportScreen> {
     final cadenceSvc = ReportCadenceService.instance;
     _isMonthly = await cadenceSvc.getCadence() == ReportCadence.monthly;
     _isReportDay = await cadenceSvc.isReportDay();
+    _weeklyEndDay = await cadenceSvc.getWeeklyDay();
     _name = await s.getSetting('myName');
     _email = await s.getSetting('discipleEmail');
     _whatsapp = await s.getSetting('discipleWhatsApp');
@@ -94,7 +96,7 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Future<void> _loadWeekCompletions() async {
-    final dates = ReportService.instance.weekDates(_weekRef);
+    final dates = ReportService.instance.weekDates(_weekRef, _weeklyEndDay);
     final completions = <double>[];
     for (final d in dates) {
       final log = await StorageService.instance.getLog(ReportService.instance.keyFor(d));
@@ -300,7 +302,7 @@ class _ReportScreenState extends State<ReportScreen> {
 
   /// Save report to archive when sent.
   Future<void> _recordSend(String channel) async {
-    final dates = ReportService.instance.weekDates(_weekRef);
+    final dates = ReportService.instance.weekDates(_weekRef, _weeklyEndDay);
     final weekStart = ReportService.instance.keyFor(dates.first);
     final weekEnd = ReportService.instance.keyFor(dates.last);
     await StorageService.instance.saveReport(
@@ -478,7 +480,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (_isMonthly) {
       label = fmtMonth.format(_weekRef);
     } else {
-      final dates = ReportService.instance.weekDates(_weekRef);
+      final dates = ReportService.instance.weekDates(_weekRef, _weeklyEndDay);
       label = '${fmtRange.format(dates.first)} \u2013 ${fmtRange.format(dates.last)}';
     }
 
@@ -909,7 +911,7 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   Widget _buildWeeklyChart(S l, Color accent) {
-    final dates = ReportService.instance.weekDates(_weekRef);
+    final dates = ReportService.instance.weekDates(_weekRef, _weeklyEndDay);
     final dayLabels = dates.map((d) => DateFormat('E').format(d).substring(0, 1)).toList();
 
     return Container(
