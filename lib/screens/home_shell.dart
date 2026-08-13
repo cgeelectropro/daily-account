@@ -12,6 +12,7 @@ import '../l10n/generated/app_localizations_fr.dart';
 import '../models/daily_log.dart';
 import '../models/activity_timer.dart';
 import '../services/notification_service.dart';
+import '../services/report_cadence_service.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../services/timer_service.dart';
@@ -356,7 +357,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   /// If offline, queue the report and send when connectivity returns.
   Future<void> _checkAutoSend() async {
     final now = DateTime.now();
-    if (now.weekday != DateTime.sunday) return;
+    if (!await ReportCadenceService.instance.isReportDay(now)) return;
 
     final s = StorageService.instance;
     final autoEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
@@ -365,10 +366,13 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final whatsapp = await s.getSetting('discipleWhatsApp');
     if (whatsapp.isEmpty) return;
 
-    // Check if we already auto-sent this week
-    final weekKey = _key(_mondayOf(now));
+    // Check if we already auto-sent this period (week or month)
+    final cadence = await ReportCadenceService.instance.getCadence();
+    final periodKey = cadence == ReportCadence.monthly
+        ? '${now.year}-${now.month.toString().padLeft(2, '0')}'
+        : _key(_mondayOf(now));
     final alreadySent = await s.getSetting('lastAutoSend', fallback: '');
-    if (alreadySent == weekKey) return;
+    if (alreadySent == periodKey) return;
 
     // Check if there's already a pending report queued
     final pending = await s.getPendingReport();
@@ -383,8 +387,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final name = await s.getSetting('myName');
     if (!mounted) return;
     final l = await _getReportLocalizations();
-    final fullReport = await ReportService.instance.buildFullReport(name, l);
-    final compactReport = await ReportService.instance.buildCompactReport(name, l);
+    final String fullReport;
+    final String compactReport;
+    if (cadence == ReportCadence.monthly) {
+      final monthly = await ReportService.instance.buildMonthlyReport(name, l, now.year, now.month);
+      fullReport = monthly;
+      compactReport = monthly; // monthly cadence has one report format
+    } else {
+      fullReport = await ReportService.instance.buildFullReport(name, l);
+      compactReport = await ReportService.instance.buildCompactReport(name, l);
+    }
 
     // Check connectivity
     if (!await _hasConnectivity()) {
@@ -397,12 +409,24 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final ok = await ReportService.instance.sendByWhatsApp(whatsapp, fullReport);
 
     if (ok) {
-      await s.setSetting('lastAutoSend', weekKey);
+      await s.setSetting('lastAutoSend', periodKey);
       // Also save to archive
-      final dates = ReportService.instance.weekDates();
+      final String archiveStart;
+      final String archiveEnd;
+      if (cadence == ReportCadence.monthly) {
+        final firstOfMonth = DateTime(now.year, now.month, 1);
+        final lastOfMonth = DateTime(now.year, now.month + 1, 0);
+        archiveStart = ReportService.instance.keyFor(firstOfMonth);
+        archiveEnd = ReportService.instance.keyFor(lastOfMonth);
+      } else {
+        final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+        final dates = ReportService.instance.weekDates(now, endWeekday);
+        archiveStart = ReportService.instance.keyFor(dates.first);
+        archiveEnd = ReportService.instance.keyFor(dates.last);
+      }
       await s.saveReport(
-        weekStart: ReportService.instance.keyFor(dates.first),
-        weekEnd: ReportService.instance.keyFor(dates.last),
+        weekStart: archiveStart,
+        weekEnd: archiveEnd,
         fullReport: fullReport,
         compactReport: compactReport,
         sentVia: 'whatsapp (auto)',
