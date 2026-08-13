@@ -8,6 +8,7 @@ import '../l10n/generated/app_localizations_en.dart';
 import '../l10n/generated/app_localizations_fr.dart';
 import '../services/notification_service.dart';
 import '../services/pdf_report_service.dart';
+import '../services/report_cadence_service.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +31,7 @@ class _ReportScreenState extends State<ReportScreen> {
   String _whatsapp = '';
   bool _loading = true;
   bool _isMonthly = false;
+  bool _isReportDay = false;
   bool _sending = false; // prevent double-tap sends
 
   // Week navigation
@@ -73,6 +75,9 @@ class _ReportScreenState extends State<ReportScreen> {
 
   Future<void> _refresh() async {
     final s = StorageService.instance;
+    final cadenceSvc = ReportCadenceService.instance;
+    _isMonthly = await cadenceSvc.getCadence() == ReportCadence.monthly;
+    _isReportDay = await cadenceSvc.isReportDay();
     _name = await s.getSetting('myName');
     _email = await s.getSetting('discipleEmail');
     _whatsapp = await s.getSetting('discipleWhatsApp');
@@ -418,8 +423,8 @@ class _ReportScreenState extends State<ReportScreen> {
           const SizedBox(height: 16),
         ],
 
-        // Sunday banner
-        if (!_isMonthly && _isCurrentWeek && DateTime.now().weekday == DateTime.sunday)
+        // Report-day banner
+        if (!_isMonthly && _isCurrentWeek && _isReportDay)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(14),
