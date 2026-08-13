@@ -190,6 +190,18 @@
   "notifDailyBody": "As-tu enregistr\u00e9 ta marche avec Dieu aujourd\u2019hui ? Appuie pour le faire.",
   "notifSundayTitle": "Dimanche \u2014 Envoie Ton Compte",
   "notifSundayBody": "Envoie le compte de cette semaine \u00e0 ton faiseur de disciples. Appuie pour revoir et envoyer.",
+  "notifReportTitleWeekly": "{day} \u2014 Envoyez votre compte",
+  "@notifReportTitleWeekly": { "placeholders": { "day": { "type": "String" } } },
+  "notifReportTitleMonthlyDay": "Le {day} \u2014 Envoyez votre compte",
+  "@notifReportTitleMonthlyDay": { "placeholders": { "day": { "type": "String" } } },
+  "notifReportTitleMonthlyLast": "Fin de mois \u2014 Envoyez votre compte",
+  "notifReportBody": "Il est temps d\u2019envoyer votre compte \u00e0 votre formateur. Appuyez pour v\u00e9rifier et envoyer.",
+  "reportCadenceLabel": "Fr\u00e9quence des comptes",
+  "reportCadenceWeekly": "Hebdomadaire",
+  "reportCadenceMonthly": "Mensuel",
+  "reportWeeklyDayLabel": "Jour du compte",
+  "reportMonthlyDayLabel": "Jour du mois pour le compte",
+  "reportMonthlyDayLast": "Dernier jour du mois",
 
   "reportHeader": "COMPTE JOURNALIER \u2014 {name}",
   "@reportHeader": {

@@ -1045,6 +1045,66 @@ abstract class S {
   /// **'Send this week\'s account to your disciple maker. Tap to review & send.'**
   String get notifSundayBody;
 
+  /// No description provided for @notifReportTitleWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'{day} — Send Your Account'**
+  String notifReportTitleWeekly(String day);
+
+  /// No description provided for @notifReportTitleMonthlyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'The {day} — Send Your Account'**
+  String notifReportTitleMonthlyDay(String day);
+
+  /// No description provided for @notifReportTitleMonthlyLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Month-end — Send Your Account'**
+  String get notifReportTitleMonthlyLast;
+
+  /// No description provided for @notifReportBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s time to send your account to your disciple maker. Tap to review & send.'**
+  String get notifReportBody;
+
+  /// No description provided for @reportCadenceLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reporting cadence'**
+  String get reportCadenceLabel;
+
+  /// No description provided for @reportCadenceWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get reportCadenceWeekly;
+
+  /// No description provided for @reportCadenceMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get reportCadenceMonthly;
+
+  /// No description provided for @reportWeeklyDayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Report day'**
+  String get reportWeeklyDayLabel;
+
+  /// No description provided for @reportMonthlyDayLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Report day of month'**
+  String get reportMonthlyDayLabel;
+
+  /// No description provided for @reportMonthlyDayLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last day of month'**
+  String get reportMonthlyDayLast;
+
   /// No description provided for @reportHeader.
   ///
   /// In en, this message translates to:

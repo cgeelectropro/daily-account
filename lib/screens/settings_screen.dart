@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
@@ -8,6 +9,7 @@ import '../data/reading_plans.dart';
 import '../services/backup_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/reading_plan_service.dart';
+import '../services/report_cadence_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -34,6 +36,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _biometricsAvailable = false;
   int _dailyFollowUps = 3; // default aggressive: 3 follow-ups
   int _sundayFollowUps = 2; // default aggressive: 2 follow-ups
+  ReportCadence _reportCadence = ReportCadence.weekly;
+  int _reportWeeklyDay = DateTime.sunday; // 7
+  String _reportMonthlyDay = 'last';
   String _selectedSound = 'sound_happy_bells';
   bool _loading = true;
   String _version = '';
@@ -97,6 +102,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
     _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
     _sundayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    _reportCadence = await ReportCadenceService.instance.getCadence();
+    _reportWeeklyDay = await ReportCadenceService.instance.getWeeklyDay();
+    _reportMonthlyDay = await ReportCadenceService.instance.getMonthlyDay();
     _selectedSound = await s.getSetting('notifSound', fallback: 'sound_happy_bells');
     try {
       final auth = LocalAuthentication();
@@ -167,6 +175,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Compute the localized reminder title text for the current cadence
+  /// setting, e.g. "Friday — Send Your Account" or "The 25th — Send Your
+  /// Account" or "Month-end — Send Your Account".
+  String _reportReminderTitle(S l) {
+    if (_reportCadence == ReportCadence.weekly) {
+      final dayName = DateFormat('EEEE', l.localeName).format(
+        DateTime(2026, 1, 4 + _reportWeeklyDay), // 2026-01-05 is a Monday (weekday=1); offset gives each weekday 1-7
+      );
+      return l.notifReportTitleWeekly(dayName);
+    }
+    if (_reportMonthlyDay == 'last') {
+      return l.notifReportTitleMonthlyLast;
+    }
+    return l.notifReportTitleMonthlyDay(_reportMonthlyDay);
+  }
+
   Future<void> _scheduleAllNotifications() async {
     final l = S.of(context);
     final s = StorageService.instance;
@@ -175,8 +199,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // (notification re-scheduling runs without BuildContext)
     await s.setSetting('notifDailyTitle', l.notifDailyTitle);
     await s.setSetting('notifDailyBody', l.notifDailyBody);
-    await s.setSetting('notifSundayTitle', l.notifSundayTitle);
-    await s.setSetting('notifSundayBody', l.notifSundayBody);
+    await s.setSetting('notifSundayTitle', _reportReminderTitle(l));
+    await s.setSetting('notifSundayBody', l.notifReportBody);
     await s.setSetting('notifSatTitle', l.saturdaySummaryTitle);
     await s.setSetting('notifMidWeekTitle', l.midWeekNudgeTitle);
 
@@ -186,17 +210,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: l.notifDailyBody,
       followUpCount: _dailyFollowUps,
     );
-    await NotificationService.instance.scheduleSundayReminder(
+    await NotificationService.instance.scheduleReportReminder(
       _sundayTime.hour, _sundayTime.minute,
-      title: l.notifSundayTitle,
-      body: l.notifSundayBody,
+      title: _reportReminderTitle(l),
+      body: l.notifReportBody,
       followUpCount: _sundayFollowUps,
     );
     if (_autoSendEnabled) {
       await NotificationService.instance.scheduleAutoSendReminder(
         _autoSendTime.hour, _autoSendTime.minute,
-        title: l.notifSundayTitle,
-        body: l.notifSundayBody,
+        title: _reportReminderTitle(l),
+        body: l.notifReportBody,
       );
     }
   }
@@ -214,6 +238,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (!mounted) return;
     if (showToast) _toast(l.remindersSaved);
+  }
+
+  Future<void> _setCadence(ReportCadence cadence) async {
+    setState(() => _reportCadence = cadence);
+    await ReportCadenceService.instance.setCadence(cadence);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
+  }
+
+  Future<void> _setWeeklyDay(int weekday) async {
+    setState(() => _reportWeeklyDay = weekday);
+    await ReportCadenceService.instance.setWeeklyDay(weekday);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
+  }
+
+  Future<void> _setMonthlyDay(String day) async {
+    setState(() => _reportMonthlyDay = day);
+    await ReportCadenceService.instance.setMonthlyDay(day);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
   }
 
   // ── Auto-send ──────────────────────────────────────────────
@@ -1184,6 +1226,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 12),
+            _cadencePicker(l),
+            const SizedBox(height: 14),
             _timeRow(l.sundayReminder, _sundayTime, () => _pickTime(false)),
             const SizedBox(height: 8),
             // Sunday follow-ups slider
@@ -1655,6 +1699,119 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _cadencePicker(S l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+
+    Widget segButton(String label, bool selected, VoidCallback onTap) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+            ),
+            alignment: Alignment.center,
+            child: Text(label,
+                style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.reportCadenceLabel.toUpperCase(),
+            style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            segButton(l.reportCadenceWeekly, _reportCadence == ReportCadence.weekly,
+                () => _setCadence(ReportCadence.weekly)),
+            const SizedBox(width: 8),
+            segButton(l.reportCadenceMonthly, _reportCadence == ReportCadence.monthly,
+                () => _setCadence(ReportCadence.monthly)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_reportCadence == ReportCadence.weekly) ...[
+          Text(l.reportWeeklyDayLabel, style: AppTheme.serif(13, color: textCol)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(7, (i) {
+              final weekday = i + 1; // 1=Monday..7=Sunday
+              final dayName = DateFormat('EEE', l.localeName)
+                  .format(DateTime(2026, 1, 4 + weekday));
+              final selected = _reportWeeklyDay == weekday;
+              return GestureDetector(
+                onTap: () => _setWeeklyDay(weekday),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(dayName,
+                      style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+                ),
+              );
+            }),
+          ),
+        ] else ...[
+          Text(l.reportMonthlyDayLabel, style: AppTheme.serif(13, color: textCol)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...List.generate(31, (i) {
+                final day = '${i + 1}';
+                final selected = _reportMonthlyDay == day;
+                return GestureDetector(
+                  onTap: () => _setMonthlyDay(day),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(day,
+                        style: AppTheme.label(11, color: selected ? accent : mutedCol)),
+                  ),
+                );
+              }),
+              GestureDetector(
+                onTap: () => _setMonthlyDay('last'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _reportMonthlyDay == 'last'
+                        ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                        color: _reportMonthlyDay == 'last' ? accent : accent.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(l.reportMonthlyDayLast,
+                      style: AppTheme.label(11,
+                          color: _reportMonthlyDay == 'last' ? accent : mutedCol)),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

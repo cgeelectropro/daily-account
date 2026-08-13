@@ -72,7 +72,8 @@ class SFr extends S {
   }
 
   @override
-  String get unknownBibleBook => 'Livre inconnu — choisissez-en un dans la liste';
+  String get unknownBibleBook =>
+      'Livre inconnu — choisissez-en un dans la liste';
 
   @override
   String get addReadingSession => 'Ajouter une session de lecture';
@@ -513,6 +514,42 @@ class SFr extends S {
   @override
   String get notifSundayBody =>
       'Envoie le compte de cette semaine à ton faiseur de disciples. Appuie pour revoir et envoyer.';
+
+  @override
+  String notifReportTitleWeekly(String day) {
+    return '$day — Envoyez votre compte';
+  }
+
+  @override
+  String notifReportTitleMonthlyDay(String day) {
+    return 'Le $day — Envoyez votre compte';
+  }
+
+  @override
+  String get notifReportTitleMonthlyLast =>
+      'Fin de mois — Envoyez votre compte';
+
+  @override
+  String get notifReportBody =>
+      'Il est temps d’envoyer votre compte à votre formateur. Appuyez pour vérifier et envoyer.';
+
+  @override
+  String get reportCadenceLabel => 'Fréquence des comptes';
+
+  @override
+  String get reportCadenceWeekly => 'Hebdomadaire';
+
+  @override
+  String get reportCadenceMonthly => 'Mensuel';
+
+  @override
+  String get reportWeeklyDayLabel => 'Jour du compte';
+
+  @override
+  String get reportMonthlyDayLabel => 'Jour du mois pour le compte';
+
+  @override
+  String get reportMonthlyDayLast => 'Dernier jour du mois';
 
   @override
   String reportHeader(String name) {

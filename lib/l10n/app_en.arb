@@ -190,6 +190,18 @@
   "notifDailyBody": "Have you recorded your walk with God today? Tap to log it.",
   "notifSundayTitle": "Sunday — Send Your Account",
   "notifSundayBody": "Send this week's account to your disciple maker. Tap to review & send.",
+  "notifReportTitleWeekly": "{day} — Send Your Account",
+  "@notifReportTitleWeekly": { "placeholders": { "day": { "type": "String" } } },
+  "notifReportTitleMonthlyDay": "The {day} — Send Your Account",
+  "@notifReportTitleMonthlyDay": { "placeholders": { "day": { "type": "String" } } },
+  "notifReportTitleMonthlyLast": "Month-end — Send Your Account",
+  "notifReportBody": "It's time to send your account to your disciple maker. Tap to review & send.",
+  "reportCadenceLabel": "Reporting cadence",
+  "reportCadenceWeekly": "Weekly",
+  "reportCadenceMonthly": "Monthly",
+  "reportWeeklyDayLabel": "Report day",
+  "reportMonthlyDayLabel": "Report day of month",
+  "reportMonthlyDayLast": "Last day of month",
 
   "reportHeader": "DAILY ACCOUNT — {name}",
   "@reportHeader": {

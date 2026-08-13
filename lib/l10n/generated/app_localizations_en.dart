@@ -514,6 +514,41 @@ class SEn extends S {
       'Send this week\'s account to your disciple maker. Tap to review & send.';
 
   @override
+  String notifReportTitleWeekly(String day) {
+    return '$day — Send Your Account';
+  }
+
+  @override
+  String notifReportTitleMonthlyDay(String day) {
+    return 'The $day — Send Your Account';
+  }
+
+  @override
+  String get notifReportTitleMonthlyLast => 'Month-end — Send Your Account';
+
+  @override
+  String get notifReportBody =>
+      'It\'s time to send your account to your disciple maker. Tap to review & send.';
+
+  @override
+  String get reportCadenceLabel => 'Reporting cadence';
+
+  @override
+  String get reportCadenceWeekly => 'Weekly';
+
+  @override
+  String get reportCadenceMonthly => 'Monthly';
+
+  @override
+  String get reportWeeklyDayLabel => 'Report day';
+
+  @override
+  String get reportMonthlyDayLabel => 'Report day of month';
+
+  @override
+  String get reportMonthlyDayLast => 'Last day of month';
+
+  @override
   String reportHeader(String name) {
     return 'DAILY ACCOUNT — $name';
   }
