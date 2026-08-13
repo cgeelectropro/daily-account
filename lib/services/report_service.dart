@@ -6,6 +6,7 @@ import '../data/reading_plans.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../models/custom_activity.dart';
 import 'reading_plan_service.dart';
+import 'report_cadence_service.dart';
 import 'storage_service.dart';
 
 class WeekStats {
@@ -73,17 +74,24 @@ class ReportService {
   static final ReportService instance = ReportService._();
   ReportService._();
 
-  /// Monday->Sunday dates for the week containing [ref] (default today).
-  List<DateTime> weekDates([DateTime? ref]) {
+  /// 7-day window ending on [endWeekday] (DateTime.weekday convention,
+  /// default DateTime.sunday) that contains [ref] (default today).
+  List<DateTime> weekDates([DateTime? ref, int? endWeekday]) {
     final today = ref ?? DateTime.now();
-    final monday = today.subtract(Duration(days: (today.weekday + 6) % 7));
-    return List.generate(7, (i) => DateTime(monday.year, monday.month, monday.day + i));
+    final end = endWeekday ?? DateTime.sunday;
+    // Days to add to today's weekday to reach the next (or same-day)
+    // occurrence of `end` (0 if today already is that weekday).
+    final daysUntilEnd = (end - today.weekday + 7) % 7;
+    final lastDayOfWindow = today.add(Duration(days: daysUntilEnd));
+    final start = lastDayOfWindow.subtract(const Duration(days: 6));
+    return List.generate(7, (i) => DateTime(start.year, start.month, start.day + i));
   }
 
   String keyFor(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   Future<WeekStats> computeWeekStats([DateTime? ref]) async {
-    final dates = weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = weekDates(ref, endWeekday);
     final logs = await StorageService.instance
         .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
     int days = 0, chapters = 0, contacts = 0, lit = 0, prayerMins = 0;
@@ -263,7 +271,8 @@ class ReportService {
 
   /// Compare this week's discipline consistency with the previous 30 days.
   Future<TrendData> computeTrend([DateTime? ref]) async {
-    final dates = weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = weekDates(ref, endWeekday);
     final weekLogs = await StorageService.instance
         .getLogsBetween(keyFor(dates.first), keyFor(dates.last));
 
@@ -538,7 +547,8 @@ class ReportService {
   // ═══════════════════════════════════════════════════════════
 
   Future<String> buildFullReport(String name, S l, [DateTime? ref]) async {
-    final dates = weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = weekDates(ref, endWeekday);
     final locale = l.localeName;
     final fmtLong = DateFormat('EEEE, MMM d', locale);
     final fmtRange = DateFormat('MMM d', locale);
@@ -666,7 +676,8 @@ class ReportService {
   // ═══════════════════════════════════════════════════════════
 
   Future<String> buildCompactReport(String name, S l, [DateTime? ref]) async {
-    final dates = weekDates(ref);
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final dates = weekDates(ref, endWeekday);
     final locale = l.localeName;
     final fmtRange = DateFormat('MMM d', locale);
     final fmtShort = DateFormat('E d', locale);

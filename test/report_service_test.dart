@@ -135,6 +135,43 @@ void main() {
     });
   });
 
+  group('weekDates with endWeekday', () {
+    final rs = ReportService.instance;
+
+    test('defaults to Sunday-ending (Monday->Sunday) when endWeekday omitted', () {
+      final ref = DateTime(2026, 8, 12); // a Wednesday
+      final dates = rs.weekDates(ref);
+      expect(dates.first.weekday, DateTime.monday);
+      expect(dates.last.weekday, DateTime.sunday);
+      expect(dates.length, 7);
+    });
+
+    test('Sunday-ending explicit matches default (regression guard)', () {
+      final ref = DateTime(2026, 8, 12);
+      final withDefault = rs.weekDates(ref);
+      final withExplicit = rs.weekDates(ref, DateTime.sunday);
+      expect(withExplicit, withDefault);
+    });
+
+    test('Friday-ending produces a Saturday->Friday window', () {
+      final ref = DateTime(2026, 8, 12); // a Wednesday
+      final dates = rs.weekDates(ref, DateTime.friday);
+      expect(dates.first.weekday, DateTime.saturday);
+      expect(dates.last.weekday, DateTime.friday);
+      expect(dates.length, 7);
+    });
+
+    test('window always contains the reference date', () {
+      final ref = DateTime(2026, 8, 12);
+      for (int endDay = 1; endDay <= 7; endDay++) {
+        final dates = rs.weekDates(ref, endDay);
+        final containsRef = dates.any((d) =>
+            d.year == ref.year && d.month == ref.month && d.day == ref.day);
+        expect(containsRef, true, reason: 'endWeekday=$endDay should contain $ref');
+      }
+    });
+  });
+
   // ═══════════════════════════════════════════════════════════
   //  keyFor
   // ═══════════════════════════════════════════════════════════
