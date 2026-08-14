@@ -1985,4 +1985,77 @@ class SFr extends S {
 
   @override
   String get reflectVerseLabel => 'ÉCRITURE';
+
+  @override
+  String get goalsSection => 'Objectifs';
+
+  @override
+  String get addGoal => '+ Ajouter un objectif';
+
+  @override
+  String get dailyGoalsLabel => 'Quotidien';
+
+  @override
+  String get weeklyGoalsLabel => 'Hebdomadaire';
+
+  @override
+  String get monthlyGoalsLabel => 'Mensuel';
+
+  @override
+  String get selectMetric => 'Que souhaitez-vous suivre ?';
+
+  @override
+  String get builtInMetrics => 'Intégré';
+
+  @override
+  String get yourActivities => 'Vos Activités';
+
+  @override
+  String get enterTarget => 'Cible';
+
+  @override
+  String get minutesUnit => 'Minutes';
+
+  @override
+  String get hoursUnit => 'Heures';
+
+  @override
+  String get goalCompletedTitle => 'Objectif atteint ! 🎉';
+
+  @override
+  String goalCompletedBody(String goalLabel) {
+    return 'Vous avez atteint votre objectif $goalLabel — bravo !';
+  }
+
+  @override
+  String behindPaceBannerText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count objectifs méritent votre attention',
+      one: '1 objectif mérite votre attention',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDdegTime => 'Temps RDQD';
+
+  @override
+  String get goalFastingCount => 'Jours de jeûne';
+
+  @override
+  String get goalChurchCount => 'Présence à l\'église';
+
+  @override
+  String get goalDiscipleshipTime => 'Temps de discipulat';
+
+  @override
+  String get goalProclamationCount => 'Nombre de proclamations';
+
+  @override
+  String get removeGoal => 'Supprimer l\'objectif';
+
+  @override
+  String get noGoalsYetForFrequency => 'Aucun objectif pour l\'instant — appuyez sur « + Ajouter un objectif ».';
 }

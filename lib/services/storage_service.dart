@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
 import '../models/fasting_period.dart';
+import '../models/goal.dart';
 import '../models/prayer_request.dart';
 import '../models/saved_report.dart';
 
@@ -445,6 +446,45 @@ class StorageService {
     final list = await getCustomActivities();
     list.removeWhere((a) => a.id == id);
     await saveCustomActivities(list);
+  }
+
+  // ── Goals ───────────────────────────────────────────────────
+
+  static const _goalsKey = 'goals';
+
+  Future<List<Goal>> getGoals() async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString(_goalsKey);
+    if (raw == null || raw.isEmpty) return [];
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => Goal.fromMap(Map<String, dynamic>.from(e))).toList();
+  }
+
+  Future<void> saveGoals(List<Goal> goals) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_goalsKey, jsonEncode(goals.map((g) => g.toMap()).toList()));
+  }
+
+  /// One-time migration from the old single-frequency 4-goal system to
+  /// the new Goal list. No-ops if already migrated (the 'goals' key
+  /// already exists, even as an empty list from a prior no-op migration).
+  Future<void> migrateGoalsIfNeeded() async {
+    final p = await SharedPreferences.getInstance();
+    if (p.containsKey(_goalsKey)) return;
+    final oldFrequency = p.getString('goalFrequency') ?? 'weekly';
+    final freq = oldFrequency == 'daily' ? GoalFrequency.daily : GoalFrequency.weekly;
+    final goals = <Goal>[];
+    void addIfPositive(String metricKey, String oldKey, GoalUnit unit) {
+      final v = int.tryParse(p.getString(oldKey) ?? '0') ?? 0;
+      if (v > 0) {
+        goals.add(Goal(id: metricKey, metricKey: metricKey, frequency: freq, target: v, unit: unit));
+      }
+    }
+    addIfPositive('bibleChapters', 'goalBibleChapters', GoalUnit.count);
+    addIfPositive('prayer', 'goalPrayerMinutes', GoalUnit.minutes);
+    addIfPositive('evangelismContacts', 'goalEvangelismContacts', GoalUnit.count);
+    addIfPositive('literatureItems', 'goalLiteratureItems', GoalUnit.count);
+    await saveGoals(goals);
   }
 
   // ── Pending Report Queue (offline-aware) ──────────────────

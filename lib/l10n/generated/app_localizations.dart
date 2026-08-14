@@ -3576,6 +3576,132 @@ abstract class S {
   /// In en, this message translates to:
   /// **'SCRIPTURE'**
   String get reflectVerseLabel;
+
+  /// No description provided for @goalsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals'**
+  String get goalsSection;
+
+  /// No description provided for @addGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'+ Add goal'**
+  String get addGoal;
+
+  /// No description provided for @dailyGoalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get dailyGoalsLabel;
+
+  /// No description provided for @weeklyGoalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get weeklyGoalsLabel;
+
+  /// No description provided for @monthlyGoalsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get monthlyGoalsLabel;
+
+  /// No description provided for @selectMetric.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to track?'**
+  String get selectMetric;
+
+  /// No description provided for @builtInMetrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get builtInMetrics;
+
+  /// No description provided for @yourActivities.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Activities'**
+  String get yourActivities;
+
+  /// No description provided for @enterTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get enterTarget;
+
+  /// No description provided for @minutesUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Minutes'**
+  String get minutesUnit;
+
+  /// No description provided for @hoursUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Hours'**
+  String get hoursUnit;
+
+  /// No description provided for @goalCompletedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal reached! 🎉'**
+  String get goalCompletedTitle;
+
+  /// No description provided for @goalCompletedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You hit your {goalLabel} goal — well done!'**
+  String goalCompletedBody(String goalLabel);
+
+  /// No description provided for @behindPaceBannerText.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 goal could use some attention} other{{count} goals could use some attention}}'**
+  String behindPaceBannerText(int count);
+
+  /// No description provided for @goalDdegTime.
+  ///
+  /// In en, this message translates to:
+  /// **'DDEG time'**
+  String get goalDdegTime;
+
+  /// No description provided for @goalFastingCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Fasting days'**
+  String get goalFastingCount;
+
+  /// No description provided for @goalChurchCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Church attendance'**
+  String get goalChurchCount;
+
+  /// No description provided for @goalDiscipleshipTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Discipleship time'**
+  String get goalDiscipleshipTime;
+
+  /// No description provided for @goalProclamationCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclamation count'**
+  String get goalProclamationCount;
+
+  /// No description provided for @removeGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove goal'**
+  String get removeGoal;
+
+  /// No description provided for @noGoalsYetForFrequency.
+  ///
+  /// In en, this message translates to:
+  /// **'No goals yet — tap "+ Add goal" to set one.'**
+  String get noGoalsYetForFrequency;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

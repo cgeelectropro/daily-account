@@ -126,7 +126,7 @@ class BackupService {
         'autoSendHour', 'autoSendMin',
         'dailyFollowUps', 'sundayFollowUps',
         'goalFrequency', 'goalBibleChapters', 'goalPrayerMinutes',
-        'goalEvangelismContacts', 'goalLiteratureItems',
+        'goalEvangelismContacts', 'goalLiteratureItems', 'goals',
         'reportLanguage', 'textScale', 'onboarding_complete',
         ...List.generate(11, (i) => 'discReminder_$i'),
       ];
