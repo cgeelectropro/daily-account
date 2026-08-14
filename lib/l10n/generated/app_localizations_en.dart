@@ -1354,6 +1354,80 @@ class SEn extends S {
   String get saveGoals => 'Save';
 
   @override
+  String get goalsSection => 'Goals';
+
+  @override
+  String get addGoal => '+ Add goal';
+
+  @override
+  String get dailyGoalsLabel => 'Daily';
+
+  @override
+  String get weeklyGoalsLabel => 'Weekly';
+
+  @override
+  String get monthlyGoalsLabel => 'Monthly';
+
+  @override
+  String get selectMetric => 'What would you like to track?';
+
+  @override
+  String get builtInMetrics => 'Built-in';
+
+  @override
+  String get yourActivities => 'Your Activities';
+
+  @override
+  String get enterTarget => 'Target';
+
+  @override
+  String get minutesUnit => 'Minutes';
+
+  @override
+  String get hoursUnit => 'Hours';
+
+  @override
+  String get goalCompletedTitle => 'Goal reached! 🎉';
+
+  @override
+  String goalCompletedBody(String goalLabel) {
+    return 'You hit your $goalLabel goal — well done!';
+  }
+
+  @override
+  String behindPaceBannerText(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count goals could use some attention',
+      one: '1 goal could use some attention',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDdegTime => 'DDEG time';
+
+  @override
+  String get goalFastingCount => 'Fasting days';
+
+  @override
+  String get goalChurchCount => 'Church attendance';
+
+  @override
+  String get goalDiscipleshipTime => 'Discipleship time';
+
+  @override
+  String get goalProclamationCount => 'Proclamation count';
+
+  @override
+  String get removeGoal => 'Remove goal';
+
+  @override
+  String get noGoalsYetForFrequency =>
+      'No goals yet — tap \"+ Add goal\" to set one.';
+
+  @override
   String get weeklyChallenge => 'This Week\'s Challenge';
 
   @override
@@ -1960,77 +2034,4 @@ class SEn extends S {
 
   @override
   String get reflectVerseLabel => 'SCRIPTURE';
-
-  @override
-  String get goalsSection => 'Goals';
-
-  @override
-  String get addGoal => '+ Add goal';
-
-  @override
-  String get dailyGoalsLabel => 'Daily';
-
-  @override
-  String get weeklyGoalsLabel => 'Weekly';
-
-  @override
-  String get monthlyGoalsLabel => 'Monthly';
-
-  @override
-  String get selectMetric => 'What would you like to track?';
-
-  @override
-  String get builtInMetrics => 'Built-in';
-
-  @override
-  String get yourActivities => 'Your Activities';
-
-  @override
-  String get enterTarget => 'Target';
-
-  @override
-  String get minutesUnit => 'Minutes';
-
-  @override
-  String get hoursUnit => 'Hours';
-
-  @override
-  String get goalCompletedTitle => 'Goal reached! 🎉';
-
-  @override
-  String goalCompletedBody(String goalLabel) {
-    return 'You hit your $goalLabel goal — well done!';
-  }
-
-  @override
-  String behindPaceBannerText(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count goals could use some attention',
-      one: '1 goal could use some attention',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get goalDdegTime => 'DDEG time';
-
-  @override
-  String get goalFastingCount => 'Fasting days';
-
-  @override
-  String get goalChurchCount => 'Church attendance';
-
-  @override
-  String get goalDiscipleshipTime => 'Discipleship time';
-
-  @override
-  String get goalProclamationCount => 'Proclamation count';
-
-  @override
-  String get removeGoal => 'Remove goal';
-
-  @override
-  String get noGoalsYetForFrequency => 'No goals yet — tap "+ Add goal" to set one.';
 }

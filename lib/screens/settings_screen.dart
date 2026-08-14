@@ -829,36 +829,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Goals ──
-        SectionCard(icon: '🎯', title: _goalFrequency == 'daily' ? l.dailyGoals : l.weeklyGoals, initiallyExpanded: false, children: [
-          Text(_goalFrequency == 'daily' ? l.dailyGoalsDesc : l.weeklyGoalsDesc, style: AppTheme.serif(12, color: mutedCol)),
-          const SizedBox(height: 8),
-          // Frequency toggle
-          Row(
-            children: [
-              Text(l.goalFrequency, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
-              const Spacer(),
-              _frequencyChip(l.daily, 'daily'),
-              const SizedBox(width: 6),
-              _frequencyChip(l.weekly, 'weekly'),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _goalField(l.goalBibleChapters, '📖', _goalBibleChapters, (v) {
-            setState(() => _goalBibleChapters = v);
-            StorageService.instance.setSetting('goalBibleChapters', '$v');
-          }),
-          _goalField(l.goalPrayerMinutes, '🙏', _goalPrayerMinutes, (v) {
-            setState(() => _goalPrayerMinutes = v);
-            StorageService.instance.setSetting('goalPrayerMinutes', '$v');
-          }),
-          _goalField(l.goalEvangelismContacts, '📢', _goalEvangelismContacts, (v) {
-            setState(() => _goalEvangelismContacts = v);
-            StorageService.instance.setSetting('goalEvangelismContacts', '$v');
-          }),
-          _goalField(l.goalLiteratureItems, '📚', _goalLiteratureItems, (v) {
-            setState(() => _goalLiteratureItems = v);
-            StorageService.instance.setSetting('goalLiteratureItems', '$v');
-          }),
+        SectionCard(icon: '🎯', title: l.goalsSection, initiallyExpanded: false, children: [
+          _goalFrequencySubsection(GoalFrequency.daily, l.dailyGoalsLabel, l),
+          const SizedBox(height: 16),
+          _goalFrequencySubsection(GoalFrequency.weekly, l.weeklyGoalsLabel, l),
+          const SizedBox(height: 16),
+          _goalFrequencySubsection(GoalFrequency.monthly, l.monthlyGoalsLabel, l),
         ]),
 
         // ── Bible Reading Plan ──
@@ -2253,123 +2229,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _frequencyChip(String label, String value) {
-    final selected = _goalFrequency == value;
-    final accent = AppTheme.accentGold(context);
-    return GestureDetector(
-      onTap: () {
-        setState(() => _goalFrequency = value);
-        StorageService.instance.setSetting('goalFrequency', value);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? accent : accent.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          label,
-          style: AppTheme.serif(12,
-            color: selected ? AppTheme.bg0 : AppTheme.textColor(context)),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showGoalInputDialog(int currentValue, ValueChanged<int> onChanged) async {
-    final controller = TextEditingController(text: currentValue > 0 ? '$currentValue' : '');
-    final accent = AppTheme.accentGold(context);
-    final l = S.of(context);
-
-    final result = await showDialog<int>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor(ctx),
-        title: Text(l.enterGoalValue, style: AppTheme.serif(16, color: AppTheme.textColor(ctx))),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          keyboardType: TextInputType.number,
-          style: AppTheme.display(20, color: accent),
-          textAlign: TextAlign.center,
-          decoration: InputDecoration(
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
-          ),
-          onSubmitted: (v) {
-            Navigator.of(ctx).pop(int.tryParse(v) ?? 0);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(ctx))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(int.tryParse(controller.text) ?? 0),
-            child: Text('OK', style: TextStyle(color: accent)),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null) {
-      onChanged(result);
-    }
-  }
-
-  Widget _goalField(String label, String icon, int value, ValueChanged<int> onChanged) {
-    final accent = AppTheme.accentGold(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
-          ),
-          GestureDetector(
-            onTap: () {
-              if (value > 0) onChanged(value - 1);
-            },
-            child: Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.remove, size: 18, color: value > 0 ? accent : AppTheme.faintColor(context)),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _showGoalInputDialog(value, onChanged),
-            child: Container(
-              width: 44,
-              alignment: Alignment.center,
-              child: Text('$value',
-                  style: AppTheme.display(16, color: value > 0 ? accent : AppTheme.mutedColor(context))),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => onChanged(value + 1),
-            child: Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              alignment: Alignment.center,
-              child: Icon(Icons.add, size: 18, color: accent),
-            ),
-          ),
-        ],
       ),
     );
   }
