@@ -6,6 +6,9 @@ import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
 import 'package:local_auth/local_auth.dart';
 import '../data/reading_plans.dart';
+import '../data/goal_metrics.dart';
+import '../models/custom_activity.dart';
+import '../models/goal.dart';
 import '../services/backup_service.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/reading_plan_service.dart';
@@ -57,11 +60,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final ReadingPlanService _planService = ReadingPlanService.instance;
 
   // Goals
-  String _goalFrequency = 'weekly'; // 'weekly' or 'daily'
-  int _goalBibleChapters = 0;
-  int _goalPrayerMinutes = 0;
-  int _goalEvangelismContacts = 0;
-  int _goalLiteratureItems = 0;
+  List<Goal> _goals = [];
+  List<CustomActivity> _customActivitiesForGoals = [];
 
   /// Per-discipline reminder times. null = off.
   final Map<int, TimeOfDay?> _disciplineTimes = {};
@@ -70,8 +70,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     'Evangelism', 'Fasting', 'Giving', 'Church', 'Discipleship', 'Proclamation',
   ];
   static const _disciplineIcons = [
-    '\uD83D\uDCD6', '\uD83D\uDCDA', '\uD83D\uDD25', '\uD83D\uDE4F', '\uD83E\uDD1D',
-    '\uD83D\uDCE2', '\uD83C\uDF7D\uFE0F', '\uD83D\uDCB0', '\u26EA', '\uD83D\uDC65', '\uD83D\uDCE3',
+    '📖', '📚', '🔥', '🙏', '🤝',
+    '📢', '🍽️', '💰', '⛪', '👥', '📣',
   ];
 
   @override
@@ -121,11 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Load report language
     _reportLanguage = await s.getSetting('reportLanguage', fallback: '');
     // Load goals
-    _goalFrequency = await s.getSetting('goalFrequency', fallback: 'weekly');
-    _goalBibleChapters = int.tryParse(await s.getSetting('goalBibleChapters', fallback: '0')) ?? 0;
-    _goalPrayerMinutes = int.tryParse(await s.getSetting('goalPrayerMinutes', fallback: '0')) ?? 0;
-    _goalEvangelismContacts = int.tryParse(await s.getSetting('goalEvangelismContacts', fallback: '0')) ?? 0;
-    _goalLiteratureItems = int.tryParse(await s.getSetting('goalLiteratureItems', fallback: '0')) ?? 0;
+    _goals = await StorageService.instance.getGoals();
+    _customActivitiesForGoals = await StorageService.instance.getCustomActivities();
     // Load per-discipline reminder times
     for (int i = 0; i < 11; i++) {
       final raw = await s.getSetting('discReminder_$i', fallback: '');
@@ -832,7 +829,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Goals ──
-        SectionCard(icon: '\uD83C\uDFAF', title: _goalFrequency == 'daily' ? l.dailyGoals : l.weeklyGoals, initiallyExpanded: false, children: [
+        SectionCard(icon: '🎯', title: _goalFrequency == 'daily' ? l.dailyGoals : l.weeklyGoals, initiallyExpanded: false, children: [
           Text(_goalFrequency == 'daily' ? l.dailyGoalsDesc : l.weeklyGoalsDesc, style: AppTheme.serif(12, color: mutedCol)),
           const SizedBox(height: 8),
           // Frequency toggle
@@ -846,19 +843,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          _goalField(l.goalBibleChapters, '\uD83D\uDCD6', _goalBibleChapters, (v) {
+          _goalField(l.goalBibleChapters, '📖', _goalBibleChapters, (v) {
             setState(() => _goalBibleChapters = v);
             StorageService.instance.setSetting('goalBibleChapters', '$v');
           }),
-          _goalField(l.goalPrayerMinutes, '\uD83D\uDE4F', _goalPrayerMinutes, (v) {
+          _goalField(l.goalPrayerMinutes, '🙏', _goalPrayerMinutes, (v) {
             setState(() => _goalPrayerMinutes = v);
             StorageService.instance.setSetting('goalPrayerMinutes', '$v');
           }),
-          _goalField(l.goalEvangelismContacts, '\uD83D\uDCE2', _goalEvangelismContacts, (v) {
+          _goalField(l.goalEvangelismContacts, '📢', _goalEvangelismContacts, (v) {
             setState(() => _goalEvangelismContacts = v);
             StorageService.instance.setSetting('goalEvangelismContacts', '$v');
           }),
-          _goalField(l.goalLiteratureItems, '\uD83D\uDCDA', _goalLiteratureItems, (v) {
+          _goalField(l.goalLiteratureItems, '📚', _goalLiteratureItems, (v) {
             setState(() => _goalLiteratureItems = v);
             StorageService.instance.setSetting('goalLiteratureItems', '$v');
           }),
@@ -870,7 +867,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Disciple Maker ──
-        SectionCard(icon: '\uD83D\uDCE7', title: l.discipleMakerSection, children: [
+        SectionCard(icon: '📧', title: l.discipleMakerSection, children: [
           GoldField(
             label: l.emailLabel,
             hint: l.emailHint,
@@ -1044,7 +1041,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          '\uD83D\uDD14 ${entry.value}',
+                          '🔔 ${entry.value}',
                           style: AppTheme.serif(13, color: selected ? textCol : mutedCol),
                         ),
                         const Spacer(),
@@ -1077,7 +1074,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(allGood ? '\u2705' : '\u26A0\uFE0F', style: const TextStyle(fontSize: 16)),
+                        Text(allGood ? '✅' : '⚠️', style: const TextStyle(fontSize: 16)),
                         const SizedBox(width: 8),
                         Text(
                           allGood ? l.notificationsHealthy : l.notificationIssuesDetected,
@@ -1282,12 +1279,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Language ──
-        SectionCard(icon: '\uD83C\uDF10', title: l.languageSection, children: [
+        SectionCard(icon: '🌐', title: l.languageSection, children: [
           Row(
             children: [
-              _languageCard('\uD83C\uDDEC\uD83C\uDDE7', l.languageEnglish, 'en'),
+              _languageCard('🇬🇧', l.languageEnglish, 'en'),
               const SizedBox(width: 12),
-              _languageCard('\uD83C\uDDEB\uD83C\uDDF7', l.languageFrench, 'fr'),
+              _languageCard('🇫🇷', l.languageFrench, 'fr'),
             ],
           ),
           const SizedBox(height: 16),
@@ -2019,6 +2016,242 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(label,
               style: AppTheme.serif(12, color: isSelected ? accent : textCol),
               textAlign: TextAlign.center),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addGoal(GoalFrequency frequency) async {
+    final metric = await _pickGoalMetric(frequency);
+    if (metric == null) return;
+    final result = await _pickGoalTarget(metric);
+    if (result == null) return;
+    final (target, unit) = result;
+    setState(() {
+      _goals.add(Goal(
+        id: metric.key,
+        metricKey: metric.key,
+        frequency: frequency,
+        target: target,
+        unit: unit,
+      ));
+    });
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  Future<void> _editGoal(Goal goal) async {
+    final metric = _metricFor(goal.metricKey);
+    if (metric == null) return;
+    final result = await _pickGoalTarget(metric, initialTarget: goal.target, initialUnit: goal.unit);
+    if (result == null) return;
+    final (target, unit) = result;
+    setState(() {
+      goal.target = target;
+      goal.unit = unit;
+    });
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  Future<void> _removeGoal(Goal goal) async {
+    setState(() => _goals.remove(goal));
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  GoalMetric? _metricFor(String metricKey) {
+    final all = [...GoalMetrics.builtIn, ...GoalMetrics.fromCustomActivities(_customActivitiesForGoals)];
+    for (final m in all) {
+      if (m.key == metricKey) return m;
+    }
+    return null;
+  }
+
+  Future<GoalMetric?> _pickGoalMetric(GoalFrequency frequency) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final alreadyGoaled = _goals.where((g) => g.frequency == frequency).map((g) => g.metricKey).toSet();
+    final builtIn = GoalMetrics.builtIn.where((m) => !alreadyGoaled.contains(m.key)).toList();
+    final custom = GoalMetrics.fromCustomActivities(_customActivitiesForGoals)
+        .where((m) => !alreadyGoaled.contains(m.key)).toList();
+
+    return showModalBottomSheet<GoalMetric>(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.selectMetric, style: AppTheme.display(16, color: accent)),
+                const SizedBox(height: 12),
+                if (builtIn.isNotEmpty) ...[
+                  Text(l.builtInMetrics.toUpperCase(), style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+                  ...builtIn.map((m) => ListTile(
+                        leading: Text(m.icon, style: const TextStyle(fontSize: 20)),
+                        title: Text(m.label(l), style: AppTheme.serif(14, color: textCol)),
+                        onTap: () => Navigator.pop(ctx, m),
+                      )),
+                ],
+                if (custom.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(l.yourActivities.toUpperCase(), style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+                  ...custom.map((m) => ListTile(
+                        leading: Text(m.icon, style: const TextStyle(fontSize: 20)),
+                        title: Text(m.label(l), style: AppTheme.serif(14, color: textCol)),
+                        onTap: () => Navigator.pop(ctx, m),
+                      )),
+                ],
+                if (builtIn.isEmpty && custom.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(l.noGoalsYetForFrequency, style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<(int, GoalUnit)?> _pickGoalTarget(GoalMetric metric, {int? initialTarget, GoalUnit? initialUnit}) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final showUnitToggle = metric.baseUnit == GoalUnit.minutes;
+    GoalUnit selectedUnit = initialUnit ?? metric.baseUnit;
+    final displayValue = initialTarget != null && selectedUnit == GoalUnit.hours
+        ? (initialTarget / 60).toStringAsFixed(1)
+        : (initialTarget?.toString() ?? '');
+    final controller = TextEditingController(text: displayValue);
+
+    return showModalBottomSheet<(int, GoalUnit)>(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Text(metric.icon, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
+                Text(metric.label(l), style: AppTheme.display(16, color: accent)),
+              ]),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: l.enterTarget),
+              ),
+              if (showUnitToggle) ...[
+                const SizedBox(height: 12),
+                Row(children: [
+                  ChoiceChip(
+                    label: Text(l.minutesUnit),
+                    selected: selectedUnit == GoalUnit.minutes,
+                    onSelected: (_) => setSheetState(() => selectedUnit = GoalUnit.minutes),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text(l.hoursUnit),
+                    selected: selectedUnit == GoalUnit.hours,
+                    onSelected: (_) => setSheetState(() => selectedUnit = GoalUnit.hours),
+                  ),
+                ]),
+              ],
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  final raw = double.tryParse(controller.text) ?? 0;
+                  final minutesOrCount = selectedUnit == GoalUnit.hours ? (raw * 60).round() : raw.round();
+                  Navigator.pop(ctx, (minutesOrCount, selectedUnit));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(gradient: AppTheme.goldGradient, borderRadius: BorderRadius.circular(12)),
+                  alignment: Alignment.center,
+                  child: Text(l.saveGoals, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _goalFrequencySubsection(GoalFrequency frequency, String title, S l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final goalsForFrequency = _goals.where((g) => g.frequency == frequency).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title.toUpperCase(), style: AppTheme.label(12, color: accent)),
+        const SizedBox(height: 8),
+        if (goalsForFrequency.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(l.noGoalsYetForFrequency, style: AppTheme.serif(12, color: mutedCol)),
+          )
+        else
+          ...goalsForFrequency.map((goal) => _goalRow(goal, l, accent, textCol, mutedCol)),
+        GestureDetector(
+          onTap: () => _addGoal(frequency),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: accent.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: Text(l.addGoal, style: AppTheme.label(12, color: accent)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _goalRow(Goal goal, S l, Color accent, Color textCol, Color mutedCol) {
+    final metric = _metricFor(goal.metricKey);
+    final icon = goal.customIcon ?? metric?.icon ?? '✨';
+    final label = goal.customLabel ?? metric?.label(l) ?? goal.metricKey;
+    final displayTarget = goal.unit == GoalUnit.hours ? '${(goal.target / 60).toStringAsFixed(1)}h' : '${goal.target}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () => _editGoal(goal),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(label, style: AppTheme.serif(13, color: textCol))),
+              Text(displayTarget, style: AppTheme.label(12, color: accent)),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _removeGoal(goal),
+                child: Icon(Icons.close, size: 16, color: mutedCol),
+              ),
+            ],
+          ),
         ),
       ),
     );
