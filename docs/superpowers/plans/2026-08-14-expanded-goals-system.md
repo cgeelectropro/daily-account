@@ -692,35 +692,69 @@ void main() {
   });
 
   group('justCompletedGoals', () {
-    test('returns a goal that crossed from under-target to at-target', () async {
+    // justCompletedGoals reads period totals from storage via
+    // computeProgress, so `after` must already be saved before calling it
+    // (matching the real call site in LogScreen._persist(), which calls
+    // this only after StorageService.saveLog(after) has completed).
+
+    test('daily goal: returns a goal that crossed from under-target to at-target', () async {
       final before = DailyLog(dateKey: '2026-08-29', bibleChapters: '2');
       final after = DailyLog(dateKey: '2026-08-29', bibleChapters: '5');
+      await StorageService.instance.saveLog(after);
       final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.daily, target: 5, unit: GoalUnit.count);
       final result = await svc.justCompletedGoals(before, after, [goal]);
       expect(result, [goal]);
     });
 
-    test('does not return a goal already complete before the save', () async {
+    test('daily goal: does not return a goal already complete before the save', () async {
       final before = DailyLog(dateKey: '2026-08-30', bibleChapters: '5');
       final after = DailyLog(dateKey: '2026-08-30', bibleChapters: '6');
+      await StorageService.instance.saveLog(after);
       final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.daily, target: 5, unit: GoalUnit.count);
       final result = await svc.justCompletedGoals(before, after, [goal]);
       expect(result, isEmpty);
     });
 
-    test('does not return a goal still under target after the save', () async {
+    test('daily goal: does not return a goal still under target after the save', () async {
       final before = DailyLog(dateKey: '2026-08-31', bibleChapters: '1');
       final after = DailyLog(dateKey: '2026-08-31', bibleChapters: '2');
+      await StorageService.instance.saveLog(after);
       final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.daily, target: 5, unit: GoalUnit.count);
       final result = await svc.justCompletedGoals(before, after, [goal]);
       expect(result, isEmpty);
     });
 
-    test('handles a null "before" (first save of a new day) as zero progress', () async {
+    test('daily goal: handles a null "before" (first save of a new day) as zero progress', () async {
       final after = DailyLog(dateKey: '2026-09-01', bibleChapters: '5');
+      await StorageService.instance.saveLog(after);
       final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.daily, target: 5, unit: GoalUnit.count);
       final result = await svc.justCompletedGoals(null, after, [goal]);
       expect(result, [goal]);
+    });
+
+    test('weekly goal: completed by CUMULATIVE progress across days, not just today\'s single-day value', () async {
+      // Regression test for the period-aware fix: a weekly goal of 10
+      // chapters, already at 8 chapters earlier in the week (a day this
+      // test seeds directly, simulating "before" days already logged),
+      // should complete when today's own save alone is small (2 chapters)
+      // but pushes the week's cumulative total to 10.
+      await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-10', bibleChapters: '8')); // Monday, earlier in the week
+      final before = DailyLog(dateKey: '2026-08-12', bibleChapters: '0'); // Wednesday, today's prior state
+      final after = DailyLog(dateKey: '2026-08-12', bibleChapters: '2'); // Wednesday, today's new state (2 chapters, alone under target)
+      await StorageService.instance.saveLog(after);
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.weekly, target: 10, unit: GoalUnit.count);
+      final result = await svc.justCompletedGoals(before, after, [goal]);
+      expect(result, [goal], reason: 'week total is 8 (Monday) + 2 (today) = 10, meeting target, even though today alone only contributed 2');
+    });
+
+    test('weekly goal: does not fire again on a later day if the week was already complete before today\'s save', () async {
+      await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-10', bibleChapters: '15')); // Monday, already over target
+      final before = DailyLog(dateKey: '2026-08-13', bibleChapters: '0'); // Thursday, today's prior state
+      final after = DailyLog(dateKey: '2026-08-13', bibleChapters: '1'); // Thursday, today's new state
+      await StorageService.instance.saveLog(after);
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.weekly, target: 10, unit: GoalUnit.count);
+      final result = await svc.justCompletedGoals(before, after, [goal]);
+      expect(result, isEmpty, reason: 'week total was already 15 >= 10 before today\'s save, so this is not a fresh completion');
     });
   });
 }
@@ -782,12 +816,22 @@ class GoalProgressService {
     }
   }
 
+  /// [after] must already be persisted to storage (i.e. call this after
+  /// StorageService.saveLog(after) has completed) — computeProgress reads
+  /// from storage, so it needs the just-saved day's data to be there.
   Future<List<Goal>> justCompletedGoals(DailyLog? before, DailyLog after, List<Goal> goals) async {
     final completed = <Goal>[];
+    final refDate = DateTime.parse(after.dateKey);
     for (final goal in goals) {
-      final afterVal = _metricValue(goal.metricKey, after);
-      final beforeVal = before != null ? _metricValue(goal.metricKey, before) : 0;
-      if (beforeVal < goal.target && afterVal >= goal.target) {
+      // Period-aware: compare the period's total progress before vs. after
+      // this save, not just today's single-day contribution — a weekly or
+      // monthly goal can be completed by cumulative logging across several
+      // days, not only by what changed today.
+      final afterTotal = await computeProgress(goal, refDate);
+      final todayAfterVal = _metricValue(goal.metricKey, after);
+      final todayBeforeVal = before != null ? _metricValue(goal.metricKey, before) : 0;
+      final beforeTotal = afterTotal - (todayAfterVal - todayBeforeVal);
+      if (beforeTotal < goal.target && afterTotal >= goal.target) {
         completed.add(goal);
       }
     }
