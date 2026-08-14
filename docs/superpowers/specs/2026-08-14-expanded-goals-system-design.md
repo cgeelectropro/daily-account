@@ -253,9 +253,24 @@ included in exports; the old keys can stay listed too (harmless, small).
 `GoalProgressService.instance.justCompletedGoals(DailyLog before, DailyLog after)`
 → `Future<List<Goal>>`, returns goals whose `computeProgress` crosses from
 `< target` to `>= target` when comparing the log state before vs. after a
-save. Called from `LogScreen._persist()` (`log_screen.dart:544`) — the
-existing single debounced auto-save point — by snapshotting `_log`'s
-relevant totals before persisting and comparing after.
+save.
+
+`LogScreen._persist()` (`log_screen.dart:544-552`) is synchronous and fires
+a debounced `Timer` whose callback calls `StorageService.instance.saveLog(_log)`
+without awaiting it — by the time `_persist()` runs, `_log` has *already*
+been mutated in-memory by whichever field's `onChanged` handler called
+`_persist()` (there are 46 such call sites in this file; instrumenting each
+individually is not viable). The correct "before" state is therefore **not**
+a snapshot taken inside `_persist()`, but whatever was last actually
+persisted to storage. Change the `Timer`'s callback to `async` and,
+immediately before calling `saveLog`, fetch
+`final before = await StorageService.instance.getLog(_log.dateKey);` (the
+row as it stood before this save overwrites it — `null` on a brand-new
+day's first save, treated as an all-zero log). After `saveLog(_log)`
+completes, call
+`final completed = await GoalProgressService.instance.justCompletedGoals(before, _log);`
+This adds exactly one extra read per debounced save (already a 500ms-debounced,
+low-frequency operation, so the added read is not a performance concern).
 
 1. **Reflection panel**: `ReflectionContext` (`reflection_service.dart:50-76`)
    gains `final List<Goal> completedGoalsToday;` (default `const []`).
