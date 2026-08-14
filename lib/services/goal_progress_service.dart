@@ -44,12 +44,22 @@ class GoalProgressService {
     }
   }
 
+  /// [after] must already be persisted to storage (i.e. call this after
+  /// StorageService.saveLog(after) has completed) — computeProgress reads
+  /// from storage, so it needs the just-saved day's data to be there.
   Future<List<Goal>> justCompletedGoals(DailyLog? before, DailyLog after, List<Goal> goals) async {
     final completed = <Goal>[];
+    final refDate = DateTime.parse(after.dateKey);
     for (final goal in goals) {
-      final afterVal = _metricValue(goal.metricKey, after);
-      final beforeVal = before != null ? _metricValue(goal.metricKey, before) : 0;
-      if (beforeVal < goal.target && afterVal >= goal.target) {
+      // Period-aware: compare the period's total progress before vs. after
+      // this save, not just today's single-day contribution — a weekly or
+      // monthly goal can be completed by cumulative logging across several
+      // days, not only by what changed today.
+      final afterTotal = await computeProgress(goal, refDate);
+      final todayAfterVal = _metricValue(goal.metricKey, after);
+      final todayBeforeVal = before != null ? _metricValue(goal.metricKey, before) : 0;
+      final beforeTotal = afterTotal - (todayAfterVal - todayBeforeVal);
+      if (beforeTotal < goal.target && afterTotal >= goal.target) {
         completed.add(goal);
       }
     }
