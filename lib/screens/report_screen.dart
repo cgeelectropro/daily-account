@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../l10n/generated/app_localizations_en.dart';
 import '../l10n/generated/app_localizations_fr.dart';
+import '../data/goal_metrics.dart';
+import '../models/custom_activity.dart';
+import '../models/goal.dart';
+import '../services/goal_progress_service.dart';
 import '../services/notification_service.dart';
 import '../services/pdf_report_service.dart';
 import '../services/report_cadence_service.dart';
@@ -47,8 +51,11 @@ class _ReportScreenState extends State<ReportScreen> {
   TrendData? _trend;
 
   // Goals
-  Map<String, int> _goals = {};
-  String _goalFrequency = 'weekly';
+  List<Goal> _goals = [];
+  List<CustomActivity> _customActivitiesForGoals = [];
+  Widget? _dailyGoalsCard;
+  Widget? _weeklyGoalsCard;
+  Widget? _monthlyGoalsCard;
 
   // Badges
   List<(String, String, bool)> _badges = []; // (emoji, label, earned)
@@ -87,8 +94,16 @@ class _ReportScreenState extends State<ReportScreen> {
     _streak = await ReportService.instance.computeStreak();
     _trend = await ReportService.instance.computeTrend(_weekRef);
     await _loadWeekCompletions();
-    await _loadGoals();
-    _computeBadges();
+    _goals = await StorageService.instance.getGoals();
+    _customActivitiesForGoals = await StorageService.instance.getCustomActivities();
+    await _computeBadges();
+    if (mounted) {
+      final l = S.of(context);
+      final accent = AppTheme.accentGold(context);
+      _dailyGoalsCard = await _buildGoalsCard(GoalFrequency.daily, l.dailyGoalsLabel, l, accent);
+      _weeklyGoalsCard = await _buildGoalsCard(GoalFrequency.weekly, l.weeklyGoalsLabel, l, accent);
+      _monthlyGoalsCard = await _buildGoalsCard(GoalFrequency.monthly, l.monthlyGoalsLabel, l, accent);
+    }
     if (mounted) {
       setState(() => _loading = false);
       _buildReport();
@@ -105,20 +120,7 @@ class _ReportScreenState extends State<ReportScreen> {
     _weekCompletions = completions;
   }
 
-  Future<void> _loadGoals() async {
-    final s = StorageService.instance;
-    _goalFrequency = await s.getSetting('goalFrequency', fallback: 'weekly');
-    _goals = {
-      'bibleChapters': int.tryParse(await s.getSetting('goalBibleChapters', fallback: '0')) ?? 0,
-      'prayerMinutes': int.tryParse(await s.getSetting('goalPrayerMinutes', fallback: '0')) ?? 0,
-      'evangelismContacts': int.tryParse(await s.getSetting('goalEvangelismContacts', fallback: '0')) ?? 0,
-      'literatureItems': int.tryParse(await s.getSetting('goalLiteratureItems', fallback: '0')) ?? 0,
-    };
-  }
-
-  bool get _hasGoals => _goals.values.any((v) => v > 0);
-
-  void _computeBadges() {
+  Future<void> _computeBadges() async {
     if (!mounted) return;
     final l = S.of(context);
     final s = _stats;
@@ -130,6 +132,13 @@ class _ReportScreenState extends State<ReportScreen> {
       ('\uD83D\uDCE2', l.badgeEvangelismFire, (s?.totalEvangelismContacts ?? 0) >= 5),
       ('\u2B50', l.badgePerfectWeek, (s?.daysLogged ?? 0) == 7),
     ];
+    for (final goal in _goals) {
+      final complete = await GoalProgressService.instance.isComplete(goal, _weekRef);
+      final metric = _metricFor(goal.metricKey);
+      final icon = goal.customIcon ?? metric?.icon ?? '\u2728';
+      final label = goal.customLabel ?? metric?.label(l) ?? goal.metricKey;
+      _badges.add((icon, '$label \u2014 ${l.goalReached}', complete));
+    }
   }
 
   /// Get the S instance for the user's chosen report language.
@@ -401,9 +410,10 @@ class _ReportScreenState extends State<ReportScreen> {
 
         const SizedBox(height: 16),
 
-        // Weekly goals progress
-        if (!_isMonthly && _hasGoals && _stats != null)
-          _buildGoalsCard(l, accent),
+        // Per-frequency goals progress
+        if (!_isMonthly && _dailyGoalsCard != null) _dailyGoalsCard!,
+        if (!_isMonthly && _weeklyGoalsCard != null) _weeklyGoalsCard!,
+        if (!_isMonthly && _monthlyGoalsCard != null) _monthlyGoalsCard!,
 
         // Weekly challenge
         if (!_isMonthly && _isCurrentWeek && _stats != null)
@@ -575,47 +585,46 @@ class _ReportScreenState extends State<ReportScreen> {
     );
   }
 
-  Widget _buildGoalsCard(S l, Color accent) {
-    final s = _stats!;
-    final isDaily = _goalFrequency == 'daily';
-    // For daily goals, multiply target by days logged (or 7 for weekly view)
-    // so progress compares actual totals against proportional targets
-    final days = s.daysLogged > 0 ? s.daysLogged : 1;
+  Future<Widget?> _buildGoalsCard(GoalFrequency frequency, String title, S l, Color accent) async {
+    final goalsForFrequency = _goals.where((g) => g.frequency == frequency).toList();
+    if (goalsForFrequency.isEmpty) return null;
 
     final items = <(String, String, int, int)>[]; // (icon, label, current, target)
-    final gb = _goals['bibleChapters'] ?? 0;
-    if (gb > 0) items.add(('\uD83D\uDCD6', l.goalBibleChapters, s.totalBibleChapters, isDaily ? gb * days : gb));
-    final gp = _goals['prayerMinutes'] ?? 0;
-    if (gp > 0) items.add(('\uD83D\uDE4F', l.goalPrayerMinutes, s.totalPrayerMinutes, isDaily ? gp * days : gp));
-    final ge = _goals['evangelismContacts'] ?? 0;
-    if (ge > 0) items.add(('\uD83D\uDCE2', l.goalEvangelismContacts, s.totalEvangelismContacts, isDaily ? ge * days : ge));
-    final gl = _goals['literatureItems'] ?? 0;
-    if (gl > 0) items.add(('\uD83D\uDCDA', l.goalLiteratureItems, s.litItems, isDaily ? gl * days : gl));
-
-    final title = isDaily ? l.dailyGoals : l.weeklyGoals;
+    for (final goal in goalsForFrequency) {
+      final metric = _metricFor(goal.metricKey);
+      final icon = goal.customIcon ?? metric?.icon ?? '\u2728';
+      final label = goal.customLabel ?? metric?.label(l) ?? goal.metricKey;
+      final current = await GoalProgressService.instance.computeProgress(goal, _weekRef);
+      items.add((icon, label, current, goal.target));
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.isDark(context)
-              ? Colors.white.withValues(alpha: 0.04)
-              : Colors.black.withValues(alpha: 0.03),
+          color: AppTheme.isDark(context) ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: accent.withValues(alpha: 0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title.toUpperCase(),
-                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            Text(title.toUpperCase(), style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
             const SizedBox(height: 12),
             ...items.map((item) => _goalProgressRow(item.$1, item.$2, item.$3, item.$4, accent)),
           ],
         ),
       ),
     ).animate().fadeIn();
+  }
+
+  GoalMetric? _metricFor(String metricKey) {
+    final all = [...GoalMetrics.builtIn, ...GoalMetrics.fromCustomActivities(_customActivitiesForGoals)];
+    for (final m in all) {
+      if (m.key == metricKey) return m;
+    }
+    return null;
   }
 
   Widget _goalProgressRow(String icon, String label, int current, int target, Color accent) {
