@@ -706,6 +706,9 @@ class SEn extends S {
   String get autoSendSection => 'Auto-Send Report';
 
   @override
+  String get goalPaceRemindersEnabled => 'Pace reminders';
+
+  @override
   String get autoSendEnabled => 'Auto-open report on Sunday';
 
   @override

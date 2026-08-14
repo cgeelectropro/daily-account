@@ -341,6 +341,7 @@
   "notificationsEnabledMsg": "Notifications activ\u00e9es",
 
   "autoSendSection": "Envoi automatique",
+  "goalPaceRemindersEnabled": "Rappels de rythme",
   "autoSendEnabled": "Rappel d\u2019envoi le dimanche",
   "autoSendTime": "Heure du rappel",
   "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application ouvrira automatiquement WhatsApp pour envoyer ton compte \u00e0 ton faiseur de disciples.",

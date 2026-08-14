@@ -29,25 +29,44 @@ class GoalProgressService {
   /// target — a simple, non-continuous pace heuristic (see design spec
   /// §9 for rationale).
   Future<bool> isBehindPace(Goal goal, [DateTime? ref]) async {
-    final elapsed = periodElapsedFraction(goal.frequency, ref);
+    final elapsed = await periodElapsedFractionAsync(goal.frequency, ref);
     if (elapsed <= 0.5) return false;
     final progress = await computeProgress(goal, ref);
     if (goal.target <= 0) return false;
     return (progress / goal.target) < 0.5;
   }
 
+  /// Cadence-aware elapsed fraction: for weekly goals this resolves the
+  /// user's configured week-ending day (matching [_logsForPeriod]'s own
+  /// window), instead of assuming a Sunday-ending week.
+  Future<double> periodElapsedFractionAsync(GoalFrequency frequency, [DateTime? ref]) async {
+    final d = ref ?? DateTime.now();
+    switch (frequency) {
+      case GoalFrequency.daily:
+        return 1.0;
+      case GoalFrequency.weekly:
+        final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+        final dates = ReportService.instance.weekDates(d, endWeekday);
+        final dayIndex = dates.indexWhere((date) =>
+            date.year == d.year && date.month == d.month && date.day == d.day);
+        final position = dayIndex >= 0 ? dayIndex + 1 : 7;
+        return position / 7.0;
+      case GoalFrequency.monthly:
+        final lastDay = DateTime(d.year, d.month + 1, 0).day;
+        return d.day / lastDay;
+    }
+  }
+
+  /// Synchronous, cadence-agnostic (Sunday-ending week) approximation.
+  /// Prefer [periodElapsedFractionAsync] wherever an async context is
+  /// available (e.g. [isBehindPace]); this remains for sync callers such
+  /// as build methods that cannot await the configured cadence day.
   double periodElapsedFraction(GoalFrequency frequency, [DateTime? ref]) {
     final d = ref ?? DateTime.now();
     switch (frequency) {
       case GoalFrequency.daily:
         return 1.0;
       case GoalFrequency.weekly:
-        // Synchronous fallback: use the default Sunday-ending window's
-        // weekday index, since this method is sync (called from build
-        // methods) and cannot await the configured cadence day. Callers
-        // needing the true cadence-aware fraction should prefer computing
-        // it from computeProgress's own period resolution; this method is
-        // a lightweight approximation for pace-check UI only.
         return (d.weekday) / 7.0;
       case GoalFrequency.monthly:
         final lastDay = DateTime(d.year, d.month + 1, 0).day;

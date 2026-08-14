@@ -1333,6 +1333,12 @@ abstract class S {
   /// **'Auto-Send Report'**
   String get autoSendSection;
 
+  /// No description provided for @goalPaceRemindersEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace reminders'**
+  String get goalPaceRemindersEnabled;
+
   /// No description provided for @autoSendEnabled.
   ///
   /// In en, this message translates to:

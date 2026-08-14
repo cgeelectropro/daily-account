@@ -709,6 +709,9 @@ class SFr extends S {
   String get autoSendSection => 'Envoi automatique';
 
   @override
+  String get goalPaceRemindersEnabled => 'Rappels de rythme';
+
+  @override
   String get autoSendEnabled => 'Rappel d’envoi le dimanche';
 
   @override

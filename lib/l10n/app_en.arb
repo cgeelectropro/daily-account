@@ -341,6 +341,7 @@
   "notificationsEnabledMsg": "Notifications enabled",
 
   "autoSendSection": "Auto-Send Report",
+  "goalPaceRemindersEnabled": "Pace reminders",
   "autoSendEnabled": "Auto-open report on Sunday",
   "autoSendTime": "Send reminder time",
   "autoSendDescription": "On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.",

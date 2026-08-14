@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:daily_account/models/daily_log.dart';
 import 'package:daily_account/models/goal.dart';
 import 'package:daily_account/services/goal_progress_service.dart';
+import 'package:daily_account/services/report_cadence_service.dart';
 import 'package:daily_account/services/storage_service.dart';
 
 void main() {
@@ -326,6 +327,35 @@ void main() {
       await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-29', bibleChapters: '60'));
       final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.monthly, target: 100, unit: GoalUnit.count);
       expect(await GoalProgressService.instance.isBehindPace(goal, day), false);
+    });
+
+    test('false for zero-target goal even past midpoint with no progress', () async {
+      final day = DateTime(2026, 8, 29);
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.monthly, target: 0, unit: GoalUnit.count);
+      expect(await GoalProgressService.instance.isBehindPace(goal, day), false);
+    });
+
+    test('weekly goal uses the configured cadence week, not a Sunday-ending week', () async {
+      // Week ends Wednesday. 2026-08-12 is a Wednesday, so the window is
+      // Thu 8/6..Wed 8/12. Ref = Thu 8/6 (day 1 of that week): elapsed =
+      // 1/7 ≈ 0.14, well under the midpoint, so never behind regardless of
+      // progress — even with zero logged. A Sunday-ending approximation
+      // would instead read weekday=4/7 ≈ 0.57 (past the midpoint) and
+      // wrongly report "behind".
+      await ReportCadenceService.instance.setWeeklyDay(DateTime.wednesday);
+      final refDate = DateTime(2026, 8, 6);
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.weekly, target: 10, unit: GoalUnit.count);
+      expect(await GoalProgressService.instance.isBehindPace(goal, refDate), false);
+    });
+
+    test('weekly goal past its cadence-week midpoint with under-half progress is behind', () async {
+      // Same Wednesday-ending week (Thu 8/6..Wed 8/12). Ref = Tue 8/11 is
+      // day 6 of 7 ≈ 0.86 elapsed, past the midpoint.
+      await ReportCadenceService.instance.setWeeklyDay(DateTime.wednesday);
+      final refDate = DateTime(2026, 8, 11);
+      await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-11', bibleChapters: '2'));
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.weekly, target: 10, unit: GoalUnit.count);
+      expect(await GoalProgressService.instance.isBehindPace(goal, refDate), true);
     });
   });
 }

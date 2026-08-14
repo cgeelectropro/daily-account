@@ -832,7 +832,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // ── Goals ──
         SectionCard(icon: '🎯', title: l.goalsSection, initiallyExpanded: false, children: [
-          _switchRow('Pace reminders', _goalPaceRemindersEnabled, _toggleGoalPaceReminders),
+          _switchRow(l.goalPaceRemindersEnabled, _goalPaceRemindersEnabled, _toggleGoalPaceReminders),
           const SizedBox(height: 12),
           _goalFrequencySubsection(GoalFrequency.daily, l.dailyGoalsLabel, l),
           const SizedBox(height: 16),
