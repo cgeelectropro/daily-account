@@ -308,13 +308,15 @@ figure.)
 1. **In-app banner**: computed live, same lifecycle-check pattern as
    `HomeShell._checkAutoSend` (`home_shell.dart:358`, called from
    `initState` and `didChangeAppLifecycleState`'s resumed branch). New
-   `HomeShell._checkGoalPace()` method iterates `_goals`, calls the
+   `HomeShell._checkGoalPace()` method iterates the active goals, calls the
    behind-pace check above for each, and if any are behind, shows a
-   dismissible banner on the Report screen (new state:
-   `List<Goal> _behindPaceGoals` threaded down similarly to how
-   `_hasPendingReport` already flows from `HomeShell` today) — e.g. "You're
-   halfway through the week — 3 goals could use some attention." tapping
-   it navigates to the Report tab's goals card.
+   banner. `_hasPendingReport` — the closest existing precedent — is a
+   `HomeShell`-owned boolean rendered directly inside `HomeShell.build()`'s
+   own widget tree (above the tab body, visible regardless of which tab is
+   active), **not** threaded down into `ReportScreen`; the new
+   `List<Goal> _behindPaceGoals` state and its banner follow that exact
+   same ownership pattern rather than being passed into `ReportScreen` — e.g.
+   "3 goals could use some attention," tapping it switches to the Report tab.
 
 2. **Background push**: `NotificationService` gains
    `scheduleGoalPaceChecks()`, called from the existing `rescheduleAll()`
