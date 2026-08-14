@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../data/scripture_library.dart';
 import '../models/daily_log.dart';
+import '../models/goal.dart';
 
 // ═══════════════════════════════════════════════════════════
 //  DATA MODELS
@@ -59,6 +60,7 @@ class ReflectionContext {
   final int totalEvangelismContactsThisWeek;
   final int totalPrayerMinutesThisWeek;
   final TimeOfDay timeOfDay;
+  final List<Goal> completedGoalsToday;
 
   const ReflectionContext({
     this.streak = 0,
@@ -72,6 +74,7 @@ class ReflectionContext {
     this.totalEvangelismContactsThisWeek = 0,
     this.totalPrayerMinutesThisWeek = 0,
     this.timeOfDay = const TimeOfDay(hour: 12, minute: 0),
+    this.completedGoalsToday = const [],
   });
 }
 
@@ -280,6 +283,14 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
       List<bool> checks, int filled, Random rng, String locale) {
     final isFr = locale.startsWith('fr');
     final signals = <(int priority, String text)>[];
+
+    // Goal completion — highest priority, always mentioned first if present
+    if (ctx.completedGoalsToday.isNotEmpty) {
+      final names = ctx.completedGoalsToday.map((g) => g.customLabel ?? g.metricKey).join(', ');
+      signals.add((0, isFr
+          ? 'Objectif atteint : $names ! Continuez ainsi.'
+          : 'Goal reached: $names! Keep it up.'));
+    }
 
     // Bible content
     final bibleRef = log.combinedBibleReference(locale);

@@ -11,6 +11,8 @@ import '../l10n/generated/app_localizations.dart';
 import '../models/custom_activity.dart';
 import '../models/daily_log.dart';
 import '../models/fasting_period.dart';
+import '../models/goal.dart';
+import '../services/goal_progress_service.dart';
 import '../services/notification_service.dart';
 import '../services/reading_plan_service.dart';
 import '../services/reflection_service.dart';
@@ -60,6 +62,9 @@ class _LogScreenState extends State<LogScreen> {
 
   // Time-conscious mode
   bool _timeConscious = false;
+
+  // Goals — completed on the most recent persist, threaded into reflection context
+  List<Goal> _lastCompletedGoals = [];
 
   @override
   void initState() {
@@ -543,10 +548,24 @@ class _LogScreenState extends State<LogScreen> {
 
   void _persist() {
     _persistDebounce?.cancel();
-    _persistDebounce = Timer(const Duration(milliseconds: 500), () {
-      StorageService.instance.saveLog(_log);
+    _persistDebounce = Timer(const Duration(milliseconds: 500), () async {
+      final before = await StorageService.instance.getLog(_log.dateKey);
+      await StorageService.instance.saveLog(_log);
       widget.onChanged();
       ReadingPlanService.instance.autoDetectCompletion(_log);
+
+      final goals = await StorageService.instance.getGoals();
+      final completed = await GoalProgressService.instance.justCompletedGoals(before, _log, goals);
+      if (completed.isNotEmpty) {
+        _lastCompletedGoals = completed;
+        for (final goal in completed) {
+          final label = goal.customLabel ?? goal.metricKey;
+          final title = S.of(context).goalCompletedTitle;
+          final body = S.of(context).goalCompletedBody(label);
+          await NotificationService.instance.showGoalCompletedNotification(title, body);
+        }
+      }
+
       _scheduleReflectionUpdate();
     });
   }
@@ -571,6 +590,7 @@ class _LogScreenState extends State<LogScreen> {
       totalEvangelismContactsThisWeek: stats.totalEvangelismContacts,
       totalPrayerMinutesThisWeek: stats.totalPrayerMinutes,
       timeOfDay: TimeOfDay.now(),
+      completedGoalsToday: _lastCompletedGoals,
     );
   }
 

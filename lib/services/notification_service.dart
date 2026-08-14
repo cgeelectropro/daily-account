@@ -79,6 +79,7 @@ Future<void> _backgroundSnooze() async {
 ///   50 = Test notification
 ///   99 = Snooze notification
 ///  110–120 = Per-discipline reminders
+///  130 = Goal completed
 class NotificationService {
   static final NotificationService instance = NotificationService._();
   NotificationService._();
@@ -1167,6 +1168,20 @@ class NotificationService {
       body,
       _alarmDetails,
     );
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  GOAL COMPLETION NOTIFICATION
+  // ═════════════════════════════════════════════════════════════
+
+  /// Immediately show a one-shot "goal completed" notification (not
+  /// scheduled — fires right away when called). Always uses id 130;
+  /// if multiple goals complete in the same save, the notifications
+  /// overwrite each other on the notification tray, which is an
+  /// accepted simplification for a celebratory, non-durable notification.
+  Future<void> showGoalCompletedNotification(String title, String body) async {
+    await init();
+    await _plugin.show(130, title, body, _alarmDetails, payload: 'navigate_report');
   }
 
   // ═════════════════════════════════════════════════════════════
