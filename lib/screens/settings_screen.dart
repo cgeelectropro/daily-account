@@ -62,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Goals
   List<Goal> _goals = [];
   List<CustomActivity> _customActivitiesForGoals = [];
+  bool _goalPaceRemindersEnabled = true;
 
   /// Per-discipline reminder times. null = off.
   final Map<int, TimeOfDay?> _disciplineTimes = {};
@@ -123,6 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Load goals
     _goals = await StorageService.instance.getGoals();
     _customActivitiesForGoals = await StorageService.instance.getCustomActivities();
+    _goalPaceRemindersEnabled = (await s.getSetting('goalPaceRemindersEnabled', fallback: 'true')) == 'true';
     // Load per-discipline reminder times
     for (int i = 0; i < 11; i++) {
       final raw = await s.getSetting('discReminder_$i', fallback: '');
@@ -830,6 +832,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         // ── Goals ──
         SectionCard(icon: '🎯', title: l.goalsSection, initiallyExpanded: false, children: [
+          _switchRow('Pace reminders', _goalPaceRemindersEnabled, _toggleGoalPaceReminders),
+          const SizedBox(height: 12),
           _goalFrequencySubsection(GoalFrequency.daily, l.dailyGoalsLabel, l),
           const SizedBox(height: 16),
           _goalFrequencySubsection(GoalFrequency.weekly, l.weeklyGoalsLabel, l),
@@ -2197,6 +2201,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _toggleGoalPaceReminders(bool value) async {
+    setState(() => _goalPaceRemindersEnabled = value);
+    await StorageService.instance.setSetting('goalPaceRemindersEnabled', value ? 'true' : 'false');
+    await NotificationService.instance.scheduleGoalPaceChecks(); // re-arm with the new setting
   }
 
   Widget _goalRow(Goal goal, S l, Color accent, Color textCol, Color mutedCol) {

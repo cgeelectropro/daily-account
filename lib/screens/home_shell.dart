@@ -11,6 +11,8 @@ import '../l10n/generated/app_localizations_en.dart';
 import '../l10n/generated/app_localizations_fr.dart';
 import '../models/daily_log.dart';
 import '../models/activity_timer.dart';
+import '../models/goal.dart';
+import '../services/goal_progress_service.dart';
 import '../services/notification_service.dart';
 import '../services/report_cadence_service.dart';
 import '../services/report_service.dart';
@@ -38,6 +40,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   Map<String, bool> _weekCompletion = {};
   int _reportKey = 0; // forces ReportScreen rebuild on data change
   bool _hasPendingReport = false;
+  List<Goal> _behindPaceGoals = [];
   StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
@@ -51,6 +54,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     _checkPendingReport();
     _trySendPending(); // retry any queued report first
     _checkAutoSend();
+    _checkGoalPace();
     _scheduleSaturdaySummary();
     _handleWidgetClicks();
     // Navigate to report tab when tapping a report notification,
@@ -89,6 +93,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // Re-check auto-send on resume — handles the case where the user
       // had the app in background past the auto-send time on Sunday.
       _checkAutoSend();
+      _checkGoalPace();
     }
   }
 
@@ -433,6 +438,20 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // Launch failed (WhatsApp not installed?) — queue for retry
       await s.queuePendingReport(fullReport, whatsapp);
     }
+  }
+
+  /// Check all configured goals for whether they're behind pace, and
+  /// update the in-app banner state. Mirrors _checkAutoSend's structure —
+  /// owned entirely by HomeShell, called from the same lifecycle points.
+  Future<void> _checkGoalPace() async {
+    final enabled = (await StorageService.instance.getSetting('goalPaceRemindersEnabled', fallback: 'true')) == 'true';
+    if (!enabled) return;
+    final goals = await StorageService.instance.getGoals();
+    final behind = <Goal>[];
+    for (final goal in goals) {
+      if (await GoalProgressService.instance.isBehindPace(goal)) behind.add(goal);
+    }
+    if (mounted) setState(() => _behindPaceGoals = behind);
   }
 
   /// Get the S instance for the user's chosen report language.
@@ -853,6 +872,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             children: [
               _header(),
               if (_hasPendingReport) _pendingReportBanner(),
+              if (_behindPaceGoals.isNotEmpty) _behindPaceGoalsBanner(),
               if (_tab == 1) _weekStrip(),
               Expanded(child: _body()),
             ],
@@ -1276,6 +1296,40 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               ),
               child: Text(l.pendingReportRetry,
                   style: AppTheme.label(10, color: AppTheme.rust)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _behindPaceGoalsBanner() {
+    final l = S.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.rust.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.rust.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Text('⏳', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(l.behindPaceBannerText(_behindPaceGoals.length),
+                style: AppTheme.serif(12, color: AppTheme.rust)),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _tab = 2), // navigate to the Report tab (case 2 in _body())
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.rust.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(l.viewReport, style: AppTheme.label(10, color: AppTheme.rust)),
             ),
           ),
         ],

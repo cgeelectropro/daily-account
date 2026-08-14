@@ -8,6 +8,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'storage_service.dart';
 import 'report_cadence_service.dart';
+import 'goal_progress_service.dart';
+import '../models/goal.dart';
 
 /// Top-level handler for notification actions when the app is in the
 /// background or terminated. Must be top-level (not an instance method)
@@ -80,6 +82,7 @@ Future<void> _backgroundSnooze() async {
 ///   99 = Snooze notification
 ///  110–120 = Per-discipline reminders
 ///  130 = Goal completed
+///  140-142 = Goal pace-check reminders
 class NotificationService {
   static final NotificationService instance = NotificationService._();
   NotificationService._();
@@ -475,6 +478,10 @@ class NotificationService {
         }
       }
     }
+
+    // Re-schedule goal pace-check reminders (independently gated by their
+    // own 'goalPaceRemindersEnabled' setting, checked inside the method).
+    await scheduleGoalPaceChecks();
   }
 
   // ═════════════════════════════════════════════════════════════
@@ -1182,6 +1189,60 @@ class NotificationService {
   Future<void> showGoalCompletedNotification(String title, String body) async {
     await init();
     await _plugin.show(130, title, body, _alarmDetails, payload: 'navigate_report');
+  }
+
+  // ═════════════════════════════════════════════════════════════
+  //  GOAL PACE-CHECK REMINDERS
+  // ═════════════════════════════════════════════════════════════
+
+  /// Schedule (or re-schedule) the three goal pace-check reminders. Each
+  /// is a one-shot notification whose "is the user actually behind" state
+  /// is computed at schedule time (this plugin's zonedSchedule bakes text
+  /// in at schedule time, not fire time — see design spec §9) and re-armed
+  /// whenever this method runs again (called from rescheduleAll(), i.e.
+  /// on every app start/resume).
+  Future<void> scheduleGoalPaceChecks() async {
+    await init();
+    final enabled = (await StorageService.instance.getSetting('goalPaceRemindersEnabled', fallback: 'true')) == 'true';
+    for (final id in [140, 141, 142]) {
+      await _plugin.cancel(id);
+    }
+    if (!enabled) return;
+
+    final goals = await StorageService.instance.getGoals();
+    final byFrequency = {
+      GoalFrequency.daily: goals.where((g) => g.frequency == GoalFrequency.daily).toList(),
+      GoalFrequency.weekly: goals.where((g) => g.frequency == GoalFrequency.weekly).toList(),
+      GoalFrequency.monthly: goals.where((g) => g.frequency == GoalFrequency.monthly).toList(),
+    };
+
+    Future<int> countBehind(List<Goal> list) async {
+      int n = 0;
+      for (final g in list) {
+        if (await GoalProgressService.instance.isBehindPace(g)) n++;
+      }
+      return n;
+    }
+
+    final dailyBehind = await countBehind(byFrequency[GoalFrequency.daily]!);
+    if (dailyBehind > 0) {
+      await _safeZonedSchedule(140, 'Goals', '$dailyBehind daily goal(s) could use some attention today.',
+          _nextInstanceOfTime(15, 0), _alarmDetails);
+    }
+
+    final weeklyBehind = await countBehind(byFrequency[GoalFrequency.weekly]!);
+    if (weeklyBehind > 0) {
+      final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+      final midWeekday = ((endWeekday - 3 - 1) % 7) + 1; // 3 days before the week-ending day, DateTime.weekday convention
+      await _safeZonedSchedule(141, 'Goals', '$weeklyBehind weekly goal(s) could use some attention.',
+          _nextInstanceOfWeekday(midWeekday, 18, 0), _alarmDetails);
+    }
+
+    final monthlyBehind = await countBehind(byFrequency[GoalFrequency.monthly]!);
+    if (monthlyBehind > 0) {
+      await _safeZonedSchedule(142, 'Goals', '$monthlyBehind monthly goal(s) could use some attention.',
+          _nextInstanceOfMonthlyDay((year, month) => 15, 18, 0), _alarmDetails);
+    }
   }
 
   // ═════════════════════════════════════════════════════════════

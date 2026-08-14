@@ -25,6 +25,17 @@ class GoalProgressService {
     return (await computeProgress(goal, ref)) >= goal.target;
   }
 
+  /// True if [goal] is past its period's midpoint but under half its
+  /// target — a simple, non-continuous pace heuristic (see design spec
+  /// §9 for rationale).
+  Future<bool> isBehindPace(Goal goal, [DateTime? ref]) async {
+    final elapsed = periodElapsedFraction(goal.frequency, ref);
+    if (elapsed <= 0.5) return false;
+    final progress = await computeProgress(goal, ref);
+    if (goal.target <= 0) return false;
+    return (progress / goal.target) < 0.5;
+  }
+
   double periodElapsedFraction(GoalFrequency frequency, [DateTime? ref]) {
     final d = ref ?? DateTime.now();
     switch (frequency) {

@@ -302,4 +302,30 @@ void main() {
       expect(result, isEmpty, reason: 'week total was already 15 >= 10 before today\'s save, so this is not a fresh completion');
     });
   });
+
+  group('isBehindPace', () {
+    test('false before the period midpoint even with zero progress', () async {
+      // Daily goals are always elapsed=1.0 per periodElapsedFraction, so
+      // this case is only meaningful for weekly/monthly — use a monthly
+      // goal early in the month.
+      final earlyMonth = DateTime(2026, 8, 5); // day 5 of 31 = ~16% elapsed
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.monthly, target: 100, unit: GoalUnit.count);
+      expect(await GoalProgressService.instance.isBehindPace(goal, earlyMonth), false);
+    });
+
+    test('true past the midpoint with under-half progress', () async {
+      final day = DateTime(2026, 8, 29);
+      await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-29', bibleChapters: '10'));
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.monthly, target: 100, unit: GoalUnit.count);
+      // Past day 15 (midpoint of 31), progress 10 < 50, so behind.
+      expect(await GoalProgressService.instance.isBehindPace(goal, day), true);
+    });
+
+    test('false past the midpoint with over-half progress', () async {
+      final day = DateTime(2026, 8, 29);
+      await StorageService.instance.saveLog(DailyLog(dateKey: '2026-08-29', bibleChapters: '60'));
+      final goal = Goal(id: 'bibleChapters', metricKey: 'bibleChapters', frequency: GoalFrequency.monthly, target: 100, unit: GoalUnit.count);
+      expect(await GoalProgressService.instance.isBehindPace(goal, day), false);
+    });
+  });
 }
