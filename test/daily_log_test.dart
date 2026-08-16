@@ -509,6 +509,45 @@ void main() {
     });
   });
 
+  group('ProclamationSession', () {
+    test('toMap/fromMap round-trip', () {
+      final s = ProclamationSession(topic: 'Healing', count: 3, duration: '12min');
+      final restored = ProclamationSession.fromMap(s.toMap());
+      expect(restored.topic, 'Healing');
+      expect(restored.count, 3);
+      expect(restored.duration, '12min');
+    });
+
+    test('isEmpty/isNotEmpty', () {
+      expect(ProclamationSession().isEmpty, true);
+      expect(ProclamationSession(topic: 'Salvation').isNotEmpty, true);
+    });
+  });
+
+  group('DailyLog proclamation totals', () {
+    test('totalProclamationCount sums sessions when present', () {
+      final log = DailyLog(dateKey: '2026-08-16', proclamationSessions: [
+        ProclamationSession(topic: 'Healing', count: 3, duration: '12min'),
+        ProclamationSession(topic: 'Salvation', count: 1, duration: '5min'),
+      ]);
+      expect(log.totalProclamationCount, 4);
+    });
+
+    test('totalProclamationCount falls back to legacy scalar when no sessions', () {
+      final log = DailyLog(dateKey: '2026-08-16', proclamationCount: '7');
+      expect(log.totalProclamationCount, 7);
+    });
+
+    test('toMap/fromMap round-trips proclamationSessions', () {
+      final log = DailyLog(dateKey: '2026-08-16', proclamationSessions: [
+        ProclamationSession(topic: 'Healing', count: 3, duration: '12min'),
+      ]);
+      final restored = DailyLog.fromMap(log.toMap());
+      expect(restored.proclamationSessions.length, 1);
+      expect(restored.proclamationSessions.first.topic, 'Healing');
+    });
+  });
+
   group('DailyLog sessions', () {
     test('toMap / fromMap round-trips ddegSessions', () {
       final log = DailyLog(

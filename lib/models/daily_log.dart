@@ -146,6 +146,33 @@ class PrayerSession {
   bool get isNotEmpty => !isEmpty;
 }
 
+/// A single proclamation session — a topic proclaimed some number of times
+/// over some duration. Multiple sessions with the same topic (case-insensitive,
+/// trimmed) on the same day are merged rather than duplicated — see
+/// TimerService's topic-matching logic.
+class ProclamationSession {
+  String topic;
+  int count;
+  String duration; // e.g. "12min", same format as other duration fields
+
+  ProclamationSession({this.topic = '', this.count = 0, this.duration = ''});
+
+  Map<String, dynamic> toMap() => {
+    'topic': topic,
+    'count': count,
+    'duration': duration,
+  };
+
+  factory ProclamationSession.fromMap(Map<String, dynamic> m) => ProclamationSession(
+    topic: m['topic'] ?? '',
+    count: m['count'] ?? 0,
+    duration: m['duration'] ?? '',
+  );
+
+  bool get isEmpty => topic.isEmpty && count == 0;
+  bool get isNotEmpty => !isEmpty;
+}
+
 /// The complete daily account for a single date.
 class DailyLog {
   String dateKey; // yyyy-MM-dd  (primary key)
@@ -217,6 +244,7 @@ class DailyLog {
   // ── Proclamation ──
   String proclamationCount; // number of times proclaimed
   String proclamationDuration; // optional duration
+  List<ProclamationSession> proclamationSessions;
 
   // Voice note (file path)
   String voiceNotePath;
@@ -268,6 +296,7 @@ class DailyLog {
     this.discipleshipDuration = '',
     this.proclamationCount = '',
     this.proclamationDuration = '',
+    List<ProclamationSession>? proclamationSessions,
     this.voiceNotePath = '',
     this.aiReflection = '',
     this.completed = false,
@@ -276,6 +305,7 @@ class DailyLog {
        ddegSessions = ddegSessions ?? [],
        prayerAloneSessions = prayerAloneSessions ?? [],
        prayerOthersSessions = prayerOthersSessions ?? [],
+       proclamationSessions = proclamationSessions ?? [],
        customActivityData = customActivityData ?? {};
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
@@ -357,6 +387,7 @@ class DailyLog {
         'discipleshipDuration': discipleshipDuration,
         'proclamationCount': proclamationCount,
         'proclamationDuration': proclamationDuration,
+        'proclamationSessions': jsonEncode(proclamationSessions.map((s) => s.toMap()).toList()),
         'voiceNotePath': voiceNotePath,
         'aiReflection': aiReflection,
         'completed': completed ? 1 : 0,
@@ -382,6 +413,34 @@ class DailyLog {
     }
     if (parts.isEmpty && bibleReference.isNotEmpty) parts.add(bibleReference);
     return parts.join('; ');
+  }
+
+  /// Total proclamation count: sessions if present, else the legacy scalar.
+  int get totalProclamationCount => proclamationSessions.isNotEmpty
+      ? proclamationSessions.fold(0, (sum, s) => sum + s.count)
+      : (int.tryParse(proclamationCount) ?? 0);
+
+  /// Total proclamation minutes across all sessions (0 if none have a duration).
+  int get totalProclamationMinutes => proclamationSessions.fold(
+      0, (sum, s) => sum + _parseDurationMinutesStatic(s.duration));
+
+  static int _parseDurationMinutesStatic(String s) {
+    if (s.isEmpty) return 0;
+    final cleaned = s.trim().toLowerCase();
+    final hm = RegExp(r'(\d+)\s*h\w*\s*(\d+)?\s*m?\w*');
+    final hmMatch = hm.firstMatch(cleaned);
+    if (hmMatch != null) {
+      final h = int.tryParse(hmMatch.group(1)!) ?? 0;
+      final m = int.tryParse(hmMatch.group(2) ?? '0') ?? 0;
+      return h * 60 + m;
+    }
+    final mOnly = RegExp(r'(\d+)\s*m(?:in(?:ute)?s?)?$');
+    final mMatch = mOnly.firstMatch(cleaned);
+    if (mMatch != null) return int.tryParse(mMatch.group(1)!) ?? 0;
+    final hOnly = RegExp(r'(\d+)\s*h(?:ours?)?$');
+    final hMatch = hOnly.firstMatch(cleaned);
+    if (hMatch != null) return (int.tryParse(hMatch.group(1)!) ?? 0) * 60;
+    return int.tryParse(cleaned) ?? 0;
   }
 
   factory DailyLog.fromMap(Map<String, dynamic> m) {
@@ -476,6 +535,28 @@ class DailyLog {
       }
     }
 
+    // Proclamation sessions
+    List<ProclamationSession> proclamationSessions = [];
+    try {
+      final rawProc = m['proclamationSessions'];
+      if (rawProc != null && rawProc.toString().isNotEmpty) {
+        final decoded = jsonDecode(rawProc) as List;
+        proclamationSessions = decoded
+            .map((e) => ProclamationSession.fromMap(Map<String, dynamic>.from(e)))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse proclamationSessions: $e');
+    }
+    if (proclamationSessions.isEmpty) {
+      final oldCount = (m['proclamationCount'] ?? '').toString();
+      final oldDuration = (m['proclamationDuration'] ?? '').toString();
+      if (oldCount.isNotEmpty && (int.tryParse(oldCount) ?? 0) > 0) {
+        proclamationSessions = [ProclamationSession(
+            topic: '', count: int.tryParse(oldCount) ?? 0, duration: oldDuration)];
+      }
+    }
+
     Map<String, Map<String, dynamic>> customData = {};
     try {
       final rawCustom = m['custom_activity_data'];
@@ -530,6 +611,7 @@ class DailyLog {
       discipleshipDuration: m['discipleshipDuration'] ?? '',
       proclamationCount: m['proclamationCount'] ?? '',
       proclamationDuration: m['proclamationDuration'] ?? '',
+      proclamationSessions: proclamationSessions,
       voiceNotePath: m['voiceNotePath'] ?? '',
       aiReflection: m['aiReflection'] ?? '',
       completed: (m['completed'] ?? 0) == 1,
