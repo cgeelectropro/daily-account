@@ -1,5 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:daily_account/l10n/generated/app_localizations_en.dart';
+import 'package:daily_account/models/daily_log.dart';
 import 'package:daily_account/services/report_service.dart';
+import 'package:daily_account/services/storage_service.dart';
 
 void main() {
   // Convenience accessor — avoids repeating ReportService.instance throughout.
@@ -418,6 +424,167 @@ void main() {
         hasData: true,
       );
       expect(trend.disciplineRates, same(rates));
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  //  buildFullReport — per-day report text (Task 7)
+  // ═══════════════════════════════════════════════════════════
+
+  group('buildFullReport — per-day report text', () {
+    setUpAll(() async {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      await initializeDateFormatting();
+    });
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    // Tests share one in-memory database via the StorageService singleton.
+    // Clear the logs table between tests so each test's weekly window only
+    // ever contains what it seeded itself.
+    tearDown(() async {
+      final db = await StorageService.instance.database;
+      await db.delete('logs');
+    });
+
+    final l = SEn();
+    // A fixed Wednesday so weekDates() resolves to a known Monday->Sunday window.
+    final ref = DateTime(2026, 8, 12);
+    final monday = svc.weekDates(ref).first; // 2026-08-10
+
+    test('shows Bible duration per-day when bibleDuration is present', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        bibleReference: 'John 3',
+        bibleChapters: '1',
+        bibleDuration: '25min',
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains('25min'));
+      expect(report, contains('John 3'));
+    });
+
+    test('falls back to plain Bible line (no duration) when bibleDuration is empty', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        bibleReference: 'John 3',
+        bibleChapters: '1',
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains(l.reportBible('John 3', '1')));
+    });
+
+    test('shows session-aware evangelism line when evangelismSessions exist', () async {
+      final start = DateTime(2026, 8, 10, 9, 0);
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        // completeness (and thus hasContent in the report) doesn't currently
+        // account for evangelismSessions on its own, so seed a minor legacy
+        // field to make this day register as having content.
+        discipleshipWho: 'Test Person',
+        evangelismSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 20)), durationSeconds: 20 * 60),
+          TimedSession(start: start, end: start.add(const Duration(minutes: 10)), durationSeconds: 10 * 60),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      // 2 sessions, 30 minutes total — the session-aware line, not the
+      // legacy contacts-based line (which requires evangelismContacts).
+      expect(report, contains(l.reportEvangelismSessions('2', '30min')));
+      expect(report, isNot(contains('contact(s)')));
+    });
+
+    test('falls back to legacy contacts-based evangelism line when no sessions exist', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        evangelismContacts: '3',
+        evangelismOutcome: 'Good talk',
+        evangelismNotes: 'Follow up next week',
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains(l.reportEvangelism('3', 'Good talk', 'Follow up next week')));
+    });
+
+    test('shows session-aware church line when churchSessions exist', () async {
+      final start = DateTime(2026, 8, 10, 10, 0);
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        // completeness doesn't account for churchSessions on its own, so
+        // seed a minor legacy field to make this day register as having content.
+        discipleshipWho: 'Test Person',
+        churchSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 90)), durationSeconds: 90 * 60),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains(l.reportChurchSessions('1', '1h 30min')));
+    });
+
+    test('falls back to legacy type/notes-based church line when no sessions exist', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        churchType: 'Sunday service',
+        churchNotes: 'Great sermon',
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains(l.reportChurch('Sunday service', 'Great sermon')));
+    });
+
+    test('lists each proclamation topic separately with count and duration', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        // completeness doesn't account for proclamationSessions on its own, so
+        // seed a minor legacy field to make this day register as having content.
+        discipleshipWho: 'Test Person',
+        proclamationSessions: [
+          ProclamationSession(topic: 'Salvation', count: 3, duration: '15min'),
+          ProclamationSession(topic: 'Grace', count: 2, duration: '10min'),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains('Salvation (3x, 15min)'));
+      expect(report, contains('Grace (2x, 10min)'));
+    });
+
+    test('renders legacy proclamationCount/Duration via the auto-migrated session on read', () async {
+      // DailyLog.fromMap migrates legacy proclamationCount/proclamationDuration
+      // into a single synthetic ProclamationSession (empty topic) whenever no
+      // proclamationSessions were persisted — so after a save/load round-trip
+      // through StorageService, the session-aware line renders using the
+      // sectionProclamation label as the topic fallback.
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        proclamationCount: '5',
+        proclamationDuration: '20min',
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains('${l.sectionProclamation} (5x, 20min)'));
     });
   });
 }

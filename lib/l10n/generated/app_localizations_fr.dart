@@ -570,6 +570,11 @@ class SFr extends S {
   }
 
   @override
+  String reportBibleWithDuration(String ref, String chapters, String duration) {
+    return 'Bible : $ref ($chapters ch., $duration)';
+  }
+
+  @override
   String reportLiterature(String title, String amount, String unit) {
     return 'Littérature : « $title » — $amount $unit';
   }
@@ -608,6 +613,11 @@ class SFr extends S {
   }
 
   @override
+  String reportEvangelismSessions(String sessionCount, String duration) {
+    return 'Évangélisation : $sessionCount séances, $duration au total';
+  }
+
+  @override
   String reportFasting(String type, String duration, String focus) {
     return 'Jeûne : $type ($duration) — $focus';
   }
@@ -620,6 +630,11 @@ class SFr extends S {
   @override
   String reportChurch(String type, String notes) {
     return 'Église : $type — $notes';
+  }
+
+  @override
+  String reportChurchSessions(String sessionCount, String duration) {
+    return 'Église : $sessionCount séances, $duration au total';
   }
 
   @override

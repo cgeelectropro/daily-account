@@ -222,6 +222,14 @@
       "chapters": { "type": "String" }
     }
   },
+  "reportBibleWithDuration": "Bible: {ref} ({chapters} ch., {duration})",
+  "@reportBibleWithDuration": {
+    "placeholders": {
+      "ref": { "type": "String" },
+      "chapters": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "reportLiterature": "Literature: \"{title}\" — {amount} {unit}",
   "@reportLiterature": {
     "placeholders": {
@@ -265,6 +273,13 @@
       "notes": { "type": "String" }
     }
   },
+  "reportEvangelismSessions": "Evangelism: {sessionCount} sessions, {duration} total",
+  "@reportEvangelismSessions": {
+    "placeholders": {
+      "sessionCount": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "reportFasting": "Fasting: {type} ({duration}) — {focus}",
   "@reportFasting": {
     "placeholders": {
@@ -285,6 +300,13 @@
     "placeholders": {
       "type": { "type": "String" },
       "notes": { "type": "String" }
+    }
+  },
+  "reportChurchSessions": "Church: {sessionCount} sessions, {duration} total",
+  "@reportChurchSessions": {
+    "placeholders": {
+      "sessionCount": { "type": "String" },
+      "duration": { "type": "String" }
     }
   },
   "reportDiscipleship": "Discipleship: {who} — {topic} ({duration})",

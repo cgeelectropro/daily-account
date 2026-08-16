@@ -1129,6 +1129,12 @@ abstract class S {
   /// **'Bible: {ref} ({chapters} ch.)'**
   String reportBible(String ref, String chapters);
 
+  /// No description provided for @reportBibleWithDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Bible: {ref} ({chapters} ch., {duration})'**
+  String reportBibleWithDuration(String ref, String chapters, String duration);
+
   /// No description provided for @reportLiterature.
   ///
   /// In en, this message translates to:
@@ -1177,6 +1183,12 @@ abstract class S {
   /// **'Evangelism: {contacts} contact(s). {outcome}. {notes}'**
   String reportEvangelism(String contacts, String outcome, String notes);
 
+  /// No description provided for @reportEvangelismSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Evangelism: {sessionCount} sessions, {duration} total'**
+  String reportEvangelismSessions(String sessionCount, String duration);
+
   /// No description provided for @reportFasting.
   ///
   /// In en, this message translates to:
@@ -1194,6 +1206,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Church: {type} — {notes}'**
   String reportChurch(String type, String notes);
+
+  /// No description provided for @reportChurchSessions.
+  ///
+  /// In en, this message translates to:
+  /// **'Church: {sessionCount} sessions, {duration} total'**
+  String reportChurchSessions(String sessionCount, String duration);
 
   /// No description provided for @reportDiscipleship.
   ///

@@ -222,6 +222,14 @@
       "chapters": { "type": "String" }
     }
   },
+  "reportBibleWithDuration": "Bible : {ref} ({chapters} ch., {duration})",
+  "@reportBibleWithDuration": {
+    "placeholders": {
+      "ref": { "type": "String" },
+      "chapters": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "reportLiterature": "Litt\u00e9rature : \u00ab {title} \u00bb \u2014 {amount} {unit}",
   "@reportLiterature": {
     "placeholders": {
@@ -265,6 +273,13 @@
       "notes": { "type": "String" }
     }
   },
+  "reportEvangelismSessions": "\u00c9vang\u00e9lisation : {sessionCount} s\u00e9ances, {duration} au total",
+  "@reportEvangelismSessions": {
+    "placeholders": {
+      "sessionCount": { "type": "String" },
+      "duration": { "type": "String" }
+    }
+  },
   "reportFasting": "Je\u00fbne : {type} ({duration}) \u2014 {focus}",
   "@reportFasting": {
     "placeholders": {
@@ -285,6 +300,13 @@
     "placeholders": {
       "type": { "type": "String" },
       "notes": { "type": "String" }
+    }
+  },
+  "reportChurchSessions": "\u00c9glise : {sessionCount} s\u00e9ances, {duration} au total",
+  "@reportChurchSessions": {
+    "placeholders": {
+      "sessionCount": { "type": "String" },
+      "duration": { "type": "String" }
     }
   },
   "reportDiscipleship": "Discipulat : {who} \u2014 {topic} ({duration})",

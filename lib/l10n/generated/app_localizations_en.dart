@@ -567,6 +567,11 @@ class SEn extends S {
   }
 
   @override
+  String reportBibleWithDuration(String ref, String chapters, String duration) {
+    return 'Bible: $ref ($chapters ch., $duration)';
+  }
+
+  @override
   String reportLiterature(String title, String amount, String unit) {
     return 'Literature: \"$title\" — $amount $unit';
   }
@@ -605,6 +610,11 @@ class SEn extends S {
   }
 
   @override
+  String reportEvangelismSessions(String sessionCount, String duration) {
+    return 'Evangelism: $sessionCount sessions, $duration total';
+  }
+
+  @override
   String reportFasting(String type, String duration, String focus) {
     return 'Fasting: $type ($duration) — $focus';
   }
@@ -617,6 +627,11 @@ class SEn extends S {
   @override
   String reportChurch(String type, String notes) {
     return 'Church: $type — $notes';
+  }
+
+  @override
+  String reportChurchSessions(String sessionCount, String duration) {
+    return 'Church: $sessionCount sessions, $duration total';
   }
 
   @override

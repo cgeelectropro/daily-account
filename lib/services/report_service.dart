@@ -358,7 +358,13 @@ class ReportService {
       // Same detailed output as the weekly full report
       final bibleRef = log.combinedBibleReference(l.localeName);
       if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
-        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
+        final ref = bibleRef.isNotEmpty ? bibleRef : log.bibleReference;
+        final chapters = '${log.totalBibleChapters}';
+        if (log.bibleDuration.isNotEmpty) {
+          buf.writeln('\uD83D\uDCD6 ${l.reportBibleWithDuration(ref, chapters, log.bibleDuration)}');
+        } else {
+          buf.writeln('\uD83D\uDCD6 ${l.reportBible(ref, chapters)}');
+        }
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
@@ -366,8 +372,15 @@ class ReportService {
       _writeDdegSessions(buf, log, l);
       _writePrayerAloneSessions(buf, log, l);
       _writePrayerOthersSessions(buf, log, l);
-      if (log.evangelismContacts.isNotEmpty) {
-        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+      final hasEvangelismData = log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty;
+      if (hasEvangelismData) {
+        if (log.evangelismSessions.isNotEmpty) {
+          final mins = log.totalEvangelismMinutes;
+          final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+          buf.writeln('\uD83D\uDCE2 ${l.reportEvangelismSessions('${log.evangelismSessions.length}', durationStr)}');
+        } else if (log.evangelismContacts.isNotEmpty) {
+          buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        }
         if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
           final parts = <String>[];
           if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
@@ -388,13 +401,26 @@ class ReportService {
         ].join(' — ');
         buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
       }
-      if (log.churchType.isNotEmpty) {
-        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+      if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) {
+        if (log.churchSessions.isNotEmpty) {
+          final mins = log.totalChurchMinutes;
+          final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+          buf.writeln('\u26EA ${l.reportChurchSessions('${log.churchSessions.length}', durationStr)}');
+        } else {
+          buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+        }
       }
       if (log.discipleshipWho.isNotEmpty) {
         buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
       }
-      if (log.proclamationCount.isNotEmpty) {
+      if (log.proclamationSessions.isNotEmpty) {
+        final parts = log.proclamationSessions.map((s) {
+          final label = s.topic.isNotEmpty ? s.topic : l.sectionProclamation;
+          final dur = s.duration.isNotEmpty ? s.duration : '-';
+          return '$label (${s.count}x, $dur)';
+        }).join(', ');
+        buf.writeln('\uD83D\uDCE3 $parts');
+      } else if (log.proclamationCount.isNotEmpty) {
         buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
       }
       if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
@@ -525,7 +551,13 @@ class ReportService {
 
       final bibleRef = log.combinedBibleReference(l.localeName);
       if (bibleRef.isNotEmpty || log.totalBibleChapters > 0) {
-        buf.writeln('\uD83D\uDCD6 ${l.reportBible(bibleRef.isNotEmpty ? bibleRef : log.bibleReference, '${log.totalBibleChapters}')}');
+        final ref = bibleRef.isNotEmpty ? bibleRef : log.bibleReference;
+        final chapters = '${log.totalBibleChapters}';
+        if (log.bibleDuration.isNotEmpty) {
+          buf.writeln('\uD83D\uDCD6 ${l.reportBibleWithDuration(ref, chapters, log.bibleDuration)}');
+        } else {
+          buf.writeln('\uD83D\uDCD6 ${l.reportBible(ref, chapters)}');
+        }
       }
       for (final lit in log.literature.where((e) => e.title.isNotEmpty)) {
         buf.writeln('\uD83D\uDCDA ${l.reportLiterature(lit.title, lit.amount, lit.unit)}');
@@ -533,8 +565,15 @@ class ReportService {
       _writeDdegSessions(buf, log, l);
       _writePrayerAloneSessions(buf, log, l);
       _writePrayerOthersSessions(buf, log, l);
-      if (log.evangelismContacts.isNotEmpty) {
-        buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+      final hasEvangelismData = log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty;
+      if (hasEvangelismData) {
+        if (log.evangelismSessions.isNotEmpty) {
+          final mins = log.totalEvangelismMinutes;
+          final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+          buf.writeln('\uD83D\uDCE2 ${l.reportEvangelismSessions('${log.evangelismSessions.length}', durationStr)}');
+        } else if (log.evangelismContacts.isNotEmpty) {
+          buf.writeln('\uD83D\uDCE2 ${l.reportEvangelism(log.evangelismContacts, log.evangelismOutcome, log.evangelismNotes)}');
+        }
         if (log.evangelismNewBelievers.isNotEmpty || log.evangelismBeingDiscipled.isNotEmpty) {
           final parts = <String>[];
           if (log.evangelismNewBelievers.isNotEmpty) parts.add('${l.evangelismNewBelievers}: ${log.evangelismNewBelievers}');
@@ -555,13 +594,26 @@ class ReportService {
         ].join(' — ');
         buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
       }
-      if (log.churchType.isNotEmpty) {
-        buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+      if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) {
+        if (log.churchSessions.isNotEmpty) {
+          final mins = log.totalChurchMinutes;
+          final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+          buf.writeln('\u26EA ${l.reportChurchSessions('${log.churchSessions.length}', durationStr)}');
+        } else {
+          buf.writeln('\u26EA ${l.reportChurch(log.churchType, log.churchNotes)}');
+        }
       }
       if (log.discipleshipWho.isNotEmpty) {
         buf.writeln('\uD83D\uDC65 ${l.reportDiscipleship(log.discipleshipWho, log.discipleshipTopic, log.discipleshipDuration)}');
       }
-      if (log.proclamationCount.isNotEmpty) {
+      if (log.proclamationSessions.isNotEmpty) {
+        final parts = log.proclamationSessions.map((s) {
+          final label = s.topic.isNotEmpty ? s.topic : l.sectionProclamation;
+          final dur = s.duration.isNotEmpty ? s.duration : '-';
+          return '$label (${s.count}x, $dur)';
+        }).join(', ');
+        buf.writeln('\uD83D\uDCE3 $parts');
+      } else if (log.proclamationCount.isNotEmpty) {
         buf.writeln('\uD83D\uDCE3 ${l.reportProclamation(log.proclamationCount, log.proclamationDuration.isNotEmpty ? log.proclamationDuration : "-")}');
       }
       if (log.other.isNotEmpty) buf.writeln('\u2795 ${l.reportOther(log.other)}');
