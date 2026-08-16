@@ -9,6 +9,7 @@ import 'duration_parser.dart';
 import 'reading_plan_service.dart';
 import 'report_cadence_service.dart';
 import 'storage_service.dart';
+import 'time_totals.dart';
 
 class WeekStats {
   int daysLogged;
@@ -125,55 +126,7 @@ class ReportService {
   static int _totalConsecratedMinutes(List<DailyLog> logs) {
     int total = 0;
     for (final log in logs) {
-      for (final d in [
-        log.discipleshipDuration,
-        log.proclamationDuration,
-        log.bibleDuration,
-        log.literatureDuration,
-        log.evangelismDuration,
-        log.givingDuration,
-        log.churchDuration,
-      ]) {
-        total += parseDurationMinutes(d);
-      }
-      // Session-aware DDEG time
-      final ddegSessions = log.ddegSessions.where((s) => s.isNotEmpty);
-      if (ddegSessions.isNotEmpty) {
-        for (final s in ddegSessions) {
-          total += parseDurationMinutes(s.time);
-        }
-      } else {
-        total += parseDurationMinutes(log.ddegTime);
-      }
-      // Session-aware prayer alone duration
-      final paSessions = log.prayerAloneSessions.where((s) => s.isNotEmpty);
-      if (paSessions.isNotEmpty) {
-        for (final s in paSessions) {
-          total += parseDurationMinutes(s.duration);
-        }
-      } else {
-        total += parseDurationMinutes(log.prayerAloneDuration);
-      }
-      // Session-aware prayer with others duration
-      final poSessions = log.prayerOthersSessions.where((s) => s.isNotEmpty);
-      if (poSessions.isNotEmpty) {
-        for (final s in poSessions) {
-          total += parseDurationMinutes(s.duration);
-        }
-      } else {
-        total += parseDurationMinutes(log.prayerOthersDuration);
-      }
-      // Custom activity duration fields
-      for (final actData in log.customActivityData.values) {
-        final fields = actData['fields'] as Map<String, dynamic>? ?? {};
-        for (final entry in fields.entries) {
-          if (entry.key == '_duration' ||
-              entry.key.toLowerCase().contains('duration') ||
-              entry.key.toLowerCase().contains('time')) {
-            total += parseDurationMinutes(entry.value.toString());
-          }
-        }
-      }
+      total += TimeTotals.consecratedMinutes(log);
     }
     return total;
   }

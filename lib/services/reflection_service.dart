@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/scripture_library.dart';
 import '../models/daily_log.dart';
 import '../models/goal.dart';
+import 'time_totals.dart';
 
 // ═══════════════════════════════════════════════════════════
 //  DATA MODELS
@@ -385,13 +386,7 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
     }
 
     // Total time
-    final totalMin = _parseMinutes(log.prayerAloneDuration) +
-        _parseMinutes(log.prayerOthersDuration) +
-        _parseMinutes(log.ddegTime) +
-        _parseMinutes(log.discipleshipDuration) +
-        _parseMinutes(log.proclamationDuration) +
-        _parseMinutes(log.bibleDuration) +
-        _parseMinutes(log.literatureDuration);
+    final totalMin = TimeTotals.consecratedMinutes(log);
     if (totalMin >= 60) {
       final hours = totalMin ~/ 60;
       final mins = totalMin % 60;
