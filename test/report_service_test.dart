@@ -428,6 +428,76 @@ void main() {
   });
 
   // ═══════════════════════════════════════════════════════════
+  //  computeTrend / _disciplineChecks — session-awareness (Task 7.5)
+  // ═══════════════════════════════════════════════════════════
+
+  group('computeTrend — _disciplineChecks session-awareness', () {
+    setUpAll(() async {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+    tearDown(() async {
+      final db = await StorageService.instance.database;
+      await db.delete('logs');
+    });
+
+    // Fixed Wednesday so weekDates() resolves to a known Monday->Sunday window
+    // (default weekly cadence day is Sunday).
+    final ref = DateTime(2026, 8, 12);
+    final monday = svc.weekDates(ref).first; // 2026-08-10
+
+    test('registers Evangelism as done for a session-only day (no legacy scalar)', () async {
+      final start = DateTime(2026, 8, 10, 9, 0);
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        evangelismSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 20)), durationSeconds: 20 * 60),
+        ],
+      );
+      expect(log.evangelismContacts, isEmpty);
+      await StorageService.instance.saveLog(log);
+
+      final trend = await svc.computeTrend(ref);
+
+      expect(trend.disciplineRates['Evangelism'], 1.0);
+    });
+
+    test('registers Church as done for a session-only day (no legacy scalar)', () async {
+      final start = DateTime(2026, 8, 10, 10, 0);
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        churchSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 90)), durationSeconds: 90 * 60),
+        ],
+      );
+      expect(log.churchType, isEmpty);
+      await StorageService.instance.saveLog(log);
+
+      final trend = await svc.computeTrend(ref);
+
+      expect(trend.disciplineRates['Church'], 1.0);
+    });
+
+    test('registers Proclamation as done for a session-only day (no legacy scalar)', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        proclamationSessions: [
+          ProclamationSession(topic: 'Salvation', count: 3, duration: '15min'),
+        ],
+      );
+      expect(log.proclamationCount, isEmpty);
+      await StorageService.instance.saveLog(log);
+
+      final trend = await svc.computeTrend(ref);
+
+      expect(trend.disciplineRates['Proclamation'], 1.0);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════
   //  buildFullReport — per-day report text (Task 7)
   // ═══════════════════════════════════════════════════════════
 
@@ -585,6 +655,45 @@ void main() {
       final report = await svc.buildFullReport('Disciple', l, ref);
 
       expect(report, contains('${l.sectionProclamation} (5x, 20min)'));
+    });
+
+    test('buildCompactReport — session-only day (no legacy scalars) registers as having content', () async {
+      // A day logged purely through the Stopwatch/timer flow: evangelismSessions,
+      // churchSessions, and proclamationSessions are populated but the legacy
+      // scalar fields (evangelismContacts, churchType, proclamationCount) are
+      // untouched. Before the completeness/discipline-check fix, this day would
+      // have completeness == 0 and be skipped from the compact report entirely
+      // as "No entry recorded" (❌).
+      final start = DateTime(2026, 8, 10, 9, 0);
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        evangelismSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 20)), durationSeconds: 20 * 60),
+        ],
+        churchSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 90)), durationSeconds: 90 * 60),
+        ],
+        proclamationSessions: [
+          ProclamationSession(topic: 'Salvation', count: 3, duration: '15min'),
+        ],
+      );
+      expect(log.evangelismContacts, isEmpty);
+      expect(log.churchType, isEmpty);
+      expect(log.proclamationCount, isEmpty);
+      expect(log.completeness, greaterThan(0.0));
+
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildCompactReport('Disciple', l, ref);
+
+      // Compact per-day summary emoji tags should reflect the session data —
+      // these only ever get added inside the "day has content" branch, so
+      // their presence proves the day was NOT skipped as "No entry recorded".
+      // Evangelism count falls back to session count (1); proclamation falls
+      // back to totalProclamationCount (3).
+      expect(report, contains('📢1'));
+      expect(report, contains('⛪'));
+      expect(report, contains('📣3'));
     });
   });
 }

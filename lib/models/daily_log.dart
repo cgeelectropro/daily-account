@@ -355,12 +355,12 @@ class DailyLog {
       ddegSessions.any((s) => s.isNotEmpty) || ddegScripture.isNotEmpty || ddegNotes.isNotEmpty,
       prayerAloneSessions.any((s) => s.isNotEmpty) || prayerAloneDuration.isNotEmpty,
       prayerOthersSessions.any((s) => s.isNotEmpty) || prayerOthersDuration.isNotEmpty,
-      evangelismContacts.isNotEmpty,
+      evangelismContacts.isNotEmpty || evangelismSessions.isNotEmpty,
       fastingType.isNotEmpty || fastingDuration.isNotEmpty,
       givingType.isNotEmpty,
-      churchType.isNotEmpty,
+      churchType.isNotEmpty || churchSessions.isNotEmpty,
       discipleshipWho.isNotEmpty,
-      proclamationCount.isNotEmpty,
+      proclamationCount.isNotEmpty || proclamationSessions.isNotEmpty,
     ];
     final filled = checks.where((c) => c).length;
 

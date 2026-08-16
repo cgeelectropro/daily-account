@@ -646,12 +646,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       final hasLit = log != null && log.literature.any((l) => l.title.isNotEmpty);
       final hasDdeg = log != null && (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty);
       final hasPrayer = log != null && (log.prayerAloneDuration.isNotEmpty || log.prayerOthersDuration.isNotEmpty);
-      final hasEvangelism = log != null && log.evangelismContacts.isNotEmpty;
+      final hasEvangelism = log != null && (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty);
       final hasFasting = log != null && (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty);
       final hasGiving = log != null && log.givingType.isNotEmpty;
-      final hasChurch = log != null && log.churchType.isNotEmpty;
+      final hasChurch = log != null && (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty);
       final hasDisciple = log != null && log.discipleshipWho.isNotEmpty;
-      final hasProclamation = log != null && log.proclamationCount.isNotEmpty;
+      final hasProclamation = log != null && (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty);
 
       final doneFlags = [hasBible, hasLit, hasDdeg, hasPrayer, hasEvangelism,
           hasFasting, hasGiving, hasChurch, hasDisciple, hasProclamation];

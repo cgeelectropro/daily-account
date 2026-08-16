@@ -188,12 +188,12 @@ class ReportService {
     l.ddegSessions.any((s) => s.isNotEmpty) || l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
     l.prayerAloneSessions.any((s) => s.isNotEmpty) || l.prayerAloneDuration.isNotEmpty,
     l.prayerOthersSessions.any((s) => s.isNotEmpty) || l.prayerOthersDuration.isNotEmpty,
-    l.evangelismContacts.isNotEmpty,
+    l.evangelismContacts.isNotEmpty || l.evangelismSessions.isNotEmpty,
     l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
     l.givingType.isNotEmpty,
-    l.churchType.isNotEmpty,
+    l.churchType.isNotEmpty || l.churchSessions.isNotEmpty,
     l.discipleshipWho.isNotEmpty,
-    l.proclamationCount.isNotEmpty,
+    l.proclamationCount.isNotEmpty || l.proclamationSessions.isNotEmpty,
   ];
 
   /// Compare this week's discipline consistency with the previous 30 days.
@@ -713,12 +713,18 @@ class ReportService {
         parts.add('\uD83D\uDE4F${dur.isNotEmpty ? dur : ""}');
       }
       if (log.prayerOthersSessions.any((s) => s.isNotEmpty) || log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
-      if (log.evangelismContacts.isNotEmpty) parts.add('\uD83D\uDCE2${log.evangelismContacts}');
+      if (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty) {
+        final count = log.evangelismContacts.isNotEmpty ? log.evangelismContacts : '${log.evangelismSessions.length}';
+        parts.add('\uD83D\uDCE2$count');
+      }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
       if (log.givingType.isNotEmpty) parts.add('\uD83D\uDCB0');
-      if (log.churchType.isNotEmpty) parts.add('\u26EA');
+      if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) parts.add('\u26EA');
       if (log.discipleshipWho.isNotEmpty) parts.add('\uD83D\uDC65');
-      if (log.proclamationCount.isNotEmpty) parts.add('\uD83D\uDCE3${log.proclamationCount}');
+      if (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty) {
+        final count = log.proclamationCount.isNotEmpty ? log.proclamationCount : '${log.totalProclamationCount}';
+        parts.add('\uD83D\uDCE3$count');
+      }
       final pct = (log.completeness * 100).round();
       dayEntries.add('\u2705 ${fmtShort.format(d)} ($pct%) ${parts.join(' ')}');
     }

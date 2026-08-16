@@ -667,6 +667,41 @@ void main() {
       );
       expect(log.completeness, closeTo(1 / 11, 0.01));
     });
+
+    test('completeness counts evangelismSessions (session-only, no legacy scalar)', () {
+      final start = DateTime(2026, 8, 10, 9, 0);
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        evangelismSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 20)), durationSeconds: 20 * 60),
+        ],
+      );
+      expect(log.evangelismContacts, isEmpty);
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts churchSessions (session-only, no legacy scalar)', () {
+      final start = DateTime(2026, 8, 10, 10, 0);
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        churchSessions: [
+          TimedSession(start: start, end: start.add(const Duration(minutes: 90)), durationSeconds: 90 * 60),
+        ],
+      );
+      expect(log.churchType, isEmpty);
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts proclamationSessions (session-only, no legacy scalar)', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        proclamationSessions: [
+          ProclamationSession(topic: 'Salvation', count: 3, duration: '15min'),
+        ],
+      );
+      expect(log.proclamationCount, isEmpty);
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
   });
 
   group('TimedSession', () {
