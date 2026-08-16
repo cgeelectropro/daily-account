@@ -424,7 +424,10 @@ class TimerService extends ChangeNotifier {
     }
 
     // No running or paused timers — cancel notification
-    NotificationService.instance.cancelStopwatchNotification();
+    NotificationService.instance.cancelStopwatchNotification().catchError((_) {
+      // Notification plugin unavailable (e.g. test environment) — timer
+      // state is already persisted, so this is safe to ignore.
+    });
   }
 
   Future<void> _persist() async {
@@ -441,39 +444,40 @@ class TimerService extends ChangeNotifier {
     final durationStr = session.logDurationString;
 
     if (session.key.isBuiltIn) {
-      // Accumulate duration field (add to existing) if the activity has one
-      final field = session.key.builtIn!.logDurationField;
-      if (field != null) {
-        switch (field) {
-          case 'bibleDuration':
-            log.bibleDuration =
-                _accumulateDuration(log.bibleDuration, durationStr);
-          case 'literatureDuration':
-            log.literatureDuration =
-                _accumulateDuration(log.literatureDuration, durationStr);
-          case 'ddegTime':
-            log.ddegTime = _accumulateDuration(log.ddegTime, durationStr);
-          case 'prayerAloneDuration':
-            log.prayerAloneDuration =
-                _accumulateDuration(log.prayerAloneDuration, durationStr);
-          case 'prayerOthersDuration':
-            log.prayerOthersDuration =
-                _accumulateDuration(log.prayerOthersDuration, durationStr);
-          case 'evangelismDuration':
-            log.evangelismDuration =
-                _accumulateDuration(log.evangelismDuration, durationStr);
-          case 'fastingDuration':
-            log.fastingDuration =
-                _accumulateDuration(log.fastingDuration, durationStr);
-          case 'discipleshipDuration':
-            log.discipleshipDuration =
-                _accumulateDuration(log.discipleshipDuration, durationStr);
-          case 'churchDuration':
-            log.churchDuration =
-                _accumulateDuration(log.churchDuration, durationStr);
-          case 'proclamationDuration':
-            log.proclamationDuration =
-                _accumulateDuration(log.proclamationDuration, durationStr);
+      final builtInType = session.key.builtIn!;
+
+      if (builtInType == ActivityType.proclamation) {
+        _appendProclamationSession(log, session, durationStr);
+      } else if (builtInType == ActivityType.evangelism) {
+        _appendTimedSession(log.evangelismSessions, session, durationStr);
+      } else if (builtInType == ActivityType.church) {
+        _appendTimedSession(log.churchSessions, session, durationStr);
+      } else {
+        // Accumulate duration field (add to existing) if the activity has one
+        final field = session.key.builtIn!.logDurationField;
+        if (field != null) {
+          switch (field) {
+            case 'bibleDuration':
+              log.bibleDuration =
+                  _accumulateDuration(log.bibleDuration, durationStr);
+            case 'literatureDuration':
+              log.literatureDuration =
+                  _accumulateDuration(log.literatureDuration, durationStr);
+            case 'ddegTime':
+              log.ddegTime = _accumulateDuration(log.ddegTime, durationStr);
+            case 'prayerAloneDuration':
+              log.prayerAloneDuration =
+                  _accumulateDuration(log.prayerAloneDuration, durationStr);
+            case 'prayerOthersDuration':
+              log.prayerOthersDuration =
+                  _accumulateDuration(log.prayerOthersDuration, durationStr);
+            case 'fastingDuration':
+              log.fastingDuration =
+                  _accumulateDuration(log.fastingDuration, durationStr);
+            case 'discipleshipDuration':
+              log.discipleshipDuration =
+                  _accumulateDuration(log.discipleshipDuration, durationStr);
+          }
         }
       }
 
@@ -485,6 +489,7 @@ class TimerService extends ChangeNotifier {
           // otherwise reports show a chapter tally with no book/verse.
           continue;
         }
+        if (entry.key == 'proclamationTopic') continue; // consumed above, not a log field
         _mergeLogField(log, entry.key, entry.value);
       }
     } else {
@@ -522,6 +527,41 @@ class TimerService extends ChangeNotifier {
     }
 
     await storage.saveLog(log);
+  }
+
+  /// Append a proclamation session, merging into an existing same-day
+  /// session if the topic matches (case-insensitive, trimmed) instead of
+  /// creating a duplicate.
+  void _appendProclamationSession(
+      DailyLog log, TimerSession session, String durationStr) {
+    final topic = (session.fields['proclamationTopic'] ?? '').trim();
+    final normalizedTopic = topic.toLowerCase();
+    final existingIndex = log.proclamationSessions.indexWhere(
+        (s) => s.topic.trim().toLowerCase() == normalizedTopic);
+
+    if (existingIndex != -1) {
+      final existing = log.proclamationSessions[existingIndex];
+      existing.count += 1;
+      existing.duration = _accumulateDuration(existing.duration, durationStr);
+    } else {
+      log.proclamationSessions.add(ProclamationSession(
+        topic: topic,
+        count: 1,
+        duration: durationStr,
+      ));
+    }
+  }
+
+  /// Append a new timed session (Evangelism/Church) to the given list.
+  void _appendTimedSession(
+      List<TimedSession> sessions, TimerSession session, String durationStr) {
+    final end = DateTime.now();
+    final start = end.subtract(session.currentElapsed);
+    sessions.add(TimedSession(
+      start: start,
+      end: end,
+      durationSeconds: session.currentElapsed.inSeconds,
+    ));
   }
 
   /// Parse a human-readable duration string into total minutes.
