@@ -12,6 +12,7 @@ import '../l10n/generated/app_localizations_fr.dart';
 import '../models/daily_log.dart';
 import '../models/activity_timer.dart';
 import '../models/goal.dart';
+import '../services/cloud_sync_service.dart';
 import '../services/goal_progress_service.dart';
 import '../services/notification_service.dart';
 import '../services/report_cadence_service.dart';
@@ -343,7 +344,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     }
   }
 
-  /// Retry sending a queued pending report (from a previous offline attempt).
+  /// Retry sending any still-pending report channels (from a previous
+  /// offline attempt). Retries whichever channels haven't succeeded yet.
   Future<void> _trySendPending() async {
     final s = StorageService.instance;
     final pending = await s.getPendingReport();
@@ -351,14 +353,40 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
     if (!await _hasConnectivity()) return; // still offline, try next time
 
-    final report = pending['report'] as String;
-    final whatsapp = pending['whatsapp'] as String;
-    final ok = await ReportService.instance.sendByWhatsApp(whatsapp, report);
-    if (ok) {
-      await s.clearPendingReport();
-      // Mark period as sent (weekly or monthly key, matching current cadence)
-      final periodKey = await ReportCadenceService.instance.currentPeriodKey();
-      await s.setSetting('lastAutoSend', periodKey);
+    final channels = List<String>.from(pending['channels'] as List? ?? []);
+    final sentChannels = List<String>.from(pending['sentChannels'] as List? ?? []);
+    final compactReport = pending['compactReport'] as String;
+    final fullReport = pending['fullReport'] as String;
+    final name = await s.getSetting('myName');
+    final l = await _getReportLocalizations();
+    final subject = '📖 ${l.reportEmailSubject(
+      name.isEmpty ? "Disciple" : name,
+      DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
+    )}';
+
+    for (final channel in channels) {
+      if (sentChannels.contains(channel)) continue;
+      bool ok = false;
+      if (channel == 'whatsapp') {
+        final whatsapp = pending['whatsapp'] as String? ?? '';
+        if (whatsapp.isNotEmpty) {
+          ok = await ReportService.instance.sendByWhatsApp(whatsapp, compactReport);
+        }
+      } else if (channel == 'email') {
+        final email = pending['email'] as String? ?? '';
+        if (email.isNotEmpty) {
+          ok = await CloudSyncService.instance.sendEmailSilently(
+            toEmail: email,
+            subject: subject,
+            body: fullReport,
+          );
+        }
+      }
+      if (ok) {
+        await s.markPendingChannelSent(channel);
+        final periodKey = await ReportCadenceService.instance.currentPeriodKey();
+        await s.setSetting('lastAutoSend', periodKey);
+      }
     }
     _checkPendingReport();
   }
@@ -406,17 +434,44 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       compactReport = await ReportService.instance.buildCompactReport(name, l);
     }
 
+    final subject = '📖 ${l.reportEmailSubject(
+      name.isEmpty ? "Disciple" : name,
+      DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
+    )}';
+    final channelSetting = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
+    final channels = channelSetting == 'both' ? ['whatsapp', 'email'] : [channelSetting];
+    final email = await s.getSetting('discipleEmail');
+
     // Check connectivity
     if (!await _hasConnectivity()) {
       // Queue for later
-      await s.queuePendingReport(fullReport, whatsapp);
+      await s.queuePendingReport(
+        fullReport: fullReport,
+        compactReport: compactReport,
+        channels: channels,
+        whatsapp: whatsapp,
+        email: email,
+      );
       return;
     }
 
-    // Send now — use the full detailed report for WhatsApp
-    final ok = await ReportService.instance.sendByWhatsApp(whatsapp, fullReport);
+    // Send now — use the full detailed report for both channels
+    final sentChannels = <String>[];
+    for (final channel in channels) {
+      bool ok = false;
+      if (channel == 'whatsapp') {
+        ok = await ReportService.instance.sendByWhatsApp(whatsapp, fullReport);
+      } else if (channel == 'email' && email.isNotEmpty) {
+        ok = await CloudSyncService.instance.sendEmailSilently(
+          toEmail: email,
+          subject: subject,
+          body: fullReport,
+        );
+      }
+      if (ok) sentChannels.add(channel);
+    }
 
-    if (ok) {
+    if (sentChannels.isNotEmpty) {
       await s.setSetting('lastAutoSend', periodKey);
       // Also save to archive
       final String archiveStart;
@@ -437,11 +492,19 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         weekEnd: archiveEnd,
         fullReport: fullReport,
         compactReport: compactReport,
-        sentVia: 'whatsapp (auto)',
+        sentVia: sentChannels.join(' + '),
       );
-    } else {
-      // Launch failed (WhatsApp not installed?) — queue for retry
-      await s.queuePendingReport(fullReport, whatsapp);
+    }
+
+    final failedChannels = channels.where((c) => !sentChannels.contains(c)).toList();
+    if (failedChannels.isNotEmpty) {
+      await s.queuePendingReport(
+        fullReport: fullReport,
+        compactReport: compactReport,
+        channels: failedChannels,
+        whatsapp: whatsapp,
+        email: email,
+      );
     }
   }
 

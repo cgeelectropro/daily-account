@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:daily_account/models/daily_log.dart';
+import 'package:daily_account/services/storage_service.dart';
 
 /// Direct DB tests that exercise the schema and migration logic
 /// without relying on the singleton StorageService (which uses SharedPreferences).
@@ -524,6 +526,36 @@ void main() {
       expect(restored.churchSessions.length, 1);
       expect(restored.churchSessions[0].durationSeconds, 3600);
       await db.close();
+    });
+  });
+
+  group('Pending report queue (multi-channel)', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('queuePendingReport supports multiple channels, clears only when all sent', () async {
+      await StorageService.instance.queuePendingReport(
+        fullReport: 'Full report text',
+        compactReport: 'Compact report text',
+        channels: ['whatsapp', 'email'],
+        whatsapp: '1234567890',
+        email: 'disciple@example.com',
+      );
+
+      var pending = await StorageService.instance.getPendingReport();
+      expect(pending, isNotNull);
+      expect(pending!['channels'], containsAll(['whatsapp', 'email']));
+
+      await StorageService.instance.markPendingChannelSent('whatsapp');
+      pending = await StorageService.instance.getPendingReport();
+      expect(pending, isNotNull); // still pending — email not sent yet
+
+      await StorageService.instance.markPendingChannelSent('email');
+      pending = await StorageService.instance.getPendingReport();
+      expect(pending, isNull); // both channels sent — queue cleared
     });
   });
 }

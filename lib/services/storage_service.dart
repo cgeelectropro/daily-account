@@ -497,21 +497,34 @@ class StorageService {
     await saveGoals(goals);
   }
 
-  // ── Pending Report Queue (offline-aware) ──────────────────
+  // ── Pending Report Queue (offline-aware, multi-channel) ────
 
   static const _pendingReportKey = 'pending_report';
 
-  /// Queue a report to be sent when connectivity is available.
-  Future<void> queuePendingReport(String compactReport, String whatsapp) async {
+  /// Queue a report to be sent via one or more channels when connectivity
+  /// is available. Persists until every requested channel has succeeded —
+  /// no time-based expiry, so a report sends whenever connectivity returns
+  /// regardless of how long the device stayed offline.
+  Future<void> queuePendingReport({
+    required String fullReport,
+    required String compactReport,
+    required List<String> channels,
+    String? whatsapp,
+    String? email,
+  }) async {
     final p = await SharedPreferences.getInstance();
     await p.setString(_pendingReportKey, jsonEncode({
-      'report': compactReport,
-      'whatsapp': whatsapp,
+      'fullReport': fullReport,
+      'compactReport': compactReport,
+      'channels': channels,
+      'sentChannels': <String>[],
+      if (whatsapp != null) 'whatsapp': whatsapp,
+      if (email != null) 'email': email,
       'queuedAt': DateTime.now().toIso8601String(),
     }));
   }
 
-  /// Get a pending report (null if none queued).
+  /// Get the pending report (null if none queued or all channels sent).
   Future<Map<String, dynamic>?> getPendingReport() async {
     final p = await SharedPreferences.getInstance();
     final raw = p.getString(_pendingReportKey);
@@ -519,7 +532,24 @@ class StorageService {
     return Map<String, dynamic>.from(jsonDecode(raw) as Map);
   }
 
-  /// Clear the pending report after successful send.
+  /// Mark one channel as successfully sent. Clears the whole queue entry
+  /// once every requested channel has been sent.
+  Future<void> markPendingChannelSent(String channel) async {
+    final pending = await getPendingReport();
+    if (pending == null) return;
+    final sent = List<String>.from(pending['sentChannels'] as List? ?? []);
+    if (!sent.contains(channel)) sent.add(channel);
+    final channels = List<String>.from(pending['channels'] as List? ?? []);
+    if (channels.every((c) => sent.contains(c))) {
+      await clearPendingReport();
+      return;
+    }
+    pending['sentChannels'] = sent;
+    final p = await SharedPreferences.getInstance();
+    await p.setString(_pendingReportKey, jsonEncode(pending));
+  }
+
+  /// Clear the pending report entirely (all channels considered done).
   Future<void> clearPendingReport() async {
     final p = await SharedPreferences.getInstance();
     await p.remove(_pendingReportKey);
