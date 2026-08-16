@@ -1227,13 +1227,6 @@ class _LogScreenState extends State<LogScreen> {
               value: _log.givingPurpose,
               onChanged: (v) { _log.givingPurpose = v; _persist(); },
             ),
-            if (_timeConscious)
-              GoldField(
-                label: t.durationLabel,
-                hint: t.durationHint,
-                value: _log.givingDuration,
-                onChanged: (v) { _log.givingDuration = v; _persist(); },
-              ),
           ],
         ).animate().fadeIn(delay: 360.ms),
 
