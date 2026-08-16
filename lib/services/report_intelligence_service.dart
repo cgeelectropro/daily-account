@@ -232,7 +232,7 @@ class ReportIntelligenceService {
       // Evangelism
       final contactCount = int.tryParse(log.evangelismContacts) ?? 0;
       evangelismContacts += contactCount;
-      if (log.evangelismContacts.isNotEmpty) evangelismDays++;
+      if (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty) evangelismDays++;
 
       // Fasting
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
@@ -243,7 +243,7 @@ class ReportIntelligenceService {
       if (log.givingType.isNotEmpty) givingDays++;
 
       // Church
-      if (log.churchType.isNotEmpty) churchDays++;
+      if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) churchDays++;
 
       // Discipleship
       if (log.discipleshipWho.isNotEmpty) discipleshipDays++;
@@ -259,7 +259,7 @@ class ReportIntelligenceService {
       }
 
       // Proclamation
-      if (log.proclamationCount.isNotEmpty) proclamationDays++;
+      if (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty) proclamationDays++;
     }
 
     return WeekDisciplineCounts(

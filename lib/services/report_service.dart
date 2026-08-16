@@ -714,7 +714,7 @@ class ReportService {
       }
       if (log.prayerOthersSessions.any((s) => s.isNotEmpty) || log.prayerOthersDuration.isNotEmpty) parts.add('\uD83E\uDD1D');
       if (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty) {
-        final count = log.evangelismContacts.isNotEmpty ? log.evangelismContacts : '${log.evangelismSessions.length}';
+        final count = log.evangelismSessions.isNotEmpty ? '${log.evangelismSessions.length}' : log.evangelismContacts;
         parts.add('\uD83D\uDCE2$count');
       }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
@@ -722,7 +722,7 @@ class ReportService {
       if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) parts.add('\u26EA');
       if (log.discipleshipWho.isNotEmpty) parts.add('\uD83D\uDC65');
       if (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty) {
-        final count = log.proclamationCount.isNotEmpty ? log.proclamationCount : '${log.totalProclamationCount}';
+        final count = log.proclamationSessions.isNotEmpty ? '${log.totalProclamationCount}' : log.proclamationCount;
         parts.add('\uD83D\uDCE3$count');
       }
       final pct = (log.completeness * 100).round();

@@ -146,11 +146,11 @@ class GoalProgressService {
       case 'fastingCount':
         return (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) ? 1 : 0;
       case 'churchCount':
-        return log.churchType.isNotEmpty ? 1 : 0;
+        return (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) ? 1 : 0;
       case 'discipleshipTime':
         return parseDurationMinutes(log.discipleshipDuration);
       case 'proclamationCount':
-        return int.tryParse(log.proclamationCount) ?? 0;
+        return log.totalProclamationCount;
       default:
         return 0;
     }

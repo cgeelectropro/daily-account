@@ -107,12 +107,12 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
     l.ddegScripture.isNotEmpty || l.ddegNotes.isNotEmpty,
     l.prayerAloneDuration.isNotEmpty,
     l.prayerOthersDuration.isNotEmpty,
-    l.evangelismContacts.isNotEmpty,
+    l.evangelismContacts.isNotEmpty || l.evangelismSessions.isNotEmpty,
     l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
     l.givingType.isNotEmpty,
-    l.churchType.isNotEmpty,
+    l.churchType.isNotEmpty || l.churchSessions.isNotEmpty,
     l.discipleshipWho.isNotEmpty,
-    l.proclamationCount.isNotEmpty,
+    l.proclamationCount.isNotEmpty || l.proclamationSessions.isNotEmpty,
   ];
 
   /// Parse duration strings like "45m", "1h 30m", "30 minutes".
@@ -378,7 +378,7 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
     }
 
     // Proclamation
-    final procCount = int.tryParse(log.proclamationCount) ?? 0;
+    final procCount = log.totalProclamationCount;
     if (procCount >= 3) {
       signals.add((9, isFr
           ? '$procCount proclamations aujourd\'hui — déclarer les promesses de Dieu avec audace.'

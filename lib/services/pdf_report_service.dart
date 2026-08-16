@@ -425,13 +425,22 @@ class PdfReportService {
     if (log.prayerOthersDuration.isNotEmpty) {
       rows.add(_detailRow(l.pdfPrayerOthers, '${log.prayerOthersDuration}${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}'));
     }
-    if (log.evangelismContacts.isNotEmpty) {
-      final parts = <String>[
-        '${log.evangelismContacts} ${l.pdfContacts}',
-        if (log.evangelismOutcome.isNotEmpty) log.evangelismOutcome,
-        if (log.evangelismNotes.isNotEmpty) log.evangelismNotes,
-      ];
-      rows.add(_detailRow(l.pdfEvangelism, parts.join('. ')));
+    if (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty) {
+      if (log.evangelismSessions.isNotEmpty && log.evangelismContacts.isEmpty) {
+        // Session-only day — mirror report_service.dart's session-aware
+        // rendering ("N sessions, X min total") since there's no manual
+        // contact count / outcome / notes to show for this day.
+        final mins = log.totalEvangelismMinutes;
+        final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+        rows.add(_detailRow(l.pdfEvangelism, l.reportEvangelismSessions('${log.evangelismSessions.length}', durationStr)));
+      } else {
+        final parts = <String>[
+          '${log.evangelismContacts} ${l.pdfContacts}',
+          if (log.evangelismOutcome.isNotEmpty) log.evangelismOutcome,
+          if (log.evangelismNotes.isNotEmpty) log.evangelismNotes,
+        ];
+        rows.add(_detailRow(l.pdfEvangelism, parts.join('. ')));
+      }
       // Follow-up data
       if (log.evangelismNewBelievers.isNotEmpty) {
         rows.add(_detailRow('  ${l.pdfNewBelievers}', log.evangelismNewBelievers));
@@ -454,13 +463,26 @@ class PdfReportService {
       ];
       rows.add(_detailRow(l.pdfGiving, givingParts.join(' — ')));
     }
-    if (log.churchType.isNotEmpty) {
-      rows.add(_detailRow(l.pdfChurch, '${log.churchType}${log.churchNotes.isNotEmpty ? " — ${log.churchNotes}" : ""}'));
+    if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) {
+      if (log.churchSessions.isNotEmpty && log.churchType.isEmpty) {
+        final mins = log.totalChurchMinutes;
+        final durationStr = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}min' : '${mins}min';
+        rows.add(_detailRow(l.pdfChurch, l.reportChurchSessions('${log.churchSessions.length}', durationStr)));
+      } else {
+        rows.add(_detailRow(l.pdfChurch, '${log.churchType}${log.churchNotes.isNotEmpty ? " — ${log.churchNotes}" : ""}'));
+      }
     }
     if (log.discipleshipWho.isNotEmpty) {
       rows.add(_detailRow(l.sectionDiscipleship, '${log.discipleshipWho}${log.discipleshipTopic.isNotEmpty ? " — ${log.discipleshipTopic}" : ""}${log.discipleshipDuration.isNotEmpty ? " (${log.discipleshipDuration})" : ""}'));
     }
-    if (log.proclamationCount.isNotEmpty) {
+    if (log.proclamationSessions.isNotEmpty) {
+      final parts = log.proclamationSessions.map((s) {
+        final label = s.topic.isNotEmpty ? s.topic : l.sectionProclamation;
+        final dur = s.duration.isNotEmpty ? s.duration : '-';
+        return '$label (${s.count}x, $dur)';
+      }).join(', ');
+      rows.add(_detailRow(l.sectionProclamation, parts));
+    } else if (log.proclamationCount.isNotEmpty) {
       rows.add(_detailRow(l.sectionProclamation, '${log.proclamationCount} ${l.pdfTimes}${log.proclamationDuration.isNotEmpty ? " (${log.proclamationDuration})" : ""}'));
     }
     if (log.other.isNotEmpty) {
