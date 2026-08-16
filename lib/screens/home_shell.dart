@@ -401,8 +401,15 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final autoEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
     if (!autoEnabled) return;
 
+    // Determine which channels this auto-send run targets before gating on
+    // channel-specific requirements below (e.g. WhatsApp number presence) —
+    // an email-only configuration must not be blocked by a missing WhatsApp
+    // number.
+    final channelSetting = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
+    final channels = channelSetting == 'both' ? ['whatsapp', 'email'] : [channelSetting];
+
     final whatsapp = await s.getSetting('discipleWhatsApp');
-    if (whatsapp.isEmpty) return;
+    if (channels.contains('whatsapp') && whatsapp.isEmpty) return;
 
     // Check if we already auto-sent this period (week or month)
     final cadence = await ReportCadenceService.instance.getCadence();
@@ -412,7 +419,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
     // Check if there's already a pending report queued
     final pending = await s.getPendingReport();
-    if (pending != null) return;
+    if (pending != null) {
+      final pendingChannels = List<String>.from(pending['channels'] as List? ?? []);
+      if (pendingChannels.isEmpty) {
+        // Corrupt/legacy entry with no channels to retry — clear it so
+        // auto-send isn't permanently blocked by an unrecoverable state.
+        await s.clearPendingReport();
+      } else {
+        return;
+      }
+    }
 
     // Check if it's past the auto-send time
     final ash = int.tryParse(await s.getSetting('autoSendHour', fallback: '19')) ?? 19;
@@ -438,8 +454,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       name.isEmpty ? "Disciple" : name,
       DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
     )}';
-    final channelSetting = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
-    final channels = channelSetting == 'both' ? ['whatsapp', 'email'] : [channelSetting];
     final email = await s.getSetting('discipleEmail');
 
     // Check connectivity
