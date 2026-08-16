@@ -171,6 +171,33 @@ class ProclamationSession {
 
   bool get isEmpty => topic.isEmpty && count == 0;
   bool get isNotEmpty => !isEmpty;
+
+  /// Find the index of an existing same-day session whose topic matches
+  /// [topic] (case-insensitive, trimmed), or -1 if none exists. Shared by
+  /// every write path that records a proclamation (TimerService's stopwatch
+  /// flow, the widget's quick-increment tap, and manual log-screen entry)
+  /// so there is exactly one topic-matching rule. Callers merge the count
+  /// (and, where applicable, accumulate the duration using their own
+  /// duration-formatting logic) into the session at the returned index, or
+  /// append a new [ProclamationSession] if -1.
+  static int findMatchingIndex(List<ProclamationSession> sessions, String topic) {
+    final normalizedTopic = topic.trim().toLowerCase();
+    return sessions.indexWhere(
+        (s) => s.topic.trim().toLowerCase() == normalizedTopic);
+  }
+
+  /// Increment [count] into an existing same-day session matching [topic]
+  /// (case-insensitive, trimmed), or append a new one with that topic and
+  /// count. Used by write paths that only need a plain +1 increment (no
+  /// duration to accumulate) — e.g. the widget's quick-increment tap.
+  static void incrementTopic(List<ProclamationSession> sessions, String topic, {int count = 1}) {
+    final idx = findMatchingIndex(sessions, topic);
+    if (idx != -1) {
+      sessions[idx].count += count;
+    } else {
+      sessions.add(ProclamationSession(topic: topic.trim(), count: count));
+    }
+  }
 }
 
 /// A single timed session for activities without richer per-session data
@@ -598,12 +625,20 @@ class DailyLog {
     } catch (e) {
       debugPrint('DailyLog.fromMap: failed to parse proclamationSessions: $e');
     }
+    // Tracks whether this call synthesized a session from the legacy scalar
+    // (as opposed to loading a persisted session list). When true, the
+    // scalar fields below are cleared before being handed to the DailyLog
+    // constructor so `toMap()` doesn't re-persist a now-superseded scalar
+    // alongside the new session — otherwise every getLog→saveLog round-trip
+    // after the first would leave two independent counters alive forever.
+    bool migratedProclamationFromScalar = false;
     if (proclamationSessions.isEmpty) {
       final oldCount = (m['proclamationCount'] ?? '').toString();
       final oldDuration = (m['proclamationDuration'] ?? '').toString();
       if (oldCount.isNotEmpty && (int.tryParse(oldCount) ?? 0) > 0) {
         proclamationSessions = [ProclamationSession(
             topic: '', count: int.tryParse(oldCount) ?? 0, duration: oldDuration)];
+        migratedProclamationFromScalar = true;
       }
     }
 
@@ -683,8 +718,8 @@ class DailyLog {
       discipleshipWho: m['discipleshipWho'] ?? '',
       discipleshipTopic: m['discipleshipTopic'] ?? '',
       discipleshipDuration: m['discipleshipDuration'] ?? '',
-      proclamationCount: m['proclamationCount'] ?? '',
-      proclamationDuration: m['proclamationDuration'] ?? '',
+      proclamationCount: migratedProclamationFromScalar ? '' : (m['proclamationCount'] ?? ''),
+      proclamationDuration: migratedProclamationFromScalar ? '' : (m['proclamationDuration'] ?? ''),
       proclamationSessions: proclamationSessions,
       voiceNotePath: m['voiceNotePath'] ?? '',
       aiReflection: m['aiReflection'] ?? '',

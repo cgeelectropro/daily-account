@@ -546,6 +546,65 @@ class _LogScreenState extends State<LogScreen> {
     super.dispose();
   }
 
+  // ── Proclamation (writes through to the session list) ──────
+  //
+  // The manual count/duration fields below used to write directly to the
+  // legacy `proclamationCount`/`proclamationDuration` scalars. Once a log
+  // has been through DailyLog.fromMap (which migrates any legacy scalar
+  // into a synthesized untitled session and clears the scalar — see
+  // daily_log.dart), that scalar is normally empty going forward, so
+  // writing to it here would silently stop affecting anything the user or
+  // reports actually see. Instead, both fields target the untitled
+  // (empty-topic) session in `proclamationSessions`, matched the same way
+  // TimerService and the widget's quick-increment tap do.
+
+  /// The count field shows the untitled session's count if one exists,
+  /// else falls back to the legacy scalar (covers a brand-new log that
+  /// hasn't been through fromMap's migration yet).
+  String get _proclamationCountFieldValue {
+    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
+    if (idx != -1) return '${_log.proclamationSessions[idx].count}';
+    return _log.proclamationCount;
+  }
+
+  String get _proclamationDurationFieldValue {
+    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
+    if (idx != -1) return _log.proclamationSessions[idx].duration;
+    return _log.proclamationDuration;
+  }
+
+  void _setProclamationCount(String v) {
+    final parsed = int.tryParse(v) ?? 0;
+    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
+    if (idx != -1) {
+      _log.proclamationSessions[idx].count = parsed;
+      // Drop the session entirely if clearing the count leaves it fully
+      // empty (count 0, no duration) — otherwise a stray zero-count entry
+      // would render as a phantom "Proclamation (0x, -)" line in reports.
+      if (_log.proclamationSessions[idx].isEmpty) {
+        _log.proclamationSessions.removeAt(idx);
+      }
+    } else if (parsed > 0) {
+      _log.proclamationSessions.add(ProclamationSession(topic: '', count: parsed));
+    }
+    _log.proclamationCount = ''; // never re-populate the legacy scalar
+    _persist();
+  }
+
+  void _setProclamationDuration(String v) {
+    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
+    if (idx != -1) {
+      _log.proclamationSessions[idx].duration = v;
+      if (_log.proclamationSessions[idx].isEmpty) {
+        _log.proclamationSessions.removeAt(idx);
+      }
+    } else if (v.isNotEmpty) {
+      _log.proclamationSessions.add(ProclamationSession(topic: '', count: 0, duration: v));
+    }
+    _log.proclamationDuration = ''; // never re-populate the legacy scalar
+    _persist();
+  }
+
   void _persist() {
     _persistDebounce?.cancel();
     _persistDebounce = Timer(const Duration(milliseconds: 500), () async {
@@ -1290,20 +1349,22 @@ class _LogScreenState extends State<LogScreen> {
         SectionCard(
           icon: '\u{1F4E3}',
           title: t.sectionProclamation,
-          initiallyExpanded: _log.proclamationCount.isNotEmpty || _log.proclamationDuration.isNotEmpty,
+          initiallyExpanded: _log.proclamationCount.isNotEmpty ||
+              _log.proclamationDuration.isNotEmpty ||
+              _log.proclamationSessions.any((s) => s.isNotEmpty),
           children: [
             GoldField(
               label: t.proclamationCountLabel,
               hint: t.proclamationCountHint,
-              value: _log.proclamationCount,
+              value: _proclamationCountFieldValue,
               keyboardType: TextInputType.number,
-              onChanged: (v) { _log.proclamationCount = v; _persist(); },
+              onChanged: (v) => _setProclamationCount(v),
             ),
             DurationQuickPick(
               label: t.proclamationDurationLabel,
               customLabel: t.durationCustom,
-              value: _log.proclamationDuration,
-              onChanged: (v) { _log.proclamationDuration = v; _persist(); },
+              value: _proclamationDurationFieldValue,
+              onChanged: (v) => _setProclamationDuration(v),
             ),
           ],
         ).animate().fadeIn(delay: 480.ms),
@@ -1879,7 +1940,7 @@ class _LogScreenState extends State<LogScreen> {
       ('\uD83D\uDCB0', t.sectionGiving, _log.givingType.isNotEmpty),
       ('\u26EA', t.sectionChurch, _log.churchType.isNotEmpty),
       ('\uD83D\uDC65', t.sectionDiscipleship, _log.discipleshipWho.isNotEmpty),
-      ('\uD83D\uDCE3', t.sectionProclamation, _log.proclamationCount.isNotEmpty),
+      ('\uD83D\uDCE3', t.sectionProclamation, _log.proclamationCount.isNotEmpty || _log.proclamationSessions.any((s) => s.isNotEmpty)),
     ];
     final allDone = disciplines.every((d) => d.$3);
 

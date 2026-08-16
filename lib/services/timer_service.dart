@@ -535,9 +535,7 @@ class TimerService extends ChangeNotifier {
   void _appendProclamationSession(
       DailyLog log, TimerSession session, String durationStr) {
     final topic = (session.fields['proclamationTopic'] ?? '').trim();
-    final normalizedTopic = topic.toLowerCase();
-    final existingIndex = log.proclamationSessions.indexWhere(
-        (s) => s.topic.trim().toLowerCase() == normalizedTopic);
+    final existingIndex = ProclamationSession.findMatchingIndex(log.proclamationSessions, topic);
 
     if (existingIndex != -1) {
       final existing = log.proclamationSessions[existingIndex];

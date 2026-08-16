@@ -386,8 +386,15 @@ void main() {
       expect(restored.discipleshipWho, 'Brother John');
       expect(restored.discipleshipTopic, 'Prayer life');
       expect(restored.discipleshipDuration, '1 hour');
-      expect(restored.proclamationCount, '7');
-      expect(restored.proclamationDuration, '30 minutes');
+      // proclamationCount/Duration were legacy scalars with no session list,
+      // so fromMap migrates them into a synthesized session and clears the
+      // scalars (see "migration is idempotent" tests below) — the session
+      // is now the source of truth.
+      expect(restored.proclamationCount, '');
+      expect(restored.proclamationDuration, '');
+      expect(restored.proclamationSessions.length, 1);
+      expect(restored.proclamationSessions.first.count, 7);
+      expect(restored.proclamationSessions.first.duration, '30 minutes');
       expect(restored.voiceNotePath, '/path/to/voice.m4a');
       expect(restored.aiReflection, 'Keep growing!');
       expect(restored.completed, true);
@@ -545,6 +552,51 @@ void main() {
       final restored = DailyLog.fromMap(log.toMap());
       expect(restored.proclamationSessions.length, 1);
       expect(restored.proclamationSessions.first.topic, 'Healing');
+    });
+
+    test('legacy scalar migration is idempotent across repeated save/load cycles', () {
+      // A log written before session-list tracking existed: only the legacy
+      // scalar is set, no proclamationSessions.
+      final legacyOnly = DailyLog(
+        dateKey: '2026-08-16',
+        proclamationCount: '5',
+        proclamationDuration: '20min',
+      );
+
+      // First round-trip: fromMap should migrate the scalar into a
+      // synthesized session AND clear the scalar so it isn't re-persisted
+      // as a second, independent counter.
+      final afterFirstLoad = DailyLog.fromMap(legacyOnly.toMap());
+      expect(afterFirstLoad.proclamationSessions.length, 1);
+      expect(afterFirstLoad.proclamationSessions.first.count, 5);
+      expect(afterFirstLoad.proclamationCount, '');
+      expect(afterFirstLoad.totalProclamationCount, 5);
+
+      // Second round-trip (simulates saveLog → getLog happening again later):
+      // since the scalar is now empty and the session list is populated,
+      // the migration branch must NOT re-fire, and the count must not double.
+      final afterSecondLoad = DailyLog.fromMap(afterFirstLoad.toMap());
+      expect(afterSecondLoad.proclamationSessions.length, 1);
+      expect(afterSecondLoad.proclamationSessions.first.count, 5);
+      expect(afterSecondLoad.proclamationCount, '');
+      expect(afterSecondLoad.totalProclamationCount, 5);
+
+      // Third round-trip for extra confidence — must stay stable forever.
+      final afterThirdLoad = DailyLog.fromMap(afterSecondLoad.toMap());
+      expect(afterThirdLoad.proclamationSessions.length, 1);
+      expect(afterThirdLoad.proclamationSessions.first.count, 5);
+      expect(afterThirdLoad.totalProclamationCount, 5);
+    });
+
+    test('legacy scalar migration preserves duration on the synthesized session', () {
+      final legacyOnly = DailyLog(
+        dateKey: '2026-08-16',
+        proclamationCount: '3',
+        proclamationDuration: '9min',
+      );
+      final restored = DailyLog.fromMap(legacyOnly.toMap());
+      expect(restored.proclamationSessions.first.duration, '9min');
+      expect(restored.proclamationDuration, '');
     });
   });
 

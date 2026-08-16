@@ -22,6 +22,7 @@ import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
 import 'log_screen.dart';
 import 'prayer_request_screen.dart';
+import 'proclamation_topic_screen.dart';
 import 'report_screen.dart';
 import 'settings_screen.dart';
 import 'stopwatch_screen.dart';
@@ -114,14 +115,23 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
       // Sync proclamation count — only trust the widget's count if it was
       // recorded today; a stale prior-day count must not leak into today's log.
+      // Compared against the untitled (empty-topic) session's count, not the
+      // legacy scalar — proclamationSessions is the live source of truth
+      // post-migration (see DailyLog.fromMap), so comparing against the
+      // scalar here would always read 0 and clobber real session data.
       final widgetProcDate = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
       final todayKey = _key(DateTime.now());
       if (widgetProcDate == todayKey) {
         final widgetProcCount = await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0';
         final widgetCount = int.tryParse(widgetProcCount) ?? 0;
-        final dbCount = int.tryParse(log.proclamationCount) ?? 0;
+        final untitledIndex = ProclamationSession.findMatchingIndex(log.proclamationSessions, '');
+        final dbCount = untitledIndex != -1 ? log.proclamationSessions[untitledIndex].count : 0;
         if (widgetCount > dbCount) {
-          log.proclamationCount = '$widgetCount';
+          if (untitledIndex != -1) {
+            log.proclamationSessions[untitledIndex].count = widgetCount;
+          } else {
+            log.proclamationSessions.add(ProclamationSession(topic: '', count: widgetCount));
+          }
           changed = true;
         }
       }
@@ -200,7 +210,21 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               case 'log':
                 setState(() => _tab = 1);
               case 'proclamation':
+                // Land on the Log tab underneath, then push the topic
+                // quick-picker on top — matches how the Stopwatch screen's
+                // proclamation tile opens it (Navigator.push), just reached
+                // from a widget deep link instead of a tap. `context` is
+                // safe to use here: HomeShell is the app's root shell and
+                // stays mounted for the app's lifetime once built, but this
+                // callback can fire from an async widget-click stream
+                // before that first frame — hence the `mounted` guard.
                 setState(() => _tab = 1);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProclamationTopicScreen()),
+                  );
+                });
             }
           }
       }
@@ -267,14 +291,20 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   /// Increment proclamation count from widget tap.
+  ///
+  /// Writes through to `proclamationSessions` (an empty-topic session,
+  /// merged via the same topic-matching rule TimerService uses) rather than
+  /// the legacy `proclamationCount` scalar — the widget has no topic
+  /// picker, so this always targets the untitled session, keeping the
+  /// session list as the single source of truth alongside topic-tagged
+  /// entries from the stopwatch flow.
   Future<void> _incrementProclamationFromWidget() async {
     final key = _key(DateTime.now());
     final storage = StorageService.instance;
     final existing = await storage.getLog(key);
     final log = existing ?? DailyLog(dateKey: key);
 
-    final current = int.tryParse(log.proclamationCount) ?? 0;
-    log.proclamationCount = '${current + 1}';
+    ProclamationSession.incrementTopic(log.proclamationSessions, '');
 
     await storage.saveLog(log);
     _onDataChanged();
@@ -756,7 +786,14 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // increments made from the widget that haven't synced yet — but
       // only trust the widget's count if it was recorded today; a stale
       // prior-day count must not be laundered into looking like today's.
-      final dbProcCount = int.tryParse(log?.proclamationCount ?? '0') ?? 0;
+      // Reads the untitled (empty-topic) session's count, not the legacy
+      // scalar — the widget only ever increments the untitled session (see
+      // _incrementProclamationFromWidget / _syncWidgetChangesToDb), and the
+      // scalar is normally empty post-migration.
+      final dbUntitledIndex = log != null
+          ? ProclamationSession.findMatchingIndex(log.proclamationSessions, '')
+          : -1;
+      final dbProcCount = dbUntitledIndex != -1 ? log!.proclamationSessions[dbUntitledIndex].count : 0;
       final widgetProcDateForMerge = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
       final todayKeyForMerge = _key(DateTime.now());
       final widgetProcCount = widgetProcDateForMerge == todayKeyForMerge

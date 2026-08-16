@@ -422,7 +422,11 @@ void main() {
       expect(rows.length, 1);
       final restored = DailyLog.fromMap(rows.first);
       expect(restored.bibleReference, 'Test');
-      expect(restored.proclamationCount, '5');
+      // proclamationCount was a legacy scalar with no session list, so
+      // fromMap migrates it into a synthesized session and clears the
+      // scalar (see daily_log_test.dart's idempotency tests) — this
+      // assertion just needs the migrated total, not the raw column.
+      expect(restored.totalProclamationCount, 5);
       expect(restored.evangelismNewBelievers, '1');
       expect(restored.voiceNotePath, '/test');
       expect(restored.bibleSessions.length, 1);
