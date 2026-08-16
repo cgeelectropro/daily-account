@@ -173,6 +173,38 @@ class ProclamationSession {
   bool get isNotEmpty => !isEmpty;
 }
 
+/// A single timed session for activities without richer per-session data
+/// (Evangelism, Church). Multiple sessions in a day accumulate here rather
+/// than overwriting a single scalar duration field.
+class TimedSession {
+  DateTime start;
+  DateTime end;
+  int durationSeconds;
+
+  TimedSession({required this.start, required this.end, required this.durationSeconds});
+
+  Map<String, dynamic> toMap() => {
+    'start': start.toIso8601String(),
+    'end': end.toIso8601String(),
+    'durationSeconds': durationSeconds,
+  };
+
+  factory TimedSession.fromMap(Map<String, dynamic> m) => TimedSession(
+    start: DateTime.parse(m['start'] as String),
+    end: DateTime.parse(m['end'] as String),
+    durationSeconds: m['durationSeconds'] as int,
+  );
+
+  String get formattedDuration {
+    final m = durationSeconds ~/ 60;
+    final h = m ~/ 60;
+    final remM = m % 60;
+    if (h > 0 && remM > 0) return '${h}h ${remM}min';
+    if (h > 0) return '${h}h';
+    return '$remM min';
+  }
+}
+
 /// The complete daily account for a single date.
 class DailyLog {
   String dateKey; // yyyy-MM-dd  (primary key)
@@ -218,6 +250,8 @@ class DailyLog {
   String evangelismDuration;
   String givingDuration;
   String churchDuration;
+  List<TimedSession> evangelismSessions;
+  List<TimedSession> churchSessions;
 
   // ── Custom activity log data (JSON) ──
   Map<String, Map<String, dynamic>> customActivityData;
@@ -282,6 +316,8 @@ class DailyLog {
     this.evangelismDuration = '',
     this.givingDuration = '',
     this.churchDuration = '',
+    List<TimedSession>? evangelismSessions,
+    List<TimedSession>? churchSessions,
     Map<String, Map<String, dynamic>>? customActivityData,
     this.fastingType = '',
     this.fastingDuration = '',
@@ -306,6 +342,8 @@ class DailyLog {
        prayerAloneSessions = prayerAloneSessions ?? [],
        prayerOthersSessions = prayerOthersSessions ?? [],
        proclamationSessions = proclamationSessions ?? [],
+       evangelismSessions = evangelismSessions ?? [],
+       churchSessions = churchSessions ?? [],
        customActivityData = customActivityData ?? {};
 
   /// Percentage (0.0–1.0) of how filled the day is — used for progress ring.
@@ -373,6 +411,8 @@ class DailyLog {
         'evangelismDuration': evangelismDuration,
         'givingDuration': givingDuration,
         'churchDuration': churchDuration,
+        'evangelismSessions': jsonEncode(evangelismSessions.map((s) => s.toMap()).toList()),
+        'churchSessions': jsonEncode(churchSessions.map((s) => s.toMap()).toList()),
         'custom_activity_data': jsonEncode(customActivityData),
         'fastingType': fastingType,
         'fastingDuration': fastingDuration,
@@ -423,6 +463,16 @@ class DailyLog {
   /// Total proclamation minutes across all sessions (0 if none have a duration).
   int get totalProclamationMinutes => proclamationSessions.fold(
       0, (sum, s) => sum + _parseDurationMinutesStatic(s.duration));
+
+  /// Total evangelism minutes: sessions if present, else the legacy scalar.
+  int get totalEvangelismMinutes => evangelismSessions.isNotEmpty
+      ? evangelismSessions.fold(0, (sum, s) => sum + s.durationSeconds ~/ 60)
+      : _parseDurationMinutesStatic(evangelismDuration);
+
+  /// Total church minutes: sessions if present, else the legacy scalar.
+  int get totalChurchMinutes => churchSessions.isNotEmpty
+      ? churchSessions.fold(0, (sum, s) => sum + s.durationSeconds ~/ 60)
+      : _parseDurationMinutesStatic(churchDuration);
 
   static int _parseDurationMinutesStatic(String s) {
     if (s.isEmpty) return 0;
@@ -557,6 +607,28 @@ class DailyLog {
       }
     }
 
+    List<TimedSession> evangelismSessions = [];
+    try {
+      final raw = m['evangelismSessions'];
+      if (raw != null && raw.toString().isNotEmpty) {
+        final decoded = jsonDecode(raw) as List;
+        evangelismSessions = decoded.map((e) => TimedSession.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse evangelismSessions: $e');
+    }
+
+    List<TimedSession> churchSessions = [];
+    try {
+      final raw = m['churchSessions'];
+      if (raw != null && raw.toString().isNotEmpty) {
+        final decoded = jsonDecode(raw) as List;
+        churchSessions = decoded.map((e) => TimedSession.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse churchSessions: $e');
+    }
+
     Map<String, Map<String, dynamic>> customData = {};
     try {
       final rawCustom = m['custom_activity_data'];
@@ -597,6 +669,8 @@ class DailyLog {
       evangelismDuration: m['evangelismDuration'] ?? '',
       givingDuration: m['givingDuration'] ?? '',
       churchDuration: m['churchDuration'] ?? '',
+      evangelismSessions: evangelismSessions,
+      churchSessions: churchSessions,
       customActivityData: customData,
       fastingType: m['fastingType'] ?? '',
       fastingDuration: m['fastingDuration'] ?? '',

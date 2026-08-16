@@ -668,4 +668,40 @@ void main() {
       expect(log.completeness, closeTo(1 / 11, 0.01));
     });
   });
+
+  group('TimedSession', () {
+    test('toMap/fromMap round-trip', () {
+      final start = DateTime(2026, 8, 16, 9, 0);
+      final end = DateTime(2026, 8, 16, 9, 45);
+      final s = TimedSession(start: start, end: end, durationSeconds: 2700);
+      final restored = TimedSession.fromMap(s.toMap());
+      expect(restored.durationSeconds, 2700);
+      expect(restored.start, start);
+      expect(restored.end, end);
+    });
+  });
+
+  group('DailyLog evangelism/church sessions', () {
+    test('totalEvangelismMinutes sums sessions when present', () {
+      final log = DailyLog(dateKey: '2026-08-16', evangelismSessions: [
+        TimedSession(start: DateTime(2026,8,16,9), end: DateTime(2026,8,16,9,30), durationSeconds: 1800),
+        TimedSession(start: DateTime(2026,8,16,14), end: DateTime(2026,8,16,14,15), durationSeconds: 900),
+      ]);
+      expect(log.totalEvangelismMinutes, 45);
+    });
+
+    test('totalChurchMinutes falls back to legacy scalar when no sessions', () {
+      final log = DailyLog(dateKey: '2026-08-16', churchDuration: '1h 30min');
+      expect(log.totalChurchMinutes, 90);
+    });
+
+    test('toMap/fromMap round-trips evangelismSessions', () {
+      final log = DailyLog(dateKey: '2026-08-16', evangelismSessions: [
+        TimedSession(start: DateTime(2026,8,16,9), end: DateTime(2026,8,16,9,30), durationSeconds: 1800),
+      ]);
+      final restored = DailyLog.fromMap(log.toMap());
+      expect(restored.evangelismSessions.length, 1);
+      expect(restored.evangelismSessions.first.durationSeconds, 1800);
+    });
+  });
 }
