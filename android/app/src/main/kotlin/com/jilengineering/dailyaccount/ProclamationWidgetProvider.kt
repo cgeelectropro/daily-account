@@ -26,9 +26,19 @@ class ProclamationWidgetProvider : HomeWidgetProvider() {
      */
     private fun incrementCount(context: Context) {
         val prefs = WidgetHelper.getWidgetPrefs(context)
-        val current = prefs.getString("proclamation_count", "0")?.toIntOrNull() ?: 0
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .format(java.util.Date())
+        val storedDate = prefs.getString("proclamation_date", "")
+        val current = if (storedDate == today) {
+            prefs.getString("proclamation_count", "0")?.toIntOrNull() ?: 0
+        } else {
+            0 // new day — reset before incrementing
+        }
         val newCount = current + 1
-        prefs.edit().putString("proclamation_count", "$newCount").apply()
+        prefs.edit()
+            .putString("proclamation_count", "$newCount")
+            .putString("proclamation_date", today)
+            .apply()
 
         // Refresh all proclamation widgets
         WidgetHelper.updateAllWidgets(context, ProclamationWidgetProvider::class.java)
@@ -47,8 +57,15 @@ class ProclamationWidgetProvider : HomeWidgetProvider() {
                 val views = RemoteViews(context.packageName, R.layout.widget_proclamation)
                 val locale = WidgetHelper.getLocale(widgetData)
 
-                // Counter value
-                val count = widgetData.getString("proclamation_count", "0") ?: "0"
+                // Counter value — show 0 if the stored count is from a prior day
+                val storedDate = widgetData.getString("proclamation_date", "")
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                    .format(java.util.Date())
+                val count = if (storedDate == today) {
+                    widgetData.getString("proclamation_count", "0") ?: "0"
+                } else {
+                    "0"
+                }
                 views.setTextViewText(R.id.proclamation_count, count)
 
                 // Localized label

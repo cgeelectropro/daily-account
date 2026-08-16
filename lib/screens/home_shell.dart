@@ -111,13 +111,18 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       final log = existing ?? DailyLog(dateKey: key);
       bool changed = false;
 
-      // Sync proclamation count
-      final widgetProcCount = await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0';
-      final widgetCount = int.tryParse(widgetProcCount) ?? 0;
-      final dbCount = int.tryParse(log.proclamationCount) ?? 0;
-      if (widgetCount > dbCount) {
-        log.proclamationCount = '$widgetCount';
-        changed = true;
+      // Sync proclamation count — only trust the widget's count if it was
+      // recorded today; a stale prior-day count must not leak into today's log.
+      final widgetProcDate = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
+      final todayKey = _key(DateTime.now());
+      if (widgetProcDate == todayKey) {
+        final widgetProcCount = await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0';
+        final widgetCount = int.tryParse(widgetProcCount) ?? 0;
+        final dbCount = int.tryParse(log.proclamationCount) ?? 0;
+        if (widgetCount > dbCount) {
+          log.proclamationCount = '$widgetCount';
+          changed = true;
+        }
       }
 
       // Sync discipline toggles
@@ -677,6 +682,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0') ?? 0;
       final maxProcCount = dbProcCount > widgetProcCount ? dbProcCount : widgetProcCount;
       await HomeWidget.saveWidgetData('proclamation_count', '$maxProcCount');
+      await HomeWidget.saveWidgetData('proclamation_date', _key(DateTime.now()));
 
       // DDEG scripture (for scripture card DDEG override)
       final ddegScripture = log?.ddegScripture ?? '';
