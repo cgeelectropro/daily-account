@@ -750,6 +750,22 @@ class SFr extends S {
       'Le dimanche à l’heure programmée, l’application ouvrira automatiquement WhatsApp pour envoyer ton compte à ton faiseur de disciples.';
 
   @override
+  String get autoSendChannelLabel => 'Envoyer via';
+
+  @override
+  String get autoSendChannelWhatsApp => 'WhatsApp';
+
+  @override
+  String get autoSendChannelEmail => 'E-mail';
+
+  @override
+  String get autoSendChannelBoth => 'Les deux';
+
+  @override
+  String get autoSendEmailDisabledHint =>
+      'Connecte Google et renseigne un e-mail valide pour activer';
+
+  @override
   String get aboutSection => 'À propos';
 
   @override

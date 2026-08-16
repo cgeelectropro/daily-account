@@ -371,6 +371,11 @@
   "autoSendEnabled": "Rappel d\u2019envoi le dimanche",
   "autoSendTime": "Heure du rappel",
   "autoSendDescription": "Le dimanche \u00e0 l\u2019heure programm\u00e9e, l\u2019application ouvrira automatiquement WhatsApp pour envoyer ton compte \u00e0 ton faiseur de disciples.",
+  "autoSendChannelLabel": "Envoyer via",
+  "autoSendChannelWhatsApp": "WhatsApp",
+  "autoSendChannelEmail": "E-mail",
+  "autoSendChannelBoth": "Les deux",
+  "autoSendEmailDisabledHint": "Connecte Google et renseigne un e-mail valide pour activer",
 
   "aboutSection": "\u00c0 propos",
   "appVersion": "Version {version}",

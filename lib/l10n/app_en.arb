@@ -371,6 +371,11 @@
   "autoSendEnabled": "Auto-open report on Sunday",
   "autoSendTime": "Send reminder time",
   "autoSendDescription": "On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.",
+  "autoSendChannelLabel": "Send via",
+  "autoSendChannelWhatsApp": "WhatsApp",
+  "autoSendChannelEmail": "Email",
+  "autoSendChannelBoth": "Both",
+  "autoSendEmailDisabledHint": "Connect Google & set a valid email to enable",
 
   "aboutSection": "About",
   "appVersion": "Version {version}",

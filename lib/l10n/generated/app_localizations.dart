@@ -1399,6 +1399,36 @@ abstract class S {
   /// **'On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.'**
   String get autoSendDescription;
 
+  /// No description provided for @autoSendChannelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Send via'**
+  String get autoSendChannelLabel;
+
+  /// No description provided for @autoSendChannelWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'WhatsApp'**
+  String get autoSendChannelWhatsApp;
+
+  /// No description provided for @autoSendChannelEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get autoSendChannelEmail;
+
+  /// No description provided for @autoSendChannelBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Both'**
+  String get autoSendChannelBoth;
+
+  /// No description provided for @autoSendEmailDisabledHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Google & set a valid email to enable'**
+  String get autoSendEmailDisabledHint;
+
   /// No description provided for @aboutSection.
   ///
   /// In en, this message translates to:

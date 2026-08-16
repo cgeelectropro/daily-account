@@ -747,6 +747,22 @@ class SEn extends S {
       'On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.';
 
   @override
+  String get autoSendChannelLabel => 'Send via';
+
+  @override
+  String get autoSendChannelWhatsApp => 'WhatsApp';
+
+  @override
+  String get autoSendChannelEmail => 'Email';
+
+  @override
+  String get autoSendChannelBoth => 'Both';
+
+  @override
+  String get autoSendEmailDisabledHint =>
+      'Connect Google & set a valid email to enable';
+
+  @override
   String get aboutSection => 'About';
 
   @override

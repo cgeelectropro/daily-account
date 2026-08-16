@@ -34,6 +34,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   TimeOfDay _autoSendTime = const TimeOfDay(hour: 19, minute: 0);
   bool _notificationsEnabled = true;
   bool _autoSendEnabled = false;
+  String _autoSendChannel = 'whatsapp';
+  bool _gmailSendReady = false;
   bool _isDark = true;
   bool _appLockEnabled = false;
   bool _useBiometrics = false;
@@ -148,6 +150,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _cloudEmail = cloud.currentUser?.email ?? '';
     _cloudLastBackup = await s.getSetting('cloudLastBackupDate', fallback: '');
 
+    // Load auto-send channel + validate it's still usable
+    _autoSendChannel = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
+    _gmailSendReady = CloudSyncService.instance.isSignedIn &&
+        await CloudSyncService.instance.hasGmailSendScope();
+    if ((_autoSendChannel == 'email' || _autoSendChannel == 'both') && !_canUseEmailChannel) {
+      _autoSendChannel = 'whatsapp';
+      await s.setSetting('autoSendChannel', 'whatsapp');
+    }
+
     if (mounted) setState(() => _loading = false);
   }
 
@@ -260,6 +271,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Auto-send ──────────────────────────────────────────────
+
+  bool get _hasValidEmail {
+    final email = _email.trim();
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
+  bool get _canUseEmailChannel => _hasValidEmail && _gmailSendReady;
 
   Future<void> _toggleAutoSend(bool enabled) async {
     final l = S.of(context);
@@ -1276,6 +1294,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_autoSendEnabled) ...[
             const SizedBox(height: 8),
             _timeRow(l.autoSendTime, _autoSendTime, _pickAutoSendTime),
+            const SizedBox(height: 12),
+            Text(l.autoSendChannelLabel.toUpperCase(),
+                style: AppTheme.label(11, color: AppTheme.accentGold(context).withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _channelButton(l.autoSendChannelWhatsApp, 'whatsapp', enabled: true),
+                const SizedBox(width: 8),
+                _channelButton(l.autoSendChannelEmail, 'email', enabled: _canUseEmailChannel),
+                const SizedBox(width: 8),
+                _channelButton(l.autoSendChannelBoth, 'both', enabled: _canUseEmailChannel),
+              ],
+            ),
+            if (!_canUseEmailChannel) ...[
+              const SizedBox(height: 6),
+              Text(l.autoSendEmailDisabledHint,
+                  style: AppTheme.serif(11, color: AppTheme.mutedColor(context))),
+            ],
             const SizedBox(height: 8),
             Text(l.autoSendDescription, style: AppTheme.serif(12, color: mutedCol)),
           ],
@@ -1700,6 +1736,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _channelButton(String label, String value, {required bool enabled}) {
+    final accent = AppTheme.accentGold(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final selected = _autoSendChannel == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: enabled ? () async {
+          setState(() => _autoSendChannel = value);
+          await StorageService.instance.setSetting('autoSendChannel', value);
+        } : null,
+        child: Opacity(
+          opacity: enabled ? 1.0 : 0.4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+            ),
+            alignment: Alignment.center,
+            child: Text(label, style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+          ),
+        ),
+      ),
     );
   }
 
