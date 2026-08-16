@@ -529,6 +529,14 @@ void main() {
       expect(ProclamationSession().isEmpty, true);
       expect(ProclamationSession(topic: 'Salvation').isNotEmpty, true);
     });
+
+    test('a duration-only session (empty topic, zero count) is not empty', () {
+      // Round-2 fix: isEmpty must also consider duration, otherwise clearing
+      // the count field to 0 on a session that only has a duration would be
+      // treated as empty and silently deleted, discarding the duration data.
+      expect(ProclamationSession(topic: '', count: 0, duration: '12min').isEmpty, false);
+      expect(ProclamationSession(topic: '', count: 0, duration: '12min').isNotEmpty, true);
+    });
   });
 
   group('DailyLog proclamation totals', () {

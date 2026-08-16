@@ -478,6 +478,13 @@ class PdfReportService {
     if (log.proclamationSessions.isNotEmpty) {
       final parts = log.proclamationSessions.map((s) {
         final label = s.topic.isNotEmpty ? s.topic : l.sectionProclamation;
+        // A session can have a real duration but zero count (the user only
+        // filled in the Duration field) — that's genuine data, not a
+        // phantom entry, but showing "0x" would look broken. Omit the
+        // count suffix entirely when count is 0.
+        if (s.count == 0) {
+          return '$label (${s.duration})';
+        }
         final dur = s.duration.isNotEmpty ? s.duration : '-';
         return '$label (${s.count}x, $dur)';
       }).join(', ');

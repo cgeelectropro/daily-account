@@ -639,6 +639,25 @@ void main() {
       expect(report, contains('Grace (2x, 10min)'));
     });
 
+    test('renders a duration-only session (count 0) without a misleading "0x" prefix', () async {
+      // Round-2 fix: a session with no count but a real duration (e.g. the
+      // user only filled in the Duration field) is genuine, non-empty data
+      // — it should render as "Proclamation (12min)", not the misleading
+      // "Proclamation (0x, 12min)".
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        proclamationSessions: [
+          ProclamationSession(topic: '', count: 0, duration: '12min'),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains('${l.sectionProclamation} (12min)'));
+      expect(report, isNot(contains('0x')));
+    });
+
     test('renders legacy proclamationCount/Duration via the auto-migrated session on read', () async {
       // DailyLog.fromMap migrates legacy proclamationCount/proclamationDuration
       // into a single synthetic ProclamationSession (empty topic) whenever no

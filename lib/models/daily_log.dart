@@ -169,7 +169,7 @@ class ProclamationSession {
     duration: m['duration'] ?? '',
   );
 
-  bool get isEmpty => topic.isEmpty && count == 0;
+  bool get isEmpty => topic.isEmpty && count == 0 && duration.isEmpty;
   bool get isNotEmpty => !isEmpty;
 
   /// Find the index of an existing same-day session whose topic matches
