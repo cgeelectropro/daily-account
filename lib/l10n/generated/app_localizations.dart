@@ -799,6 +799,30 @@ abstract class S {
   /// **'e.g. 237670000000'**
   String get whatsappHint;
 
+  /// No description provided for @widgetTitleSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Home Widget'**
+  String get widgetTitleSection;
+
+  /// No description provided for @widgetTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Proclamation Title'**
+  String get widgetTitleLabel;
+
+  /// No description provided for @widgetTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Jesus Christ is the Lord'**
+  String get widgetTitleHint;
+
+  /// No description provided for @widgetTitleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize the declaration shown on your home-screen widget.'**
+  String get widgetTitleDescription;
+
   /// No description provided for @remindersSection.
   ///
   /// In en, this message translates to:

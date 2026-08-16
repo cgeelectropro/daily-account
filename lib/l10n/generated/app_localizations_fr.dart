@@ -380,6 +380,19 @@ class SFr extends S {
   String get whatsappHint => 'ex. 237670000000';
 
   @override
+  String get widgetTitleSection => 'Widget d\'accueil';
+
+  @override
+  String get widgetTitleLabel => 'Titre de la proclamation';
+
+  @override
+  String get widgetTitleHint => 'ex. Jésus-Christ est le Seigneur';
+
+  @override
+  String get widgetTitleDescription =>
+      'Personnalisez la déclaration affichée sur votre widget d\'écran d\'accueil.';
+
+  @override
   String get remindersSection => 'Rappels';
 
   @override

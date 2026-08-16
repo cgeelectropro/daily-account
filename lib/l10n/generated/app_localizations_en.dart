@@ -374,6 +374,19 @@ class SEn extends S {
   String get whatsappHint => 'e.g. 237670000000';
 
   @override
+  String get widgetTitleSection => 'Home Widget';
+
+  @override
+  String get widgetTitleLabel => 'Proclamation Title';
+
+  @override
+  String get widgetTitleHint => 'e.g. Jesus Christ is the Lord';
+
+  @override
+  String get widgetTitleDescription =>
+      'Customize the declaration shown on your home-screen widget.';
+
+  @override
   String get remindersSection => 'Reminders';
 
   @override

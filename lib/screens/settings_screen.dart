@@ -28,6 +28,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _name = '', _email = '', _whatsapp = '';
+  String _widgetTitle = '';
   TimeOfDay _dailyTime = const TimeOfDay(hour: 20, minute: 0);
   TimeOfDay _sundayTime = const TimeOfDay(hour: 18, minute: 0);
   TimeOfDay _autoSendTime = const TimeOfDay(hour: 19, minute: 0);
@@ -86,6 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _name = await s.getSetting('myName');
     _email = await s.getSetting('discipleEmail');
     _whatsapp = await s.getSetting('discipleWhatsApp');
+    _widgetTitle = await s.getSetting('widgetTitle');
     final dh = int.tryParse(await s.getSetting('dailyHour', fallback: '20')) ?? 20;
     final dm = int.tryParse(await s.getSetting('dailyMin', fallback: '0')) ?? 0;
     final sh = int.tryParse(await s.getSetting('sundayHour', fallback: '18')) ?? 18;
@@ -861,6 +863,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _whatsapp,
             keyboardType: TextInputType.phone,
             onChanged: (v) { _whatsapp = v; StorageService.instance.setSetting('discipleWhatsApp', v); },
+          ),
+        ]),
+
+        // ── Home Widget ──
+        SectionCard(icon: '\u{1F3E0}', title: l.widgetTitleSection, children: [
+          GoldField(
+            label: l.widgetTitleLabel,
+            hint: l.widgetTitleHint,
+            value: _widgetTitle,
+            onChanged: (v) async {
+              _widgetTitle = v;
+              await StorageService.instance.setSetting('widgetTitle', v);
+              await HomeWidget.saveWidgetData('widget_title', v);
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              l.widgetTitleDescription,
+              style: AppTheme.serif(11, color: AppTheme.mutedColor(context).withValues(alpha: 0.7)),
+            ),
           ),
         ]),
 

@@ -693,6 +693,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       final ddegScripture = log?.ddegScripture ?? '';
       await HomeWidget.saveWidgetData('ddeg_scripture', ddegScripture);
 
+      // Custom widget proclamation title (falls back to hardcoded string when empty)
+      final widgetTitle = await StorageService.instance.getSetting('widgetTitle');
+      if (widgetTitle.isNotEmpty) {
+        await HomeWidget.saveWidgetData('widget_title', widgetTitle);
+      }
+
       // Active timer info
       final ts = TimerService.instance;
       final activeKey = ts.activeKey;

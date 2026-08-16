@@ -91,7 +91,12 @@ object WidgetHelper {
 
         // Afternoon/evening → proclamation
         if (hour in 12..21) {
-            val text = getLocalizedString(context, locale, R.string.widget_proclamation_text)
+            val customTitle = widgetData.getString("widget_title", "") ?: ""
+            val text = if (customTitle.isNotEmpty()) {
+                customTitle
+            } else {
+                getLocalizedString(context, locale, R.string.widget_proclamation_text)
+            }
             val label = getLocalizedString(context, locale, R.string.widget_proclamation_label)
             return Triple(text, "", label)
         }
