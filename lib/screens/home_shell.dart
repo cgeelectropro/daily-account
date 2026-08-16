@@ -676,13 +676,18 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
       // Proclamation count (numeric for counter widget)
       // Use the MAX of DB and widget values to prevent overwriting
-      // increments made from the widget that haven't synced yet.
+      // increments made from the widget that haven't synced yet — but
+      // only trust the widget's count if it was recorded today; a stale
+      // prior-day count must not be laundered into looking like today's.
       final dbProcCount = int.tryParse(log?.proclamationCount ?? '0') ?? 0;
-      final widgetProcCount = int.tryParse(
-          await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0') ?? 0;
+      final widgetProcDateForMerge = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
+      final todayKeyForMerge = _key(DateTime.now());
+      final widgetProcCount = widgetProcDateForMerge == todayKeyForMerge
+          ? (int.tryParse(await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0') ?? 0)
+          : 0;
       final maxProcCount = dbProcCount > widgetProcCount ? dbProcCount : widgetProcCount;
       await HomeWidget.saveWidgetData('proclamation_count', '$maxProcCount');
-      await HomeWidget.saveWidgetData('proclamation_date', _key(DateTime.now()));
+      await HomeWidget.saveWidgetData('proclamation_date', todayKeyForMerge);
 
       // DDEG scripture (for scripture card DDEG override)
       final ddegScripture = log?.ddegScripture ?? '';
