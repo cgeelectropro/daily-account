@@ -49,3 +49,6 @@ android/key.properties
 android/app/app-release.jks
 android/app/google-services.json
 *.jks
+
+# Isolated worktrees for subagent-driven-development
+.worktrees/
