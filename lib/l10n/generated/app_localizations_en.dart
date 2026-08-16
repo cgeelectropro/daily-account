@@ -985,16 +985,22 @@ class SEn extends S {
   String get proclamationDurationHint => 'e.g. 10 minutes';
 
   @override
-  String get proclamationCounter => 'Proclamation Counter';
-
-  @override
-  String get proclamationSubtitle => 'Proclaim: Jesus Christ is the Lord!';
-
-  @override
   String get proclamationTap => 'Tap to proclaim';
 
   @override
   String get proclamationSave => 'Save & Close';
+
+  @override
+  String get proclamationTopicPrompt => 'What are you proclaiming?';
+
+  @override
+  String get proclamationTopicHint => 'e.g. Healing, Salvation, Victory';
+
+  @override
+  String get proclamationRecentTopics => 'Recent topics today';
+
+  @override
+  String get proclamationStartButton => 'Start Proclaiming';
 
   @override
   String reportProclamation(String count, String duration) {

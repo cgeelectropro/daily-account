@@ -989,16 +989,22 @@ class SFr extends S {
   String get proclamationDurationHint => 'ex. 10 minutes';
 
   @override
-  String get proclamationCounter => 'Compteur de Proclamation';
-
-  @override
-  String get proclamationSubtitle => 'Proclame : Jésus-Christ est Seigneur !';
-
-  @override
   String get proclamationTap => 'Appuie pour proclamer';
 
   @override
   String get proclamationSave => 'Enregistrer et Fermer';
+
+  @override
+  String get proclamationTopicPrompt => 'Que proclamez-vous ?';
+
+  @override
+  String get proclamationTopicHint => 'ex. Guérison, Salut, Victoire';
+
+  @override
+  String get proclamationRecentTopics => 'Sujets récents aujourd\'hui';
+
+  @override
+  String get proclamationStartButton => 'Commencer la Proclamation';
 
   @override
   String reportProclamation(String count, String duration) {

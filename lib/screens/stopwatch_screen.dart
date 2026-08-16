@@ -10,6 +10,7 @@ import '../services/storage_service.dart';
 import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/bible_books.dart';
+import 'proclamation_topic_screen.dart';
 
 class StopwatchScreen extends StatefulWidget {
   /// Called when a timer is stopped so the parent can refresh the log.
@@ -219,7 +220,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   }
 
   Widget _activityGrid(S l, TimerService ts, Color accent) {
-    final builtIn = ActivityType.values;
+    final builtIn = ActivityType.values.where((a) => a != ActivityType.fasting).toList();
     final totalCount = builtIn.length + _customActivities.length + 1;
 
     return GridView.builder(
@@ -297,7 +298,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
               if (!isRunning && !isPaused)
                 _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
                   if (activity == ActivityType.proclamation) {
-                    _openProclamationCounter();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProclamationTopicScreen()),
+                    );
                   } else {
                     _showFieldsAndStart(activity);
                   }
@@ -1055,180 +1058,6 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  /// Open the proclamation counter screen.
-  void _openProclamationCounter() {
-    final l = S.of(context);
-    final accent = AppTheme.accentGold(context);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
-      backgroundColor: AppTheme.surfaceColor(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        int count = 0;
-        bool timerRunning = false;
-        final stopwatch = Stopwatch();
-
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            final elapsed = stopwatch.elapsed;
-            final h = elapsed.inHours;
-            final m = elapsed.inMinutes % 60;
-            final s = elapsed.inSeconds % 60;
-            final timerDisplay = h > 0
-                ? '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
-                : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                  20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('\uD83D\uDCE3',
-                      style: TextStyle(fontSize: 36)),
-                  const SizedBox(height: 8),
-                  Text(l.proclamationCounter,
-                      style: AppTheme.display(20, color: accent)),
-                  const SizedBox(height: 4),
-                  Text(l.proclamationSubtitle,
-                      style: AppTheme.serif(13,
-                          color: AppTheme.mutedColor(context))),
-                  const SizedBox(height: 24),
-                  Text('$count', style: AppTheme.display(72, color: accent)),
-                  const SizedBox(height: 8),
-                  Text(l.proclamationTap,
-                      style: AppTheme.serif(13,
-                          color: AppTheme.mutedColor(context))),
-                  const SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: () {
-                      setSheetState(() => count++);
-                      if (!timerRunning && !stopwatch.isRunning) {
-                        stopwatch.start();
-                        timerRunning = true;
-                        Future.doWhile(() async {
-                          await Future.delayed(const Duration(seconds: 1));
-                          if (ctx.mounted && stopwatch.isRunning) {
-                            setSheetState(() {});
-                            return true;
-                          }
-                          return false;
-                        });
-                      }
-                    },
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: AppTheme.goldGradient,
-                        boxShadow: [
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                          child:
-                              Icon(Icons.add, color: AppTheme.bg0, size: 48)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (timerRunning || stopwatch.elapsed > Duration.zero)
-                    Text(timerDisplay,
-                        style: AppTheme.display(20,
-                            color: AppTheme.mutedColor(context))),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (stopwatch.isRunning)
-                        _controlButton(
-                          icon: Icons.pause_rounded,
-                          color: AppTheme.goldSoft,
-                          onTap: () => setSheetState(() => stopwatch.stop()),
-                        ),
-                      if (!stopwatch.isRunning && timerRunning)
-                        _controlButton(
-                          icon: Icons.play_arrow_rounded,
-                          color: AppTheme.green,
-                          onTap: () {
-                            stopwatch.start();
-                            setSheetState(() {});
-                            Future.doWhile(() async {
-                              await Future.delayed(
-                                  const Duration(seconds: 1));
-                              if (ctx.mounted && stopwatch.isRunning) {
-                                setSheetState(() {});
-                                return true;
-                              }
-                              return false;
-                            });
-                          },
-                        ),
-                      const SizedBox(width: 24),
-                      GestureDetector(
-                        onTap: () async {
-                          stopwatch.stop();
-                          Navigator.pop(ctx);
-                          if (count > 0) {
-                            String durationStr = '';
-                            final d = stopwatch.elapsed;
-                            if (d.inMinutes > 0) {
-                              final dh = d.inHours;
-                              final dm = d.inMinutes % 60;
-                              if (dh > 0) {
-                                durationStr = '${dh}h ${dm}min';
-                              } else {
-                                durationStr = '${dm}min';
-                              }
-                            }
-                            final dateKey = _todayKey;
-                            final log = await StorageService.instance
-                                    .getLog(dateKey) ??
-                                DailyLog(dateKey: dateKey);
-                            final existing =
-                                int.tryParse(log.proclamationCount) ?? 0;
-                            log.proclamationCount = '${existing + count}';
-                            if (durationStr.isNotEmpty) {
-                              log.proclamationDuration = durationStr;
-                            }
-                            await StorageService.instance.saveLog(log);
-                            widget.onTimerStopped?.call();
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 14),
-                          decoration: BoxDecoration(
-                            gradient: AppTheme.goldGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(l.proclamationSave,
-                              style:
-                                  AppTheme.display(16, color: AppTheme.bg0)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 

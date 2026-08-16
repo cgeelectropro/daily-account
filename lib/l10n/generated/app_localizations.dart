@@ -1843,18 +1843,6 @@ abstract class S {
   /// **'e.g. 10 minutes'**
   String get proclamationDurationHint;
 
-  /// No description provided for @proclamationCounter.
-  ///
-  /// In en, this message translates to:
-  /// **'Proclamation Counter'**
-  String get proclamationCounter;
-
-  /// No description provided for @proclamationSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Proclaim: Jesus Christ is the Lord!'**
-  String get proclamationSubtitle;
-
   /// No description provided for @proclamationTap.
   ///
   /// In en, this message translates to:
@@ -1866,6 +1854,30 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Save & Close'**
   String get proclamationSave;
+
+  /// No description provided for @proclamationTopicPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you proclaiming?'**
+  String get proclamationTopicPrompt;
+
+  /// No description provided for @proclamationTopicHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Healing, Salvation, Victory'**
+  String get proclamationTopicHint;
+
+  /// No description provided for @proclamationRecentTopics.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent topics today'**
+  String get proclamationRecentTopics;
+
+  /// No description provided for @proclamationStartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Proclaiming'**
+  String get proclamationStartButton;
 
   /// No description provided for @reportProclamation.
   ///

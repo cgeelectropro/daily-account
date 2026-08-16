@@ -463,10 +463,12 @@
   "proclamationCountHint": "ex. 50",
   "proclamationDurationLabel": "Durée (optionnel)",
   "proclamationDurationHint": "ex. 10 minutes",
-  "proclamationCounter": "Compteur de Proclamation",
-  "proclamationSubtitle": "Proclame : Jésus-Christ est Seigneur !",
   "proclamationTap": "Appuie pour proclamer",
   "proclamationSave": "Enregistrer et Fermer",
+  "proclamationTopicPrompt": "Que proclamez-vous ?",
+  "proclamationTopicHint": "ex. Guérison, Salut, Victoire",
+  "proclamationRecentTopics": "Sujets récents aujourd'hui",
+  "proclamationStartButton": "Commencer la Proclamation",
   "reportProclamation": "Proclamation : {count} fois ({duration})",
   "@reportProclamation": {
     "placeholders": {
