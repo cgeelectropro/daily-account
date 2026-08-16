@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as dev;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:googleapis/gmail/v1.dart' as gmail;
 import 'package:http/http.dart' as http;
 import 'backup_service.dart';
 import 'storage_service.dart';
@@ -18,7 +19,10 @@ class CloudSyncService {
   static const _backupFileName = 'daily_account_backup.json';
 
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [drive.DriveApi.driveAppdataScope],
+    scopes: [
+      drive.DriveApi.driveAppdataScope,
+      'https://www.googleapis.com/auth/gmail.send',
+    ],
   );
 
   GoogleSignInAccount? _currentUser;
@@ -100,6 +104,70 @@ class CloudSyncService {
       }
       return null;
     }
+  }
+
+  /// Whether the current sign-in grant includes the gmail.send scope.
+  /// Users who signed in before this scope was added will need to
+  /// re-authenticate (call signIn() again) to grant it.
+  Future<bool> hasGmailSendScope() async {
+    if (_currentUser == null) return false;
+    try {
+      return await _googleSignIn.canAccessScopes(
+        ['https://www.googleapis.com/auth/gmail.send'],
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Send an email fully silently via the Gmail API — no external app
+  /// opens, unlike the mailto:-based sendByEmail in ReportService.
+  Future<bool> sendEmailSilently({
+    required String toEmail,
+    required String subject,
+    required String body,
+  }) async {
+    if (_currentUser == null) {
+      final restored = await silentSignIn();
+      if (!restored) return false;
+    }
+    try {
+      final headers = await _currentUser!.authHeaders;
+      final client = _GoogleAuthClient(headers);
+      final gmailApi = gmail.GmailApi(client);
+
+      final message = _buildMimeMessage(
+        from: _currentUser!.email,
+        to: toEmail,
+        subject: subject,
+        body: body,
+      );
+
+      await gmailApi.users.messages.send(
+        gmail.Message(raw: message),
+        'me',
+      );
+      return true;
+    } catch (e, st) {
+      dev.log('CloudSync: sendEmailSilently failed: $e', name: 'CloudSync');
+      dev.log('$st', name: 'CloudSync');
+      return false;
+    }
+  }
+
+  String _buildMimeMessage({
+    required String from,
+    required String to,
+    required String subject,
+    required String body,
+  }) {
+    final mime = 'From: $from\r\n'
+        'To: $to\r\n'
+        'Subject: =?UTF-8?B?${base64.encode(utf8.encode(subject))}?=\r\n'
+        'MIME-Version: 1.0\r\n'
+        'Content-Type: text/plain; charset="UTF-8"\r\n\r\n'
+        '$body';
+    return base64Url.encode(utf8.encode(mime)).replaceAll('=', '');
   }
 
   /// Upload a full backup to Google Drive's App Data folder.
