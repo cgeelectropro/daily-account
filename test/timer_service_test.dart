@@ -134,6 +134,17 @@ void main() {
     });
   });
 
+  group('TimerService — literature writes a real entry', () {
+    test('stopping a literature timer with a title creates a LiteratureEntry, not a no-op', () async {
+      final key = TimerKey.builtIn(ActivityType.literature);
+      TimerService.instance.start(key, fields: {'literatureTitle': 'Mere Christianity'});
+      await TimerService.instance.stop(key);
+      final log = await StorageService.instance.getLog(
+          DateFormat('yyyy-MM-dd').format(DateTime.now()));
+      expect(log!.literature.any((l) => l.title == 'Mere Christianity'), true);
+    });
+  });
+
   group('TimerService — untouched scalar-accumulating activities still work', () {
     test('stopping a Bible reading timer still accumulates into bibleDuration', () async {
       final key = const TimerKey.builtIn(ActivityType.bibleReading);

@@ -683,9 +683,33 @@ class TimerService extends ChangeNotifier {
       case 'other':
         log.other = _appendText(log.other, value);
       case 'literatureTitle':
-        break;
+        _upsertLiteratureEntry(log, title: value);
       case 'literatureAmount':
-        break;
+        _upsertLiteratureEntry(log, amount: value);
+    }
+  }
+
+  /// Find-or-create a `LiteratureEntry` for the current write. If the log's
+  /// literature list is just the default single empty entry, fill that one
+  /// in rather than appending a second — mirrors how the Log screen itself
+  /// treats a fresh single empty entry so a timer-completed entry doesn't
+  /// leave an extra blank card.
+  void _upsertLiteratureEntry(DailyLog log, {String? title, String? amount}) {
+    if (log.literature.length == 1 && log.literature.first.isEmpty) {
+      if (title != null) log.literature.first.title = title;
+      if (amount != null) log.literature.first.amount = amount;
+      return;
+    }
+    // Otherwise, find an entry still missing the field being set (the
+    // in-progress entry from this same timer session), or append new.
+    final idx = title != null
+        ? log.literature.indexWhere((l) => l.title.isEmpty)
+        : log.literature.indexWhere((l) => l.amount.isEmpty && l.title.isNotEmpty);
+    if (idx != -1) {
+      if (title != null) log.literature[idx].title = title;
+      if (amount != null) log.literature[idx].amount = amount;
+    } else {
+      log.literature.add(LiteratureEntry(title: title ?? '', amount: amount ?? ''));
     }
   }
 

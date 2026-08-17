@@ -10,6 +10,9 @@ class LiteratureEntry {
 
   LiteratureEntry({this.title = '', this.amount = '', this.unit = 'pages'});
 
+  bool get isEmpty => title.isEmpty && amount.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+
   Map<String, dynamic> toMap() => {'title': title, 'amount': amount, 'unit': unit};
 
   factory LiteratureEntry.fromMap(Map<String, dynamic> m) => LiteratureEntry(
