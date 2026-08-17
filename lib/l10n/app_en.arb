@@ -916,5 +916,8 @@
 
   "coachStopwatchTimer": "Tap the play button to start timing a discipline — like Bible reading or prayer.",
   "coachStopwatchProclamation": "Tap here to log a proclamation moment.",
-  "coachStopwatchAddActivity": "Track something not listed here — tap + to add your own activity."
+  "coachStopwatchAddActivity": "Track something not listed here — tap + to add your own activity.",
+
+  "coachLogBible": "Log today's Bible reading here — this is where your daily entry starts.",
+  "coachLogQuickLog": "In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast."
 }

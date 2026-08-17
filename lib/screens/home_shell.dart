@@ -30,6 +30,10 @@ import 'stopwatch_screen.dart';
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
+  /// Exposes the Quick Log button's key so other screens (e.g. `LogScreen`)
+  /// can target it in a coach-mark sequence without a new callback layer.
+  static final quickLogButtonKey = GlobalKey();
+
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
@@ -1058,6 +1062,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               if (_tab == 1) ...[
                 const SizedBox(width: 8),
                 Material(
+                  key: HomeShell.quickLogButtonKey,
                   color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(

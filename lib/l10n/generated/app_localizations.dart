@@ -3834,6 +3834,18 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Track something not listed here — tap + to add your own activity.'**
   String get coachStopwatchAddActivity;
+
+  /// No description provided for @coachLogBible.
+  ///
+  /// In en, this message translates to:
+  /// **'Log today\'s Bible reading here — this is where your daily entry starts.'**
+  String get coachLogBible;
+
+  /// No description provided for @coachLogQuickLog.
+  ///
+  /// In en, this message translates to:
+  /// **'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.'**
+  String get coachLogQuickLog;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

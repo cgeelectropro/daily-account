@@ -2138,4 +2138,12 @@ class SFr extends S {
   @override
   String get coachStopwatchAddActivity =>
       'Suivez autre chose : appuyez sur + pour ajouter votre propre activité.';
+
+  @override
+  String get coachLogBible =>
+      'Enregistrez votre lecture biblique du jour ici — c\'est le début de votre entrée quotidienne.';
+
+  @override
+  String get coachLogQuickLog =>
+      'Pressé ? Appuyez sur le bouton Journal Rapide dans l\'en-tête pour cocher rapidement vos disciplines.';
 }

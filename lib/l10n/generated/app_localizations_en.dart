@@ -2113,4 +2113,12 @@ class SEn extends S {
   @override
   String get coachStopwatchAddActivity =>
       'Track something not listed here — tap + to add your own activity.';
+
+  @override
+  String get coachLogBible =>
+      'Log today\'s Bible reading here — this is where your daily entry starts.';
+
+  @override
+  String get coachLogQuickLog =>
+      'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.';
 }

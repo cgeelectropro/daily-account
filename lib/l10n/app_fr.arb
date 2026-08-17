@@ -916,5 +916,8 @@
 
   "coachStopwatchTimer": "Appuyez sur lecture pour chronométrer une discipline — comme la lecture biblique ou la prière.",
   "coachStopwatchProclamation": "Appuyez ici pour enregistrer un moment de proclamation.",
-  "coachStopwatchAddActivity": "Suivez autre chose : appuyez sur + pour ajouter votre propre activité."
+  "coachStopwatchAddActivity": "Suivez autre chose : appuyez sur + pour ajouter votre propre activité.",
+
+  "coachLogBible": "Enregistrez votre lecture biblique du jour ici — c'est le début de votre entrée quotidienne.",
+  "coachLogQuickLog": "Pressé ? Appuyez sur le bouton Journal Rapide dans l'en-tête pour cocher rapidement vos disciplines."
 }
