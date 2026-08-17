@@ -902,13 +902,20 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   void _showFieldsAndStart(ActivityType activity) {
     final l = S.of(context);
     final fields = _fieldsFor(l, activity);
+    final key = TimerKey.builtIn(activity);
+
+    if (fields.isEmpty) {
+      // No fields to collect — start directly, matching
+      // _showCustomFieldsAndStart's equivalent guard for custom activities.
+      TimerService.instance.start(key);
+      return;
+    }
+
     final accent = AppTheme.accentGold(context);
     final controllers = <String, TextEditingController>{};
     for (final f in fields) {
       controllers[f.$1] = TextEditingController();
     }
-
-    final key = TimerKey.builtIn(activity);
 
     showModalBottomSheet(
       context: context,
