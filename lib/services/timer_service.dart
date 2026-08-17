@@ -452,25 +452,22 @@ class TimerService extends ChangeNotifier {
         _appendTimedSession(log.evangelismSessions, session, durationStr);
       } else if (builtInType == ActivityType.church) {
         _appendTimedSession(log.churchSessions, session, durationStr);
+      } else if (builtInType == ActivityType.bibleReading) {
+        _appendBibleSession(log, session, durationStr);
+      } else if (builtInType == ActivityType.ddeg) {
+        _appendDdegSession(log, session, durationStr);
+      } else if (builtInType == ActivityType.prayerAlone) {
+        _appendPrayerSession(log.prayerAloneSessions, session, durationStr, 'prayerAloneTitle');
+      } else if (builtInType == ActivityType.prayerOthers) {
+        _appendPrayerSession(log.prayerOthersSessions, session, durationStr, 'prayerOthersTitle');
       } else {
         // Accumulate duration field (add to existing) if the activity has one
         final field = session.key.builtIn!.logDurationField;
         if (field != null) {
           switch (field) {
-            case 'bibleDuration':
-              log.bibleDuration =
-                  _accumulateDuration(log.bibleDuration, durationStr);
             case 'literatureDuration':
               log.literatureDuration =
                   _accumulateDuration(log.literatureDuration, durationStr);
-            case 'ddegTime':
-              log.ddegTime = _accumulateDuration(log.ddegTime, durationStr);
-            case 'prayerAloneDuration':
-              log.prayerAloneDuration =
-                  _accumulateDuration(log.prayerAloneDuration, durationStr);
-            case 'prayerOthersDuration':
-              log.prayerOthersDuration =
-                  _accumulateDuration(log.prayerOthersDuration, durationStr);
             case 'fastingDuration':
               log.fastingDuration =
                   _accumulateDuration(log.fastingDuration, durationStr);
@@ -483,13 +480,14 @@ class TimerService extends ChangeNotifier {
 
       // Merge extra fields captured before start (accumulate, don't overwrite)
       for (final entry in session.fields.entries) {
-        if (entry.key == 'bibleChapters' &&
-            !_hasBibleReference(session.fields, log)) {
-          // Never record a chapter count without a matching reference —
-          // otherwise reports show a chapter tally with no book/verse.
-          continue;
+        if ([
+          'proclamationTopic',
+          'bibleStartBook', 'bibleStartChapter', 'bibleEndBook', 'bibleEndChapter',
+          'ddegScripture', 'ddegNotes',
+          'prayerAloneTitle', 'prayerOthersTitle', 'prayerPeopleCount', 'prayerNotes',
+        ].contains(entry.key)) {
+          continue; // consumed by the session-append helpers above, not a legacy scalar merge
         }
-        if (entry.key == 'proclamationTopic') continue; // consumed above, not a log field
         _mergeLogField(log, entry.key, entry.value);
       }
     } else {
@@ -562,6 +560,63 @@ class TimerService extends ChangeNotifier {
     ));
   }
 
+  /// Append a Bible reading session using the start/end reference fields
+  /// captured by the timer's start/stop dialogs (populated by a later task
+  /// that restructures stopwatch_screen.dart's Bible dialogs — until that
+  /// lands, these fields simply won't be present and this method is a no-op
+  /// via the early return below).
+  void _appendBibleSession(DailyLog log, TimerSession session, String durationStr) {
+    final startBook = session.fields['bibleStartBook'] ?? '';
+    final startChapterStr = session.fields['bibleStartChapter'] ?? '';
+    final endBook = session.fields['bibleEndBook'] ?? '';
+    final endChapterStr = session.fields['bibleEndChapter'] ?? '';
+    if (startBook.isEmpty) return; // nothing to record without a start reference
+    final entry = BibleReadingEntry(
+      startBook: startBook,
+      startChapter: int.tryParse(startChapterStr) ?? 0,
+      endBook: endBook,
+      endChapter: int.tryParse(endChapterStr) ?? 0,
+    );
+    entry.recalculate();
+    log.bibleSessions.add(entry);
+  }
+
+  /// Append a DDEG session from the scripture/notes fields captured by the
+  /// timer's start/stop dialogs.
+  void _appendDdegSession(DailyLog log, TimerSession session, String durationStr) {
+    final scripture = session.fields['ddegScripture'] ?? '';
+    final notes = session.fields['ddegNotes'] ?? '';
+    log.ddegSessions.add(DdegSession(
+      scripture: scripture,
+      time: durationStr,
+      notes: notes,
+    ));
+  }
+
+  /// Append or merge a Prayer session (Alone or Others) by title match,
+  /// mirroring _appendProclamationSession's merge-or-append rule exactly.
+  void _appendPrayerSession(List<PrayerSession> sessions, TimerSession session,
+      String durationStr, String titleFieldKey) {
+    final title = (session.fields[titleFieldKey] ?? '').trim();
+    final peopleCount = session.fields['prayerPeopleCount'] ?? '';
+    final notes = session.fields['prayerNotes'] ?? '';
+    final existingIndex = PrayerSession.findMatchingIndex(sessions, title);
+
+    if (existingIndex != -1) {
+      final existing = sessions[existingIndex];
+      existing.duration = _accumulateDuration(existing.duration, durationStr);
+      if (notes.isNotEmpty) existing.notes = _appendText(existing.notes, notes);
+      if (peopleCount.isNotEmpty) existing.peopleCount = peopleCount;
+    } else {
+      sessions.add(PrayerSession(
+        title: title,
+        duration: durationStr,
+        notes: notes,
+        peopleCount: peopleCount,
+      ));
+    }
+  }
+
   /// Parse a human-readable duration string into total minutes.
   /// Handles formats: "1h 30min", "45 minutes", "2h", "30s", plain numbers.
   int _parseDurationMinutes(String s) {
@@ -626,14 +681,6 @@ class TimerService extends ChangeNotifier {
     final b = int.tryParse(added) ?? 0;
     final sum = a + b;
     return sum > 0 ? '$sum' : (added.isNotEmpty ? added : existing);
-  }
-
-  /// Whether a Bible reference exists (or is about to be merged) for [log],
-  /// so a 'bibleChapters' value in [fields] has something to attach to.
-  static bool _hasBibleReference(Map<String, String> fields, DailyLog log) {
-    if (log.bibleReference.isNotEmpty) return true;
-    if ((fields['bibleReference'] ?? '').isNotEmpty) return true;
-    return log.bibleSessions.any((s) => s.isNotEmpty);
   }
 
   void _mergeLogField(DailyLog log, String key, String value) {

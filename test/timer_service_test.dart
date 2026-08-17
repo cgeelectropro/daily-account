@@ -146,19 +146,68 @@ void main() {
   });
 
   group('TimerService — untouched scalar-accumulating activities still work', () {
-    test('stopping a Bible reading timer still accumulates into bibleDuration', () async {
+    test('stopping a Bible reading timer without reference fields does not write a session or legacy scalar', () async {
       final key = const TimerKey.builtIn(ActivityType.bibleReading);
       TimerService.instance.start(key);
       await TimerService.instance.stop(key);
 
       final log = await StorageService.instance.getLog(todayKey);
       expect(log, isNotNull);
-      // Elapsed is effectively 0s immediately after start/stop, so the
-      // duration string may be empty — the key assertion is simply that
-      // this activity did NOT get routed into a sessions list.
-      expect(log!.proclamationSessions, isEmpty);
+      // No bibleStartBook field was supplied, so _appendBibleSession is a
+      // no-op — nothing should land in bibleSessions, and the legacy
+      // bibleDuration scalar is no longer written by this path at all.
+      expect(log!.bibleSessions, isEmpty);
+      expect(log.bibleDuration, isEmpty);
+      expect(log.proclamationSessions, isEmpty);
       expect(log.evangelismSessions, isEmpty);
       expect(log.churchSessions, isEmpty);
+    });
+  });
+
+  group('TimerService — DDEG/Prayer session writes', () {
+    test('stopping a ddeg timer appends a DdegSession, not just ddegTime scalar', () async {
+      const key = TimerKey.builtIn(ActivityType.ddeg);
+      TimerService.instance.start(key, fields: {'ddegScripture': 'Psalm 23'});
+      await TimerService.instance.stop(key);
+      final log = await StorageService.instance.getLog(todayKey);
+      expect(log!.ddegSessions.any((s) => s.scripture == 'Psalm 23'), true);
+      expect(log.ddegTime, isEmpty);
+    });
+
+    test('stopping a prayer-alone timer with a title appends a PrayerSession under that title', () async {
+      const key = TimerKey.builtIn(ActivityType.prayerAlone);
+      TimerService.instance.start(key, fields: {'prayerAloneTitle': 'Healing for Mom'});
+      await TimerService.instance.stop(key);
+      final log = await StorageService.instance.getLog(todayKey);
+      expect(log!.prayerAloneSessions.any((s) => s.title == 'Healing for Mom'), true);
+      expect(log.prayerAloneDuration, isEmpty);
+    });
+
+    test('a second prayer-alone timer with the same title merges duration into the existing session', () async {
+      // Seeded within this test body (rather than relying on state left
+      // over from the previous test) because this file's setUp() clears
+      // TimerService sessions and today's log row before every test.
+      const key = TimerKey.builtIn(ActivityType.prayerAlone);
+
+      TimerService.instance.start(key, fields: {'prayerAloneTitle': 'Healing for Mom'});
+      await TimerService.instance.stop(key);
+
+      TimerService.instance.start(key, fields: {'prayerAloneTitle': 'healing for mom'});
+      await TimerService.instance.stop(key);
+
+      final log = await StorageService.instance.getLog(todayKey);
+      final matching = log!.prayerAloneSessions
+          .where((s) => s.title.toLowerCase() == 'healing for mom');
+      expect(matching.length, 1); // merged, not duplicated
+    });
+
+    test('stopping a prayer-with-others timer with a title appends a PrayerSession under that title', () async {
+      const key = TimerKey.builtIn(ActivityType.prayerOthers);
+      TimerService.instance.start(key, fields: {'prayerOthersTitle': 'Cell group intercession'});
+      await TimerService.instance.stop(key);
+      final log = await StorageService.instance.getLog(todayKey);
+      expect(log!.prayerOthersSessions.any((s) => s.title == 'Cell group intercession'), true);
+      expect(log.prayerOthersDuration, isEmpty);
     });
   });
 }
