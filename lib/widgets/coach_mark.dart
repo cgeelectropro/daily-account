@@ -49,7 +49,7 @@ class _CoachMarkOverlay extends StatefulWidget {
 }
 
 class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
-  int _index = 0;
+  late int _index;
 
   /// Finds the first step from [_index] onward whose target is currently
   /// mounted and laid out. Returns null if none remain.
@@ -82,14 +82,19 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   @override
   void initState() {
     super.initState();
+    // Resolve the starting index synchronously before the first build().
+    // This prevents a race where the initial build() sees _index == 0,
+    // finds no target, and calls onDone() before a post-frame callback
+    // could correct the index.
     final first = _nextShowableIndex(0);
     if (first == null) {
-      // Nothing in the whole sequence is showable — end immediately.
+      // Nothing in the whole sequence is showable — schedule end for after
+      // the first frame (to avoid calling onDone() from initState).
+      _index = 0;
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDone());
-    } else if (first != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _index = first);
-      });
+    } else {
+      // first is now the correct starting index; use it immediately.
+      _index = first;
     }
   }
 
@@ -97,6 +102,14 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   Widget build(BuildContext context) {
     final l = S.of(context);
     final accent = AppTheme.accentGold(context);
+
+    // Guard against empty list or out-of-range index. This can occur if
+    // steps is empty (a legal call per the public signature) or if _index
+    // was somehow invalidated mid-sequence.
+    if (_index < 0 || _index >= widget.steps.length) {
+      return const SizedBox.shrink();
+    }
+
     final rect = _targetRect(widget.steps[_index].targetKey);
 
     if (rect == null) {
