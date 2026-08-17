@@ -134,15 +134,28 @@ on a busy day.
 
 ### 3. First-run guided walkthrough (coach marks)
 
+This is the highest-priority piece of the design — the others reduce
+clutter passively, but this is the part that actively teaches, which is
+the core of what was asked for ("a way that leads you into discovering
+the application... click here").
+
 New reusable widget, `CoachMark` / `CoachMarkSequence`, in
 `lib/widgets/`: a spotlight overlay that highlights one target widget at
-a time with a short caption and a "Next"/"Got it" control, using
+a time with a short caption and a "Next" control, using
 `Overlay.of(context)` + `CompositedTransformTarget`/`GlobalKey` to locate
-targets — no new package dependency.
+targets — no new package dependency. Every step also shows a **"Skip"**
+control that dismisses the entire sequence immediately, not just the
+current step — a user who taps Skip should never see the remaining steps
+of that same sequence on this visit.
 
 Sequences, keyed by screen, shown automatically the first time that
 screen is visited after onboarding:
 
+- **Stopwatch screen** (3 steps) — this is tab index 0, the very first
+  screen a new user lands on after onboarding: a timer's start button
+  ("tap to start timing a discipline"), the proclamation counter
+  ("tap + to log a proclamation"), the "add activity" control ("track
+  something not listed here").
 - **Log screen** (3 steps): the Core section ("log the essentials
   here"), the "More disciplines" expander ("everything else lives
   here"), the Quick Log flash button ("busy day? tap here instead").
@@ -153,17 +166,19 @@ screen is visited after onboarding:
   icon ("stuck? tap here anytime").
 
 State: one new `StorageService` setting per sequence,
-e.g. `coachmark_log_shown`, `coachmark_report_shown`,
-`coachmark_settings_shown` (string `'true'`/unset), checked in each
-screen's `initState`/first frame the same way `onboarding_complete` is
-checked today. A **"Replay tutorial"** action in the new Advanced
-settings group clears all three flags so any user — including existing
-members who want a refresher — can re-trigger every walkthrough on next
-screen visit.
+e.g. `coachmark_stopwatch_shown`, `coachmark_log_shown`,
+`coachmark_report_shown`, `coachmark_settings_shown`
+(string `'true'`/unset), checked in each screen's `initState`/first
+frame the same way `onboarding_complete` is checked today. Skipping a
+sequence still writes its flag — "skip" means "don't show me this
+again," not "ask me next launch."
 
-This is the piece that directly answers "a sort of way that leads you
-into discovering the application... click here" — it points at the real,
-live UI rather than describing it in an abstract onboarding slide.
+A **"Replay tutorial"** action in the new Advanced settings group clears
+all four flags so any user — including someone who skipped by mistake,
+or an existing member wanting a refresher — can re-trigger every
+walkthrough on next screen visit. This is the safety net that makes
+"skippable" safe to offer: nothing shown via coach mark is ever
+permanently lost to a user who dismissed it too fast.
 
 ### 4. Help & FAQ screen, reached from one global header icon
 
@@ -212,15 +227,19 @@ used elsewhere in `HomeShell` (e.g. `_syncWidgetChangesToDb`).
 ### Testing
 
 No test suite exists in this project today (per CLAUDE.md). Verification
-will be manual: run the app, clear `onboarding_complete` and the three
-coach-mark flags via a fresh install/emulator wipe, confirm each
-walkthrough appears once, confirm "Replay tutorial" re-triggers them,
-confirm Settings groups collapse/expand correctly, confirm Log screen's
-Core/More split doesn't hide already-filled-in data, confirm the
-Notifications sub-screen preserves every existing behavior (sound
-preview, diagnostics fix button, per-discipline reminder bottom sheet,
-follow-up sliders all still write the same `StorageService` keys), and
-confirm the header `?` icon opens `HelpScreen` from every tab.
+will be manual: run the app, clear `onboarding_complete` and the four
+coach-mark flags via a fresh install/emulator wipe, confirm each of the
+four walkthroughs (Stopwatch, Log, Report, Settings) appears once and in
+the right order relative to tab navigation, confirm tapping Skip on any
+step dismisses the whole sequence and still marks it shown (doesn't
+reappear on next visit to that screen), confirm "Replay tutorial"
+re-triggers all four, confirm Settings groups collapse/expand correctly,
+confirm Log screen's Core/More split doesn't hide already-filled-in
+data, confirm the Notifications sub-screen preserves every existing
+behavior (sound preview, diagnostics fix button, per-discipline reminder
+bottom sheet, follow-up sliders all still write the same
+`StorageService` keys), and confirm the header `?` icon opens
+`HelpScreen` from every tab.
 
 ## Future work (explicitly deferred)
 
