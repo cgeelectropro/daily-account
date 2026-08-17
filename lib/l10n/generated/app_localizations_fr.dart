@@ -2126,4 +2126,16 @@ class SFr extends S {
 
   @override
   String get reflectVerseLabel => 'ÉCRITURE';
+
+  @override
+  String get coachStopwatchTimer =>
+      'Appuyez sur lecture pour chronométrer une discipline — comme la lecture biblique ou la prière.';
+
+  @override
+  String get coachStopwatchProclamation =>
+      'Appuyez ici pour enregistrer un moment de proclamation.';
+
+  @override
+  String get coachStopwatchAddActivity =>
+      'Suivez autre chose : appuyez sur + pour ajouter votre propre activité.';
 }

@@ -2101,4 +2101,16 @@ class SEn extends S {
 
   @override
   String get reflectVerseLabel => 'SCRIPTURE';
+
+  @override
+  String get coachStopwatchTimer =>
+      'Tap the play button to start timing a discipline — like Bible reading or prayer.';
+
+  @override
+  String get coachStopwatchProclamation =>
+      'Tap here to log a proclamation moment.';
+
+  @override
+  String get coachStopwatchAddActivity =>
+      'Track something not listed here — tap + to add your own activity.';
 }

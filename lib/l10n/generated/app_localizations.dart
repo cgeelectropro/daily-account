@@ -3816,6 +3816,24 @@ abstract class S {
   /// In en, this message translates to:
   /// **'SCRIPTURE'**
   String get reflectVerseLabel;
+
+  /// No description provided for @coachStopwatchTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the play button to start timing a discipline — like Bible reading or prayer.'**
+  String get coachStopwatchTimer;
+
+  /// No description provided for @coachStopwatchProclamation.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to log a proclamation moment.'**
+  String get coachStopwatchProclamation;
+
+  /// No description provided for @coachStopwatchAddActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Track something not listed here — tap + to add your own activity.'**
+  String get coachStopwatchAddActivity;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {
