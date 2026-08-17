@@ -235,6 +235,9 @@ class SFr extends S {
   String get givingPurposeHint => 'ex. Offrande du dimanche, fonds de missions';
 
   @override
+  String get addGivingEntry => 'Ajouter un autre don';
+
+  @override
   String get sectionChurch => 'Église et Communion';
 
   @override
@@ -1060,6 +1063,12 @@ class SFr extends S {
   String get proclamationTopicHint => 'ex. Guérison, Salut, Victoire';
 
   @override
+  String get proclamationTopicLabel => 'Sujet';
+
+  @override
+  String get addProclamationSession => 'Ajouter un autre sujet';
+
+  @override
   String get proclamationRecentTopics => 'Sujets récents aujourd\'hui';
 
   @override
@@ -1067,6 +1076,9 @@ class SFr extends S {
 
   @override
   String get prayerTitlePrompt => 'Pour quoi pries-tu ?';
+
+  @override
+  String get prayerBurdenLabel => 'Pour quoi pries-tu ?';
 
   @override
   String get prayerBurdenHint => 'ex. Guérison, Provision, Direction';

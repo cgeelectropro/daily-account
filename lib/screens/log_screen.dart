@@ -546,65 +546,6 @@ class _LogScreenState extends State<LogScreen> {
     super.dispose();
   }
 
-  // ── Proclamation (writes through to the session list) ──────
-  //
-  // The manual count/duration fields below used to write directly to the
-  // legacy `proclamationCount`/`proclamationDuration` scalars. Once a log
-  // has been through DailyLog.fromMap (which migrates any legacy scalar
-  // into a synthesized untitled session and clears the scalar — see
-  // daily_log.dart), that scalar is normally empty going forward, so
-  // writing to it here would silently stop affecting anything the user or
-  // reports actually see. Instead, both fields target the untitled
-  // (empty-topic) session in `proclamationSessions`, matched the same way
-  // TimerService and the widget's quick-increment tap do.
-
-  /// The count field shows the untitled session's count if one exists,
-  /// else falls back to the legacy scalar (covers a brand-new log that
-  /// hasn't been through fromMap's migration yet).
-  String get _proclamationCountFieldValue {
-    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
-    if (idx != -1) return '${_log.proclamationSessions[idx].count}';
-    return _log.proclamationCount;
-  }
-
-  String get _proclamationDurationFieldValue {
-    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
-    if (idx != -1) return _log.proclamationSessions[idx].duration;
-    return _log.proclamationDuration;
-  }
-
-  void _setProclamationCount(String v) {
-    final parsed = int.tryParse(v) ?? 0;
-    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
-    if (idx != -1) {
-      _log.proclamationSessions[idx].count = parsed;
-      // Drop the session entirely if clearing the count leaves it fully
-      // empty (count 0, no duration) — otherwise a stray zero-count entry
-      // would render as a phantom "Proclamation (0x, -)" line in reports.
-      if (_log.proclamationSessions[idx].isEmpty) {
-        _log.proclamationSessions.removeAt(idx);
-      }
-    } else if (parsed > 0) {
-      _log.proclamationSessions.add(ProclamationSession(topic: '', count: parsed));
-    }
-    _log.proclamationCount = ''; // never re-populate the legacy scalar
-    _persist();
-  }
-
-  void _setProclamationDuration(String v) {
-    final idx = ProclamationSession.findMatchingIndex(_log.proclamationSessions, '');
-    if (idx != -1) {
-      _log.proclamationSessions[idx].duration = v;
-      if (_log.proclamationSessions[idx].isEmpty) {
-        _log.proclamationSessions.removeAt(idx);
-      }
-    } else if (v.isNotEmpty) {
-      _log.proclamationSessions.add(ProclamationSession(topic: '', count: 0, duration: v));
-    }
-    _log.proclamationDuration = ''; // never re-populate the legacy scalar
-    _persist();
-  }
-
   void _persist() {
     _persistDebounce?.cancel();
     _persistDebounce = Timer(const Duration(milliseconds: 500), () async {
@@ -1266,27 +1207,8 @@ class _LogScreenState extends State<LogScreen> {
         SectionCard(
           icon: '\u{1F4B0}',
           title: t.sectionGiving,
-          initiallyExpanded: _log.givingType.isNotEmpty || _log.givingAmount.isNotEmpty,
-          children: [
-            GoldField(
-              label: t.givingTypeLabel,
-              hint: t.givingTypeHint,
-              value: _log.givingType,
-              onChanged: (v) { _log.givingType = v; _persist(); },
-            ),
-            GoldField(
-              label: t.givingAmountLabel,
-              hint: t.givingAmountHint,
-              value: _log.givingAmount,
-              onChanged: (v) { _log.givingAmount = v; _persist(); },
-            ),
-            GoldField(
-              label: t.givingPurposeLabel,
-              hint: t.givingPurposeHint,
-              value: _log.givingPurpose,
-              onChanged: (v) { _log.givingPurpose = v; _persist(); },
-            ),
-          ],
+          initiallyExpanded: _log.giving.any((g) => g.isNotEmpty),
+          children: _givingEntryWidgets(t),
         ).animate().fadeIn(delay: 360.ms),
 
         // Church & Fellowship
@@ -1352,21 +1274,7 @@ class _LogScreenState extends State<LogScreen> {
           initiallyExpanded: _log.proclamationCount.isNotEmpty ||
               _log.proclamationDuration.isNotEmpty ||
               _log.proclamationSessions.any((s) => s.isNotEmpty),
-          children: [
-            GoldField(
-              label: t.proclamationCountLabel,
-              hint: t.proclamationCountHint,
-              value: _proclamationCountFieldValue,
-              keyboardType: TextInputType.number,
-              onChanged: (v) => _setProclamationCount(v),
-            ),
-            DurationQuickPick(
-              label: t.proclamationDurationLabel,
-              customLabel: t.durationCustom,
-              value: _proclamationDurationFieldValue,
-              onChanged: (v) => _setProclamationDuration(v),
-            ),
-          ],
+          children: _proclamationSessionWidgets(t),
         ).animate().fadeIn(delay: 480.ms),
 
         // Other + Custom Activities
@@ -1937,7 +1845,7 @@ class _LogScreenState extends State<LogScreen> {
       ('\uD83E\uDD1D', t.sectionPrayerOthers, _log.prayerOthersSessions.any((s) => s.isNotEmpty) || _log.prayerOthersDuration.isNotEmpty),
       ('\uD83D\uDCE2', t.sectionEvangelism, _log.evangelismContacts.isNotEmpty),
       ('\uD83C\uDF7D\uFE0F', t.sectionFasting, _log.fastingType.isNotEmpty || _log.fastingDuration.isNotEmpty),
-      ('\uD83D\uDCB0', t.sectionGiving, _log.givingType.isNotEmpty),
+      ('\uD83D\uDCB0', t.sectionGiving, _log.giving.any((g) => g.isNotEmpty)),
       ('\u26EA', t.sectionChurch, _log.churchType.isNotEmpty),
       ('\uD83D\uDC65', t.sectionDiscipleship, _log.discipleshipWho.isNotEmpty),
       ('\uD83D\uDCE3', t.sectionProclamation, _log.proclamationCount.isNotEmpty || _log.proclamationSessions.any((s) => s.isNotEmpty)),
@@ -2818,6 +2726,15 @@ class _LogScreenState extends State<LogScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              GoldField(
+                label: t.prayerBurdenLabel,
+                hint: t.proclamationTopicHint,
+                value: session.title,
+                onChanged: (v) {
+                  session.title = v;
+                  _syncPrayerAloneLegacy();
+                },
+              ),
               if (_log.prayerAloneSessions.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
@@ -2887,7 +2804,7 @@ class _LogScreenState extends State<LogScreen> {
     if (_log.prayerOthersSessions.isNotEmpty) {
       final first = _log.prayerOthersSessions.first;
       _log.prayerOthersDuration = first.duration;
-      _log.prayerOthersContext = first.notes;
+      _log.prayerOthersContext = first.title;
     }
     _persist();
   }
@@ -2915,6 +2832,15 @@ class _LogScreenState extends State<LogScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              GoldField(
+                label: t.prayerBurdenLabel,
+                hint: t.proclamationTopicHint,
+                value: session.title,
+                onChanged: (v) {
+                  session.title = v;
+                  _syncPrayerOthersLegacy();
+                },
+              ),
               if (_log.prayerOthersSessions.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
@@ -2932,12 +2858,13 @@ class _LogScreenState extends State<LogScreen> {
                 },
               ),
               GoldField(
-                label: t.prayerOthersContextLabel,
-                hint: t.prayerOthersContextHint,
-                value: session.notes,
+                label: t.prayerPeopleCountLabel,
+                hint: t.prayerPeopleCountHint,
+                value: session.peopleCount,
+                keyboardType: TextInputType.number,
                 onChanged: (v) {
-                  session.notes = v;
-                  _syncPrayerOthersLegacy();
+                  session.peopleCount = v;
+                  _persist();
                 },
               ),
               if (_log.prayerOthersSessions.length > 1)
@@ -2966,6 +2893,159 @@ class _LogScreenState extends State<LogScreen> {
           },
           icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
           label: Text(t.addPrayerSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
+  }
+
+  // ── Proclamation sessions (multi-session, topic-based) ─────
+
+  void _ensureProclamationSession() {
+    if (_log.proclamationSessions.isEmpty) {
+      _log.proclamationSessions = [ProclamationSession()];
+    }
+  }
+
+  List<Widget> _proclamationSessionWidgets(S t) {
+    _ensureProclamationSession();
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+
+    return [
+      ..._log.proclamationSessions.asMap().entries.map((entry) {
+        final i = entry.key;
+        final session = entry.value;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GoldField(
+                label: t.proclamationTopicLabel,
+                hint: t.proclamationTopicHint,
+                value: session.topic,
+                onChanged: (v) {
+                  setState(() => session.topic = v);
+                  _persist();
+                },
+              ),
+              GoldField(
+                label: t.proclamationCountLabel,
+                hint: t.proclamationCountHint,
+                value: session.count > 0 ? '${session.count}' : '',
+                keyboardType: TextInputType.number,
+                onChanged: (v) {
+                  setState(() => session.count = int.tryParse(v) ?? 0);
+                  _persist();
+                },
+              ),
+              DurationQuickPick(
+                label: t.proclamationDurationLabel,
+                customLabel: t.durationCustom,
+                value: session.duration,
+                onChanged: (v) {
+                  setState(() => session.duration = v);
+                  _persist();
+                },
+              ),
+              if (_log.proclamationSessions.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.proclamationSessions.removeAt(i));
+                      _persist();
+                    },
+                    icon: const Icon(Icons.remove_circle_outline, size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession, style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _log.proclamationSessions.add(ProclamationSession()));
+          },
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addProclamationSession, style: AppTheme.serif(13, color: accent)),
+        ),
+      ),
+    ];
+  }
+
+  // ── Giving entries (multi-entry list) ───────────────────────
+
+  List<Widget> _givingEntryWidgets(S t) {
+    if (_log.giving.isEmpty) _log.giving = [GivingEntry()];
+    final accent = AppTheme.accentGold(context);
+    final dark = AppTheme.isDark(context);
+
+    return [
+      ..._log.giving.asMap().entries.map((entry) {
+        final i = entry.key;
+        final g = entry.value;
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dark ? Colors.white.withValues(alpha: 0.03) : Colors.black.withValues(alpha: 0.03),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GoldField(
+                label: t.givingTypeLabel,
+                hint: t.givingTypeHint,
+                value: g.type,
+                onChanged: (v) { setState(() => g.type = v); _persist(); },
+              ),
+              GoldField(
+                label: t.givingAmountLabel,
+                hint: t.givingAmountHint,
+                value: g.amount,
+                onChanged: (v) { setState(() => g.amount = v); _persist(); },
+              ),
+              GoldField(
+                label: t.givingPurposeLabel,
+                hint: t.givingPurposeHint,
+                value: g.purpose,
+                onChanged: (v) { setState(() => g.purpose = v); _persist(); },
+              ),
+              if (_log.giving.length > 1)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() => _log.giving.removeAt(i));
+                      _persist();
+                    },
+                    icon: const Icon(Icons.remove_circle_outline, size: 16, color: AppTheme.rust),
+                    label: Text(t.removeSession, style: AppTheme.serif(12, color: AppTheme.rust)),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () => setState(() => _log.giving.add(GivingEntry())),
+          icon: Icon(Icons.add_circle_outline, size: 18, color: accent),
+          label: Text(t.addGivingEntry, style: AppTheme.serif(13, color: accent)),
         ),
       ),
     ];

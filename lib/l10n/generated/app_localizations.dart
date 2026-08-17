@@ -535,6 +535,12 @@ abstract class S {
   /// **'e.g. Sunday offering, missions fund'**
   String get givingPurposeHint;
 
+  /// No description provided for @addGivingEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another gift'**
+  String get addGivingEntry;
+
   /// No description provided for @sectionChurch.
   ///
   /// In en, this message translates to:
@@ -1969,6 +1975,18 @@ abstract class S {
   /// **'e.g. Healing, Salvation, Victory'**
   String get proclamationTopicHint;
 
+  /// No description provided for @proclamationTopicLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get proclamationTopicLabel;
+
+  /// No description provided for @addProclamationSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another topic'**
+  String get addProclamationSession;
+
   /// No description provided for @proclamationRecentTopics.
   ///
   /// In en, this message translates to:
@@ -1986,6 +2004,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'What are you praying for?'**
   String get prayerTitlePrompt;
+
+  /// No description provided for @prayerBurdenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you praying for?'**
+  String get prayerBurdenLabel;
 
   /// No description provided for @prayerBurdenHint.
   ///

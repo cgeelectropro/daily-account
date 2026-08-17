@@ -231,6 +231,9 @@ class SEn extends S {
   String get givingPurposeHint => 'e.g. Sunday offering, missions fund';
 
   @override
+  String get addGivingEntry => 'Add another gift';
+
+  @override
   String get sectionChurch => 'Church & Fellowship';
 
   @override
@@ -1056,6 +1059,12 @@ class SEn extends S {
   String get proclamationTopicHint => 'e.g. Healing, Salvation, Victory';
 
   @override
+  String get proclamationTopicLabel => 'Topic';
+
+  @override
+  String get addProclamationSession => 'Add another topic';
+
+  @override
   String get proclamationRecentTopics => 'Recent topics today';
 
   @override
@@ -1063,6 +1072,9 @@ class SEn extends S {
 
   @override
   String get prayerTitlePrompt => 'What are you praying for?';
+
+  @override
+  String get prayerBurdenLabel => 'What are you praying for?';
 
   @override
   String get prayerBurdenHint => 'e.g. Healing, Provision, Guidance';
