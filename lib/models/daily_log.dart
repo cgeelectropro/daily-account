@@ -125,25 +125,51 @@ class DdegSession {
   bool get isNotEmpty => !isEmpty;
 }
 
-/// A single prayer session (used for both Prayer Alone and Prayer With Others).
+/// A single prayer session (used for both Prayer Alone and Prayer With
+/// Others). `title` is the burden/subject a session is filed under —
+/// multiple same-day sessions with the same title (case-insensitive,
+/// trimmed) merge into one via `findMatchingIndex`, mirroring
+/// `ProclamationSession`'s topic-matching rule exactly.
 class PrayerSession {
+  String title;
   String duration;
-  String notes; // for alone: notes; for others: context/who
+  String notes; // for alone: reflection; for others: unused, superseded by title
+  String peopleCount; // Prayer with Others only; optional headcount
 
-  PrayerSession({this.duration = '', this.notes = ''});
+  PrayerSession({
+    this.title = '',
+    this.duration = '',
+    this.notes = '',
+    this.peopleCount = '',
+  });
 
   Map<String, dynamic> toMap() => {
+    'title': title,
     'duration': duration,
     'notes': notes,
+    'peopleCount': peopleCount,
   };
 
   factory PrayerSession.fromMap(Map<String, dynamic> m) => PrayerSession(
+    title: m['title'] ?? '',
     duration: m['duration'] ?? '',
     notes: m['notes'] ?? '',
+    peopleCount: m['peopleCount'] ?? '',
   );
 
-  bool get isEmpty => duration.isEmpty && notes.isEmpty;
+  bool get isEmpty => title.isEmpty && duration.isEmpty && notes.isEmpty && peopleCount.isEmpty;
   bool get isNotEmpty => !isEmpty;
+
+  /// Find the index of an existing same-day session whose title matches
+  /// [title] (case-insensitive, trimmed), or -1 if none exists. Same
+  /// matching rule as `ProclamationSession.findMatchingIndex` — kept as a
+  /// parallel static method (not shared via inheritance, since these are
+  /// small unrelated data classes) so both call sites read identically.
+  static int findMatchingIndex(List<PrayerSession> sessions, String title) {
+    final normalizedTitle = title.trim().toLowerCase();
+    return sessions.indexWhere(
+        (s) => s.title.trim().toLowerCase() == normalizedTitle);
+  }
 }
 
 /// A single proclamation session — a topic proclaimed some number of times

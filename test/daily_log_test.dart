@@ -516,6 +516,27 @@ void main() {
     });
   });
 
+  group('PrayerSession title', () {
+    test('toMap/fromMap round-trip includes title and peopleCount', () {
+      final s = PrayerSession(title: 'Healing for Mom', duration: '15min', notes: 'Felt peace', peopleCount: '3');
+      final restored = PrayerSession.fromMap(s.toMap());
+      expect(restored.title, 'Healing for Mom');
+      expect(restored.peopleCount, '3');
+    });
+
+    test('findMatchingIndex finds a case-insensitive trimmed title match', () {
+      final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+      final idx = PrayerSession.findMatchingIndex(sessions, '  healing FOR MOM  ');
+      expect(idx, 0);
+    });
+
+    test('findMatchingIndex returns -1 when no title matches', () {
+      final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+      final idx = PrayerSession.findMatchingIndex(sessions, 'General intercession');
+      expect(idx, -1);
+    });
+  });
+
   group('ProclamationSession', () {
     test('toMap/fromMap round-trip', () {
       final s = ProclamationSession(topic: 'Healing', count: 3, duration: '12min');
