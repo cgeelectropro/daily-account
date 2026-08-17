@@ -200,7 +200,7 @@ void main() {
         prayerOthersDuration: '15 minutes',
         evangelismContacts: '2',
         fastingType: 'Daniel fast',
-        givingType: 'tithe',
+        giving: [GivingEntry(type: 'tithe')],
         churchType: 'Sunday service',
         discipleshipWho: 'John',
         proclamationCount: '5',
@@ -781,6 +781,24 @@ void main() {
         ],
       );
       expect(log.proclamationCount, isEmpty);
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts giving list entries (list-only, no legacy scalar)', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        giving: [GivingEntry(type: 'Tithe', amount: '50000 XAF')],
+      );
+      expect(log.givingType, isEmpty);
+      expect(log.completeness, closeTo(1 / 11, 0.01));
+    });
+
+    test('completeness counts a title-only PrayerSession with no legacy scalar', () {
+      final log = DailyLog(
+        dateKey: '2025-01-01',
+        prayerAloneSessions: [PrayerSession(title: 'Morning intercession')],
+      );
+      expect(log.prayerAloneDuration, isEmpty);
       expect(log.completeness, closeTo(1 / 11, 0.01));
     });
   });

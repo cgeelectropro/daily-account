@@ -240,7 +240,7 @@ class ReportIntelligenceService {
       }
 
       // Giving
-      if (log.givingType.isNotEmpty) givingDays++;
+      if (log.giving.any((g) => g.isNotEmpty)) givingDays++;
 
       // Church
       if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) churchDays++;

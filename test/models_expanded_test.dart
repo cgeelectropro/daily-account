@@ -223,7 +223,7 @@ void main() {
           prayerOthersDuration: '15min',
           evangelismContacts: '1',
           fastingType: 'complete',
-          givingType: 'tithe',
+          giving: [GivingEntry(type: 'tithe')],
           churchType: 'Sunday',
           discipleshipWho: 'James',
           proclamationCount: '3',

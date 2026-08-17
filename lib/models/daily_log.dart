@@ -439,7 +439,7 @@ class DailyLog {
       prayerOthersSessions.any((s) => s.isNotEmpty) || prayerOthersDuration.isNotEmpty,
       evangelismContacts.isNotEmpty || evangelismSessions.isNotEmpty,
       fastingType.isNotEmpty || fastingDuration.isNotEmpty,
-      givingType.isNotEmpty,
+      giving.any((g) => g.isNotEmpty),
       churchType.isNotEmpty || churchSessions.isNotEmpty,
       discipleshipWho.isNotEmpty,
       proclamationCount.isNotEmpty || proclamationSessions.isNotEmpty,

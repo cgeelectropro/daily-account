@@ -419,10 +419,22 @@ class PdfReportService {
       if (log.ddegNotes.isNotEmpty) parts.add(log.ddegNotes);
       rows.add(_detailRow(l.ddegShort, parts.join(' · ')));
     }
-    if (log.prayerAloneDuration.isNotEmpty) {
+    if (log.prayerAloneSessions.any((s) => s.isNotEmpty)) {
+      for (final s in log.prayerAloneSessions.where((s) => s.isNotEmpty)) {
+        final label = s.title.isNotEmpty ? s.title : l.pdfPrayerAlone;
+        final detail = '${s.duration}${s.notes.isNotEmpty ? " — ${s.notes}" : ""}';
+        rows.add(_detailRow(label, detail));
+      }
+    } else if (log.prayerAloneDuration.isNotEmpty) {
       rows.add(_detailRow(l.pdfPrayerAlone, '${log.prayerAloneDuration}${log.prayerAloneNotes.isNotEmpty ? " — ${log.prayerAloneNotes}" : ""}'));
     }
-    if (log.prayerOthersDuration.isNotEmpty) {
+    if (log.prayerOthersSessions.any((s) => s.isNotEmpty)) {
+      for (final s in log.prayerOthersSessions.where((s) => s.isNotEmpty)) {
+        final label = s.title.isNotEmpty ? s.title : l.pdfPrayerOthers;
+        final peopleSuffix = s.peopleCount.isNotEmpty ? ' (${s.peopleCount})' : '';
+        rows.add(_detailRow(label, '${s.duration}$peopleSuffix'));
+      }
+    } else if (log.prayerOthersDuration.isNotEmpty) {
       rows.add(_detailRow(l.pdfPrayerOthers, '${log.prayerOthersDuration}${log.prayerOthersContext.isNotEmpty ? " — ${log.prayerOthersContext}" : ""}'));
     }
     if (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty) {
@@ -455,11 +467,11 @@ class PdfReportService {
     if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
       rows.add(_detailRow(l.sectionFasting, '${log.fastingType} (${log.fastingDuration})${log.fastingPrayerFocus.isNotEmpty ? " — ${log.fastingPrayerFocus}" : ""}'));
     }
-    if (log.givingType.isNotEmpty) {
+    for (final g in log.giving.where((e) => e.isNotEmpty)) {
       final givingParts = <String>[
-        log.givingType,
-        if (log.givingAmount.isNotEmpty) log.givingAmount,
-        if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+        g.type,
+        if (g.amount.isNotEmpty) g.amount,
+        if (g.purpose.isNotEmpty) g.purpose,
       ];
       rows.add(_detailRow(l.pdfGiving, givingParts.join(' — ')));
     }

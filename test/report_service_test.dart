@@ -697,11 +697,11 @@ void main() {
     test('buildFullReport lists multiple giving entries per day', () async {
       final log = DailyLog(
         dateKey: svc.keyFor(monday),
-        // DailyLog.completeness (and thus hasContent in the report) doesn't
-        // currently account for the `giving` list on its own — only the
-        // legacy givingType scalar — so seed a minor legacy field to make
-        // this day register as having content (same pattern used by the
-        // evangelism/church session tests above).
+        // DailyLog.completeness now accounts for the `giving` list on its
+        // own (Task 12 fix); this extra legacy field is kept only to match
+        // the belt-and-suspenders pattern used by the evangelism/church
+        // session tests above and isn't required for the day to register
+        // as having content.
         discipleshipWho: 'Test Person',
         giving: [
           GivingEntry(type: 'Tithe', amount: '50'),
