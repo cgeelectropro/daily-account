@@ -1870,6 +1870,26 @@ class SEn extends S {
   String get diagFix => 'Fix';
 
   @override
+  String get diagOemAutostart => 'Autostart / background permission';
+
+  @override
+  String get diagOemAutostartHint =>
+      'Your phone\'s manufacturer requires a separate permission beyond battery settings so reminders can fire while the app is closed. Tap Fix, then enable Autostart / Allow background activity for Daily Account.';
+
+  @override
+  String get batteryPromptTitle => 'Keep your reminders reliable';
+
+  @override
+  String get batteryPromptBody =>
+      'Android may silently stop your daily reminders to save battery. Allow Daily Account to run unrestricted so your reminders always arrive on time.';
+
+  @override
+  String get batteryPromptLater => 'Not now';
+
+  @override
+  String get batteryPromptAllow => 'Allow';
+
+  @override
   String diagScheduledFailed(int scheduled, int failed) {
     return 'Scheduled: $scheduled | Failed: $failed';
   }

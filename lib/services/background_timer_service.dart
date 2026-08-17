@@ -11,8 +11,22 @@ const kTimerChannelId = 'daily_account_stopwatch_v2';
 const kTimerChannelName = 'Activity Timer';
 const kTimerNotifId = 200; // must match NotificationService.stopwatchNotifId
 
-/// Manages an Android foreground service that keeps the activity timer
-/// alive even when the Flutter UI is suspended.
+/// Low-priority channel for the always-on guardian notification, shown
+/// whenever no activity timer is running. Keeps the process classified as
+/// a foreground service so Android (and OEM battery managers) are far less
+/// likely to kill it before scheduled reminder alarms can fire.
+const kGuardianChannelId = 'daily_account_guardian';
+const kGuardianChannelName = 'Background Protection';
+const kGuardianNotifId = 201;
+
+/// Manages a single always-on Android foreground service that:
+///  - keeps the process alive so scheduled reminder alarms are more likely
+///    to survive Doze/App Standby and OEM background killers, and
+///  - keeps the activity timer alive in the background when one is running.
+///
+/// Only one Android foreground service can exist per app, so both
+/// responsibilities share the same service/notification, switching content
+/// between an idle "guardian" state and the richer timer state.
 ///
 /// Communication between the UI isolate and the background isolate uses
 /// [FlutterBackgroundService.invoke] / [FlutterBackgroundService.on].
@@ -21,7 +35,7 @@ const kTimerNotifId = 200; // must match NotificationService.stopwatchNotifId
 ///   UI → BG:
 ///     "startTimer"  { label, icon, elapsedMs }
 ///     "pauseTimer"  { elapsedMs }
-///     "stopTimer"   (no args)
+///     "stopTimer"   (no args)          — reverts to guardian idle state
 ///   BG → UI:
 ///     "timerTick"   { elapsedMs }   (every second while running)
 class BackgroundTimerService {
@@ -31,7 +45,9 @@ class BackgroundTimerService {
   final _service = FlutterBackgroundService();
   bool _configured = false;
 
-  /// Call once at app startup (before any timer interaction).
+  /// Call once at app startup (before any timer interaction). Also starts
+  /// the guardian service immediately so it's protecting reminders even
+  /// when no timer is running.
   Future<void> init() async {
     if (_configured) return;
     if (!Platform.isAndroid) {
@@ -40,7 +56,6 @@ class BackgroundTimerService {
     }
 
     try {
-      // Create the notification channel up-front so the service can use it.
       final plugin = FlutterLocalNotificationsPlugin();
       final android = plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -55,18 +70,29 @@ class BackgroundTimerService {
             enableVibration: false,
           ),
         );
+        await android.createNotificationChannel(
+          const AndroidNotificationChannel(
+            kGuardianChannelId,
+            kGuardianChannelName,
+            description: 'Keeps Daily Account active so reminders arrive on time',
+            importance: Importance.min,
+            playSound: false,
+            enableVibration: false,
+            showBadge: false,
+          ),
+        );
       }
 
       await _service.configure(
         androidConfiguration: AndroidConfiguration(
           onStart: _onStart,
-          autoStart: false, // only start when a timer starts
-          autoStartOnBoot: false,
+          autoStart: true,
+          autoStartOnBoot: true,
           isForegroundMode: true,
-          notificationChannelId: kTimerChannelId,
+          notificationChannelId: kGuardianChannelId,
           initialNotificationTitle: 'Daily Account',
-          initialNotificationContent: 'Timer running…',
-          foregroundServiceNotificationId: kTimerNotifId,
+          initialNotificationContent: 'Protecting your reminders…',
+          foregroundServiceNotificationId: kGuardianNotifId,
           foregroundServiceTypes: [AndroidForegroundType.specialUse],
         ),
         iosConfiguration: IosConfiguration(
@@ -74,15 +100,21 @@ class BackgroundTimerService {
           onForeground: _onStart,
         ),
       );
-    } catch (_) {
-      // Background service configuration failed — timer will work
-      // without foreground service (just won't survive backgrounding)
-    }
 
-    _configured = true;
+      _configured = true;
+
+      final running = await _service.isRunning();
+      if (!running) {
+        await _service.startService();
+      }
+    } catch (_) {
+      // Background service configuration failed — app still works, just
+      // without the extra protection against being killed in the background.
+      _configured = true;
+    }
   }
 
-  /// Start the foreground service for a running timer.
+  /// Start (or switch) the foreground service into timer mode.
   Future<void> startForegroundTimer({
     required String label,
     required String icon,
@@ -120,7 +152,8 @@ class BackgroundTimerService {
     } catch (_) {}
   }
 
-  /// Stop the foreground service.
+  /// Revert the service to its idle guardian state (does NOT stop the
+  /// service — it keeps running to protect scheduled reminders).
   void stopForegroundTimer() {
     if (!Platform.isAndroid) return;
     try {
@@ -151,9 +184,34 @@ void _onStart(ServiceInstance service) async {
   int elapsedMs = 0;
   DateTime? startedAt;
   String currentLabel = 'Timer';
-  String currentIcon = '\u23F1';
+  String currentIcon = '⏱';
+  bool timerActive = false;
 
-  void updateNotification({bool running = true, bool paused = false}) {
+  void showGuardianNotification() {
+    plugin.show(
+      kGuardianNotifId,
+      'Daily Account',
+      'Protecting your reminders — tap to open.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          kGuardianChannelId,
+          kGuardianChannelName,
+          channelDescription: 'Keeps Daily Account active so reminders arrive on time',
+          importance: Importance.min,
+          priority: Priority.min,
+          playSound: false,
+          enableVibration: false,
+          ongoing: true,
+          autoCancel: false,
+          showWhen: false,
+          category: AndroidNotificationCategory.service,
+          visibility: NotificationVisibility.public,
+        ),
+      ),
+    );
+  }
+
+  void updateTimerNotification({bool running = true, bool paused = false}) {
     final totalMs = running && startedAt != null
         ? elapsedMs + DateTime.now().difference(startedAt!).inMilliseconds
         : elapsedMs;
@@ -162,23 +220,23 @@ void _onStart(ServiceInstance service) async {
     final actions = <AndroidNotificationAction>[
       if (running)
         const AndroidNotificationAction(
-          'timer_pause', '\u23F8 Pause',
+          'timer_pause', '⏸ Pause',
           showsUserInterface: false, cancelNotification: false,
         )
       else if (paused)
         const AndroidNotificationAction(
-          'timer_resume', '\u25B6 Resume',
+          'timer_resume', '▶ Resume',
           showsUserInterface: false, cancelNotification: false,
         ),
       AndroidNotificationAction(
-        'timer_stop', '\u23F9 Stop',
+        'timer_stop', '⏹ Stop',
         showsUserInterface: currentLabel.contains('Bible') ||
             currentLabel.contains('Lecture') ||
-            currentLabel.contains('Litt\u00e9rature'),
+            currentLabel.contains('Littérature'),
         cancelNotification: true,
       ),
       const AndroidNotificationAction(
-        'timer_cancel', '\u2715 Cancel',
+        'timer_cancel', '✕ Cancel',
         showsUserInterface: true, cancelNotification: false,
       ),
     ];
@@ -208,8 +266,11 @@ void _onStart(ServiceInstance service) async {
         ? '${hrs.toString().padLeft(2, '0')}:${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}'
         : '${mins.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
 
-    final body = paused ? '\u23F8 Paused \u2014 $display' : '\u23F1 In progress \u2014 $display';
+    final body = paused ? '⏸ Paused — $display' : '⏱ In progress — $display';
 
+    // Cancel the guardian notification while the richer timer one is shown
+    // under a different channel/ID — avoids two persistent icons at once.
+    plugin.cancel(kGuardianNotifId);
     plugin.show(
       kTimerNotifId,
       '$currentIcon $currentLabel',
@@ -218,9 +279,13 @@ void _onStart(ServiceInstance service) async {
     );
   }
 
+  // Start in idle guardian mode.
+  showGuardianNotification();
+
   service.on('startTimer').listen((data) {
+    timerActive = true;
     currentLabel = data?['label'] ?? 'Timer';
-    currentIcon = data?['icon'] ?? '\u23F1';
+    currentIcon = data?['icon'] ?? '⏱';
     elapsedMs = data?['elapsedMs'] ?? 0;
     startedAt = DateTime.now();
 
@@ -231,7 +296,7 @@ void _onStart(ServiceInstance service) async {
       service.invoke('timerTick', {'elapsedMs': totalMs});
     });
 
-    updateNotification();
+    updateTimerNotification();
   });
 
   service.on('pauseTimer').listen((data) {
@@ -240,7 +305,7 @@ void _onStart(ServiceInstance service) async {
     elapsedMs = data?['elapsedMs'] ?? elapsedMs;
     currentLabel = data?['label'] ?? currentLabel;
     startedAt = null;
-    updateNotification(running: false, paused: true);
+    updateTimerNotification(running: false, paused: true);
   });
 
   service.on('stopTimer').listen((_) {
@@ -248,7 +313,19 @@ void _onStart(ServiceInstance service) async {
     ticker = null;
     elapsedMs = 0;
     startedAt = null;
+    timerActive = false;
+    // Revert to the idle guardian notification instead of stopping the
+    // service — the service keeps running to protect scheduled reminders.
     plugin.cancel(kTimerNotifId);
-    service.stopSelf();
+    showGuardianNotification();
+  });
+
+  // Periodic self-heal: nudge the guardian notification so it stays alive
+  // in the eyes of the OS even across long idle stretches, without
+  // interrupting an active timer's own richer notification.
+  Timer.periodic(const Duration(minutes: 15), (_) {
+    if (!timerActive) {
+      showGuardianNotification();
+    }
   });
 }

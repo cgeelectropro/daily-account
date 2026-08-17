@@ -3385,6 +3385,42 @@ abstract class S {
   /// **'Fix'**
   String get diagFix;
 
+  /// No description provided for @diagOemAutostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Autostart / background permission'**
+  String get diagOemAutostart;
+
+  /// No description provided for @diagOemAutostartHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Your phone\'s manufacturer requires a separate permission beyond battery settings so reminders can fire while the app is closed. Tap Fix, then enable Autostart / Allow background activity for Daily Account.'**
+  String get diagOemAutostartHint;
+
+  /// No description provided for @batteryPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your reminders reliable'**
+  String get batteryPromptTitle;
+
+  /// No description provided for @batteryPromptBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Android may silently stop your daily reminders to save battery. Allow Daily Account to run unrestricted so your reminders always arrive on time.'**
+  String get batteryPromptBody;
+
+  /// No description provided for @batteryPromptLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get batteryPromptLater;
+
+  /// No description provided for @batteryPromptAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get batteryPromptAllow;
+
   /// No description provided for @diagScheduledFailed.
   ///
   /// In en, this message translates to:

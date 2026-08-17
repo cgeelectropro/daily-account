@@ -815,6 +815,12 @@
   "diagExactAlarms": "Alarmes exactes",
   "diagBatteryOptimized": "Batterie optimisée",
   "diagFix": "Corriger",
+  "diagOemAutostart": "Démarrage auto / autorisation d'arrière-plan",
+  "diagOemAutostartHint": "Le fabricant de votre téléphone exige une autorisation distincte, en plus des réglages de batterie, pour que les rappels fonctionnent quand l'application est fermée. Appuyez sur Corriger, puis activez le Démarrage automatique / l'activité en arrière-plan pour Daily Account.",
+  "batteryPromptTitle": "Fiabilisez vos rappels",
+  "batteryPromptBody": "Android peut arrêter silencieusement vos rappels quotidiens pour économiser la batterie. Autorisez Daily Account à fonctionner sans restriction pour que vos rappels arrivent toujours à l'heure.",
+  "batteryPromptLater": "Plus tard",
+  "batteryPromptAllow": "Autoriser",
   "diagScheduledFailed": "Planifiées : {scheduled} | Échouées : {failed}",
   "@diagScheduledFailed": {
     "placeholders": {

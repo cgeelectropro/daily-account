@@ -815,6 +815,12 @@
   "diagExactAlarms": "Exact alarms",
   "diagBatteryOptimized": "Battery optimized",
   "diagFix": "Fix",
+  "diagOemAutostart": "Autostart / background permission",
+  "diagOemAutostartHint": "Your phone's manufacturer requires a separate permission beyond battery settings so reminders can fire while the app is closed. Tap Fix, then enable Autostart / Allow background activity for Daily Account.",
+  "batteryPromptTitle": "Keep your reminders reliable",
+  "batteryPromptBody": "Android may silently stop your daily reminders to save battery. Allow Daily Account to run unrestricted so your reminders always arrive on time.",
+  "batteryPromptLater": "Not now",
+  "batteryPromptAllow": "Allow",
   "diagScheduledFailed": "Scheduled: {scheduled} | Failed: {failed}",
   "@diagScheduledFailed": {
     "placeholders": {

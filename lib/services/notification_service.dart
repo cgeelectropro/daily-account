@@ -378,6 +378,31 @@ class NotificationService {
     );
   }
 
+  /// Re-check live OS permission/battery state.
+  ///
+  /// [requestExactAlarmsPermission] and the notification-permission request
+  /// only report their result once, at the moment they're called — Android
+  /// can revoke exact-alarm permission or battery-optimization exemption
+  /// later (OEM battery managers, "remove permissions if unused", or the
+  /// user changing it in system Settings) without ever notifying the app.
+  /// Without this re-check, `diagnostics` shows a stale install-time
+  /// snapshot that can read "healthy" while every scheduled alarm is
+  /// silently being dropped by the OS.
+  Future<void> _refreshDiagnostics() async {
+    final androidImpl = _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl == null) return;
+    _notifPermissionGranted =
+        await androidImpl.areNotificationsEnabled() ?? _notifPermissionGranted;
+    _exactAlarmGranted =
+        await androidImpl.canScheduleExactNotifications() ?? _exactAlarmGranted;
+    _batteryOptExempt = await _checkBatteryOptimization();
+  }
+
+  /// Public wrapper so screens (e.g. Settings) can refresh the diagnostics
+  /// panel against live OS state without paying for a full reschedule.
+  Future<void> refreshDiagnostics() => _refreshDiagnostics();
+
   /// Re-schedule all reminders. Safe to call repeatedly.
   ///
   /// This is critical because Android can silently drop scheduled alarms
@@ -390,6 +415,7 @@ class NotificationService {
     // Reset diagnostic counters for this run
     _scheduledCount = 0;
     _failedCount = 0;
+    await _refreshDiagnostics();
 
     final s = StorageService.instance;
     final enabled = await s.getSetting('notificationsEnabled', fallback: '');
@@ -1283,6 +1309,47 @@ class NotificationService {
       await _batteryChannel.invokeMethod('openBatteryOptimizationSettings');
     } catch (_) {
       debugPrint('[NotificationService] Failed to open battery settings');
+    }
+  }
+
+  /// Manufacturers with a known OEM-specific autostart/background manager
+  /// screen (lowercase `Build.MANUFACTURER` values). Standard Android's
+  /// battery-optimization exemption does not reach this layer — the OEM
+  /// kills scheduled alarms anyway unless the app is whitelisted here too.
+  static const _oemsWithAutostartManager = {
+    'xiaomi', 'oppo', 'vivo', 'huawei', 'honor', 'samsung', 'oneplus', 'asus',
+  };
+
+  String? _manufacturer;
+
+  /// Whether this device's manufacturer is known to enforce a separate
+  /// autostart/background-permission layer beyond stock Android's battery
+  /// optimization exemption (MIUI, ColorOS, FuntouchOS/OriginOS, EMUI, etc).
+  Future<bool> hasKnownOemAutostartSettings() async {
+    _manufacturer ??= await _getManufacturer();
+    return _oemsWithAutostartManager.contains(_manufacturer);
+  }
+
+  Future<String?> _getManufacturer() async {
+    try {
+      final result = await _batteryChannel.invokeMethod<String>('getManufacturer');
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Open this OEM's autostart/background-app manager so the user can
+  /// whitelist the app. Falls back to the app's details settings page if no
+  /// known screen exists for this manufacturer/firmware. Returns true if a
+  /// manufacturer-specific screen was launched, false if it fell back.
+  Future<bool> openOemAutostartSettings() async {
+    try {
+      final result = await _batteryChannel.invokeMethod<bool>('openOemAutostartSettings');
+      return result ?? false;
+    } catch (_) {
+      debugPrint('[NotificationService] Failed to open OEM autostart settings');
+      return false;
     }
   }
 }

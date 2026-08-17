@@ -1,7 +1,7 @@
 name: daily_account
 description: "Daily Account — A spiritual accountability app for your daily walk with God (CMFI discipline)."
 publish_to: 'none'
-version: 2.0.0+4
+version: 2.0.0+5
 
 environment:
   sdk: '>=3.2.0 <4.0.0'

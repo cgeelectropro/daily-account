@@ -49,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   String _version = '';
   String _reportLanguage = ''; // empty = same as app
+  bool _hasOemAutostart = false;
 
   // Time-conscious mode
   bool _timeConscious = false;
@@ -82,6 +83,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _load();
+    NotificationService.instance.refreshDiagnostics().then((_) {
+      if (mounted) setState(() {});
+    });
+    NotificationService.instance.hasKnownOemAutostartSettings().then((v) {
+      if (mounted) setState(() => _hasOemAutostart = v);
+    });
   }
 
   Future<void> _load() async {
@@ -1127,6 +1134,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                       ],
                     ),
+                    if (_hasOemAutostart) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l.diagOemAutostart,
+                              style: AppTheme.serif(12, color: mutedCol),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () async {
+                              await NotificationService.instance.openOemAutostartSettings();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                              ),
+                              child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          l.diagOemAutostartHint,
+                          style: AppTheme.label(9, color: mutedCol),
+                        ),
+                      ),
+                    ],
                     Text(
                       l.diagScheduledFailed(stats.$1, stats.$2),
                       style: AppTheme.label(10, color: mutedCol),

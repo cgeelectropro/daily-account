@@ -71,6 +71,52 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     };
     // Update widget on timer ticks
     TimerService.instance.addListener(_onTimerTick);
+    _maybePromptBatteryExemption();
+  }
+
+  /// Ask once, up front, for the battery-optimization exemption that lets
+  /// scheduled reminders fire reliably — instead of leaving it buried in a
+  /// Settings health panel the user may never open. Runs after the first
+  /// frame so it doesn't compete with initial layout, and only once ever
+  /// (tracked via a persisted flag), whether or not the user grants it.
+  Future<void> _maybePromptBatteryExemption() async {
+    if (!Platform.isAndroid) return;
+    final s = StorageService.instance;
+    final asked = await s.getSetting('batteryExemptionPrompted', fallback: '');
+    if (asked == 'true') return;
+    await s.setSetting('batteryExemptionPrompted', 'true');
+
+    // Let the first frame settle before showing the system dialog.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+
+    final diag = NotificationService.instance.diagnostics;
+    if (diag['batteryOptExempt'] == true) return; // already exempt
+
+    if (!mounted) return;
+    final l = S.of(context);
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.batteryPromptTitle, style: AppTheme.display(16, color: AppTheme.gold)),
+        content: Text(l.batteryPromptBody, style: AppTheme.serif(13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.batteryPromptLater),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.batteryPromptAllow, style: const TextStyle(color: AppTheme.gold)),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) {
+      await NotificationService.instance.requestBatteryOptimizationExemption();
+    }
   }
 
   @override

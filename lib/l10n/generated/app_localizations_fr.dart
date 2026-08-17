@@ -1891,6 +1891,27 @@ class SFr extends S {
   String get diagFix => 'Corriger';
 
   @override
+  String get diagOemAutostart =>
+      'Démarrage auto / autorisation d\'arrière-plan';
+
+  @override
+  String get diagOemAutostartHint =>
+      'Le fabricant de votre téléphone exige une autorisation distincte, en plus des réglages de batterie, pour que les rappels fonctionnent quand l\'application est fermée. Appuyez sur Corriger, puis activez le Démarrage automatique / l\'activité en arrière-plan pour Daily Account.';
+
+  @override
+  String get batteryPromptTitle => 'Fiabilisez vos rappels';
+
+  @override
+  String get batteryPromptBody =>
+      'Android peut arrêter silencieusement vos rappels quotidiens pour économiser la batterie. Autorisez Daily Account à fonctionner sans restriction pour que vos rappels arrivent toujours à l\'heure.';
+
+  @override
+  String get batteryPromptLater => 'Plus tard';
+
+  @override
+  String get batteryPromptAllow => 'Autoriser';
+
+  @override
   String diagScheduledFailed(int scheduled, int failed) {
     return 'Planifiées : $scheduled | Échouées : $failed';
   }
