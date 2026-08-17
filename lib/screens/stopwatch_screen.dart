@@ -878,11 +878,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       case ActivityType.prayerOthers:
         return []; // uses PrayerTopicScreen — see _activityTile
       case ActivityType.evangelism:
-        return [
-          ('evangelismContacts', l.evangelismContactsLabel,
-              l.evangelismContactsHint),
-          ('evangelismNotes', l.evangelismNotesLabel, l.evangelismNotesHint),
-        ];
+        return []; // all fields are only knowable after — see _showEvangelismEndDialog
       case ActivityType.fasting:
         return [
           ('fastingType', l.fastingTypeLabel, l.fastingTypeHint),
@@ -1422,6 +1418,10 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         await _showPrayerAloneEndDialog(session);
       } else if (key.builtIn == ActivityType.prayerOthers) {
         await _showPrayerOthersEndDialog(session);
+      } else if (key.builtIn == ActivityType.evangelism) {
+        await _showEvangelismEndDialog(session);
+      } else if (key.builtIn == ActivityType.church) {
+        await _showChurchEndDialog(session);
       } else {
         await ts.stop(key);
       }
@@ -2050,6 +2050,219 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   if (count.isNotEmpty) session.fields['prayerPeopleCount'] = count;
                   Navigator.pop(ctx);
                   await ts.stop(TimerKey.builtIn(ActivityType.prayerOthers));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show dialog after Evangelism timer stops — every field here is only
+  /// knowable once the outreach is complete, so nothing is asked at start.
+  Future<void> _showEvangelismEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    final contactsCtrl = TextEditingController();
+    final outcomeCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String? contactsError;
+        String? outcomeError;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text(ActivityType.evangelism.icon, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(l.sectionEvangelism, style: AppTheme.display(18, color: accent))),
+                ]),
+                const SizedBox(height: 8),
+                Text(l.timerStoppedDuration(duration),
+                    style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: contactsCtrl,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismContactsLabel,
+                    hintText: l.evangelismContactsHint,
+                    errorText: contactsError,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: outcomeCtrl,
+                  keyboardType: TextInputType.number,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismOutcomeLabel,
+                    hintText: l.evangelismOutcomeHint,
+                    errorText: outcomeError,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  maxLines: 3,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismNotesLabel,
+                    hintText: l.evangelismNotesHint,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    alignLabelWithHint: true,
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final contacts = contactsCtrl.text.trim();
+                      final outcome = outcomeCtrl.text.trim();
+                      bool hasError = false;
+                      if (contacts.isEmpty) {
+                        contactsError = l.fieldRequiredError;
+                        hasError = true;
+                      }
+                      if (outcome.isEmpty) {
+                        outcomeError = l.fieldRequiredError;
+                        hasError = true;
+                      }
+                      if (hasError) {
+                        setSheetState(() {});
+                        return;
+                      }
+                      session.fields['evangelismContacts'] = contacts;
+                      session.fields['evangelismOutcome'] = outcome;
+                      final notes = notesCtrl.text.trim();
+                      if (notes.isNotEmpty) session.fields['evangelismNotes'] = notes;
+                      Navigator.pop(ctx);
+                      await ts.stop(TimerKey.builtIn(ActivityType.evangelism));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show optional notes prompt after a Church timer stops.
+  Future<void> _showChurchEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.church.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionChurch, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesCtrl,
+              autofocus: true,
+              maxLines: 4,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.churchNotesLabel,
+                hintText: l.churchNotesHint,
+                labelStyle: AppTheme.serif(12, color: accent),
+                alignLabelWithHint: true,
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final notes = notesCtrl.text.trim();
+                  if (notes.isNotEmpty) session.fields['churchNotes'] = notes;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.church));
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
