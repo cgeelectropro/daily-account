@@ -1861,6 +1861,36 @@ abstract class S {
   /// **'e.g. John 3'**
   String get bibleEndHint;
 
+  /// No description provided for @bibleStartBookLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting book'**
+  String get bibleStartBookLabel;
+
+  /// No description provided for @bibleStartChapterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting chapter'**
+  String get bibleStartChapterLabel;
+
+  /// No description provided for @bibleEndBookLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending book'**
+  String get bibleEndBookLabel;
+
+  /// No description provided for @bibleEndChapterLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending chapter'**
+  String get bibleEndChapterLabel;
+
+  /// No description provided for @fieldRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'This field is required'**
+  String get fieldRequiredError;
+
   /// No description provided for @bibleChaptersRead.
   ///
   /// In en, this message translates to:

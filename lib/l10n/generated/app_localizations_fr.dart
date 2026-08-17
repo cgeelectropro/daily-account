@@ -1002,6 +1002,21 @@ class SFr extends S {
   String get bibleEndHint => 'ex. Jean 3';
 
   @override
+  String get bibleStartBookLabel => 'Livre de début';
+
+  @override
+  String get bibleStartChapterLabel => 'Chapitre de début';
+
+  @override
+  String get bibleEndBookLabel => 'Livre de fin';
+
+  @override
+  String get bibleEndChapterLabel => 'Chapitre de fin';
+
+  @override
+  String get fieldRequiredError => 'Ce champ est obligatoire';
+
+  @override
   String bibleChaptersRead(int count) {
     return '$count chapitre(s) lu(s)';
   }

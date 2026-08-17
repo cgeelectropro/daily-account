@@ -301,6 +301,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ProclamationTopicScreen()),
                     );
+                  } else if (activity == ActivityType.bibleReading) {
+                    _showBibleStartDialog();
                   } else {
                     _showFieldsAndStart(activity);
                   }
@@ -858,7 +860,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
   List<(String, String, String)> _fieldsFor(S l, ActivityType type) {
     switch (type) {
       case ActivityType.bibleReading:
-        return [('bibleStartRef', l.bibleStartRef, l.bibleStartHint)];
+        return []; // Bible uses a dedicated start dialog — see _showBibleStartDialog
       case ActivityType.literature:
         return [('literatureTitle', l.bookTitleLabel, l.bookTitleHint)];
       case ActivityType.ddeg:
@@ -1058,6 +1060,119 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Show a dedicated start dialog for Bible reading — collects the
+  /// starting book/chapter (book required) before the timer begins, since a
+  /// Bible entry is meaningless without a reference to attach it to.
+  void _showBibleStartDialog() {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final bookCtrl = TextEditingController();
+    final chapterCtrl = TextEditingController();
+    final locale = Localizations.localeOf(context).languageCode;
+    final bookNames = BibleBooks.bookNames(locale);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(ActivityType.bibleReading.icon, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(l.sectionBible,
+                            style: AppTheme.display(18, color: accent))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Autocomplete<String>(
+                  optionsBuilder: (v) {
+                    if (v.text.isEmpty) return const [];
+                    final input = v.text.toLowerCase();
+                    return bookNames.where((n) => n.toLowerCase().contains(input));
+                  },
+                  fieldViewBuilder: (ctx2, controller, focusNode, onSubmitted) {
+                    controller.addListener(() => bookCtrl.text = controller.text);
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      autofocus: true,
+                      style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                      decoration: InputDecoration(
+                        labelText: l.bibleStartBookLabel,
+                        hintText: l.bibleStartHint,
+                        labelStyle: AppTheme.serif(12, color: accent),
+                        errorText: errorText,
+                        enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: chapterCtrl,
+                  keyboardType: TextInputType.number,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.bibleStartChapterLabel,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (bookCtrl.text.trim().isEmpty) {
+                        setSheetState(() => errorText = l.fieldRequiredError);
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      TimerService.instance.start(
+                        TimerKey.builtIn(ActivityType.bibleReading),
+                        fields: {
+                          'bibleStartBook': bookCtrl.text.trim(),
+                          'bibleStartChapter': chapterCtrl.text.trim(),
+                        },
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.startTimer, style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1315,7 +1430,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final l = S.of(context);
     final accent = AppTheme.accentGold(context);
     final endRefCtrl = TextEditingController();
-    final startRef = session.fields['bibleStartRef'] ?? '';
+    final startBook = session.fields['bibleStartBook'] ?? '';
+    final startChapter = session.fields['bibleStartChapter'] ?? '';
+    final startRef = startBook.isEmpty ? '' : (startChapter.isEmpty ? startBook : '$startBook $startChapter');
     final ts = TimerService.instance;
 
     ts.pause(session.key);
@@ -1335,6 +1452,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       builder: (ctx) {
         int? calculatedChapters;
+        String? errorText;
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1397,6 +1515,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                       decoration: InputDecoration(
                         labelText: l.bibleEndRef,
                         hintText: l.bibleEndHint,
+                        errorText: errorText,
                         labelStyle: AppTheme.serif(12, color: accent),
                         hintStyle: AppTheme.serif(12,
                             color: AppTheme.faintColor(context)),
@@ -1430,24 +1549,41 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   child: GestureDetector(
                     onTap: () async {
                       final endRef = endRefCtrl.text.trim();
-                      String fullRef = startRef;
-                      if (endRef.isNotEmpty && startRef.isNotEmpty) {
-                        fullRef = '$startRef – $endRef';
-                      } else if (endRef.isNotEmpty) {
-                        fullRef = endRef;
+                      if (endRef.isEmpty) {
+                        setSheetState(() => errorText = l.fieldRequiredError);
+                        return;
                       }
 
-                      final chapters =
-                          (startRef.isNotEmpty && endRef.isNotEmpty)
-                              ? BibleBooks.calculateChapters(
-                                  startRef, endRef)
-                              : null;
-
-                      session.fields['bibleReference'] = fullRef;
-                      if (chapters != null) {
-                        session.fields['bibleChapters'] = '$chapters';
+                      // Parse endRef into book/chapter for the structured
+                      // session. The end field remains a single free-text
+                      // Autocomplete (unlike the start dialog's split
+                      // book+chapter inputs), so split on the last space
+                      // and treat the trailing token as the chapter number
+                      // when it parses as one; otherwise treat the whole
+                      // string as the book name with chapter 0.
+                      final lastSpace = endRef.lastIndexOf(' ');
+                      String endBook = endRef;
+                      int endChapterNum = 0;
+                      if (lastSpace > 0) {
+                        final trailing = endRef.substring(lastSpace + 1);
+                        final parsedChapter = int.tryParse(trailing);
+                        if (parsedChapter != null) {
+                          endBook = endRef.substring(0, lastSpace).trim();
+                          endChapterNum = parsedChapter;
+                        }
                       }
-                      session.fields.remove('bibleStartRef');
+                      final resolvedBook = BibleBooks.findBook(endBook)?.nameEn ?? endBook;
+                      session.fields['bibleEndBook'] = resolvedBook;
+                      session.fields['bibleEndChapter'] = '$endChapterNum';
+                      // Deliberately NOT writing session.fields['bibleReference']
+                      // or ['bibleChapters'] anymore — those were legacy
+                      // scalar targets. The structured BibleReadingEntry built
+                      // by _appendBibleSession (already landed in Task 5)
+                      // recalculates chaptersRead itself from the start/end
+                      // book+chapter fields via entry.recalculate(), so a
+                      // separate scalar write would be a second, redundant
+                      // source of truth.
+                      session.fields.remove('bibleStartRef'); // legacy key from the old single-field start flow, no longer used
 
                       Navigator.pop(ctx);
                       await ts.stop(TimerKey.builtIn(ActivityType.bibleReading));
@@ -1495,6 +1631,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
+        String? errorText;
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1539,6 +1676,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                             color: AppTheme.textColor(context)),
                         decoration: InputDecoration(
                           hintText: l.amountHint,
+                          errorText: errorText,
                           hintStyle: AppTheme.serif(12,
                               color: AppTheme.faintColor(context)),
                           enabledBorder: UnderlineInputBorder(
@@ -1587,6 +1725,10 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   width: double.infinity,
                   child: GestureDetector(
                     onTap: () async {
+                      if (amountCtrl.text.trim().isEmpty) {
+                        setSheetState(() => errorText = l.fieldRequiredError);
+                        return;
+                      }
                       Navigator.pop(ctx);
 
                       final dateKey = _todayKey;

@@ -478,6 +478,11 @@
   "bibleStartHint": "ex. Jean 1",
   "bibleEndRef": "Référence de fin (après lecture)",
   "bibleEndHint": "ex. Jean 3",
+  "bibleStartBookLabel": "Livre de début",
+  "bibleStartChapterLabel": "Chapitre de début",
+  "bibleEndBookLabel": "Livre de fin",
+  "bibleEndChapterLabel": "Chapitre de fin",
+  "fieldRequiredError": "Ce champ est obligatoire",
   "bibleChaptersRead": "{count} chapitre(s) lu(s)",
   "@bibleChaptersRead": {
     "placeholders": { "count": { "type": "int" } }

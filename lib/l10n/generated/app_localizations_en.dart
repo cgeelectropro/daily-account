@@ -998,6 +998,21 @@ class SEn extends S {
   String get bibleEndHint => 'e.g. John 3';
 
   @override
+  String get bibleStartBookLabel => 'Starting book';
+
+  @override
+  String get bibleStartChapterLabel => 'Starting chapter';
+
+  @override
+  String get bibleEndBookLabel => 'Ending book';
+
+  @override
+  String get bibleEndChapterLabel => 'Ending chapter';
+
+  @override
+  String get fieldRequiredError => 'This field is required';
+
+  @override
   String bibleChaptersRead(int count) {
     return '$count chapter(s) read';
   }

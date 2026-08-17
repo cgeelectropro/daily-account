@@ -478,6 +478,11 @@
   "bibleStartHint": "e.g. John 1",
   "bibleEndRef": "Ending reference (after reading)",
   "bibleEndHint": "e.g. John 3",
+  "bibleStartBookLabel": "Starting book",
+  "bibleStartChapterLabel": "Starting chapter",
+  "bibleEndBookLabel": "Ending book",
+  "bibleEndChapterLabel": "Ending chapter",
+  "fieldRequiredError": "This field is required",
   "bibleChaptersRead": "{count} chapter(s) read",
   "@bibleChaptersRead": {
     "placeholders": { "count": { "type": "int" } }
