@@ -123,7 +123,7 @@ class _ReportScreenState extends State<ReportScreen> {
     }
     if (mounted) {
       setState(() => _loading = false);
-      _buildReport();
+      await _buildReport();
       WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
     }
   }

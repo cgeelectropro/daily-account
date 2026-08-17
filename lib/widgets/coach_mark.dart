@@ -62,7 +62,9 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   int? _nextShowableIndex(int from) {
     for (var i = from; i < widget.steps.length; i++) {
       final ctx = widget.steps[i].targetKey.currentContext;
-      if (ctx != null && ctx.findRenderObject() is RenderBox) return i;
+      if (ctx == null) continue;
+      final renderObject = ctx.findRenderObject();
+      if (renderObject is RenderBox && renderObject.hasSize) return i;
     }
     return null;
   }

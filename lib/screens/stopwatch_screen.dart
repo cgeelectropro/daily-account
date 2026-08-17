@@ -42,12 +42,14 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final shown = await StorageService.instance.getSetting(flag, fallback: '');
     if (shown == 'true' || !mounted) return;
     final l = S.of(context);
-    await showCoachMarkSequence(context, steps: [
+    final shownAny = await showCoachMarkSequence(context, steps: [
       CoachMarkStep(targetKey: _firstTimerKey, caption: l.coachStopwatchTimer),
       CoachMarkStep(targetKey: _proclamationKey, caption: l.coachStopwatchProclamation),
       CoachMarkStep(targetKey: _addActivityKey, caption: l.coachStopwatchAddActivity),
     ]);
-    await StorageService.instance.setSetting(flag, 'true');
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   @override
