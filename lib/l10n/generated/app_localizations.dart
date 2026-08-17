@@ -1987,11 +1987,11 @@ abstract class S {
   /// **'What are you praying for?'**
   String get prayerTitlePrompt;
 
-  /// No description provided for @prayerTitleHint.
+  /// No description provided for @prayerBurdenHint.
   ///
   /// In en, this message translates to:
-  /// **'e.g. Healing for my brother'**
-  String get prayerTitleHint;
+  /// **'e.g. Healing, Provision, Guidance'**
+  String get prayerBurdenHint;
 
   /// No description provided for @prayerRecentTitles.
   ///
@@ -2130,6 +2130,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Prayer request'**
   String get prayerTitleLabel;
+
+  /// No description provided for @prayerTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Healing for my brother'**
+  String get prayerTitleHint;
 
   /// No description provided for @prayerDescLabel.
   ///

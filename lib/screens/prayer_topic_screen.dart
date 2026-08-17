@@ -82,7 +82,7 @@ class _PrayerTopicScreenState extends State<PrayerTopicScreen> {
               onChanged: (v) => setState(() { _selected = null; _errorText = null; }),
               style: AppTheme.serif(16, color: AppTheme.textColor(context)),
               decoration: InputDecoration(
-                hintText: l.prayerTitleHint,
+                hintText: l.prayerBurdenHint,
                 errorText: _errorText,
                 hintStyle: AppTheme.serif(14, color: AppTheme.faintColor(context)),
                 enabledBorder: UnderlineInputBorder(

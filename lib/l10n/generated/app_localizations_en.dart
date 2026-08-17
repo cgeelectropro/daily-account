@@ -1065,7 +1065,7 @@ class SEn extends S {
   String get prayerTitlePrompt => 'What are you praying for?';
 
   @override
-  String get prayerTitleHint => 'e.g. Healing for my brother';
+  String get prayerBurdenHint => 'e.g. Healing, Provision, Guidance';
 
   @override
   String get prayerRecentTitles => 'Recent today';
@@ -1168,6 +1168,9 @@ class SEn extends S {
 
   @override
   String get prayerTitleLabel => 'Prayer request';
+
+  @override
+  String get prayerTitleHint => 'e.g. Healing for my brother';
 
   @override
   String get prayerDescLabel => 'Details (optional)';
