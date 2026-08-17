@@ -562,4 +562,20 @@ void main() {
       expect(pending, isNull); // both channels sent — queue cleared
     });
   });
+
+  group('Giving list persistence (v14)', () {
+    test('saveLog and getLog round-trip a multi-entry giving list', () async {
+      final log = DailyLog(
+        dateKey: '2026-08-17',
+        giving: [
+          GivingEntry(type: 'Tithe', amount: '50000 XAF'),
+          GivingEntry(type: 'Offering', amount: '5000 XAF', purpose: 'Missions'),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+      final restored = await StorageService.instance.getLog('2026-08-17');
+      expect(restored!.giving.length, 2);
+      expect(restored.giving[1].purpose, 'Missions');
+    });
+  });
 }

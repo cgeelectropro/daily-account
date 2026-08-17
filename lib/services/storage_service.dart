@@ -28,7 +28,7 @@ class StorageService {
     final path = join(dbPath, 'daily_account.db');
     return openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE logs (
@@ -36,6 +36,7 @@ class StorageService {
             bibleReference TEXT,
             bibleChapters TEXT,
             literature TEXT,
+            giving TEXT DEFAULT '',
             ddegScripture TEXT,
             ddegTime TEXT,
             ddegNotes TEXT,
@@ -178,6 +179,9 @@ class StorageService {
             ]) {
               await txn.execute("ALTER TABLE logs ADD COLUMN $col TEXT DEFAULT ''");
             }
+          }
+          if (oldVersion < 14) {
+            await txn.execute("ALTER TABLE logs ADD COLUMN giving TEXT DEFAULT ''");
           }
         });
       },
