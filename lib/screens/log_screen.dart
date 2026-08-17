@@ -75,7 +75,6 @@ class _LogScreenState extends State<LogScreen> {
     _load();
     _loadCustomActivities();
     _loadActiveFast();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
   }
 
   Future<void> _maybeShowCoachMarks() async {
@@ -83,11 +82,13 @@ class _LogScreenState extends State<LogScreen> {
     final shown = await StorageService.instance.getSetting(flag, fallback: '');
     if (shown == 'true' || !mounted) return;
     final l = S.of(context);
-    await showCoachMarkSequence(context, steps: [
+    final shownAny = await showCoachMarkSequence(context, steps: [
       CoachMarkStep(targetKey: _bibleSectionKey, caption: l.coachLogBible),
       CoachMarkStep(targetKey: HomeShell.quickLogButtonKey, caption: l.coachLogQuickLog),
     ]);
-    await StorageService.instance.setSetting(flag, 'true');
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   @override
@@ -102,7 +103,10 @@ class _LogScreenState extends State<LogScreen> {
     _log = existing ?? DailyLog(dateKey: _key);
     if (isNew) await _tryAutoFill();
     _timeConscious = (await StorageService.instance.getSetting('timeConscious', fallback: 'false')) == 'true';
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    }
     await ReadingPlanService.instance.load();
 
     // Load cached reflection or generate fresh

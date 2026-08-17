@@ -17,21 +17,25 @@ class CoachMarkStep {
 /// is null) are skipped rather than shown or treated as an error — a coach
 /// mark must never crash the screen it's meant to help.
 ///
-/// Returns when the sequence completes or the user taps Skip.
-Future<void> showCoachMarkSequence(
+/// Returns when the sequence completes or the user taps Skip. The returned
+/// bool is `true` if at least one step's spotlight actually rendered for the
+/// user, and `false` if the sequence ended (empty list, or every target
+/// unmounted) without ever showing anything — callers use this to decide
+/// whether it's safe to persist a "coach mark shown" flag.
+Future<bool> showCoachMarkSequence(
   BuildContext context, {
   required List<CoachMarkStep> steps,
 }) {
-  final completer = Completer<void>();
+  final completer = Completer<bool>();
   late OverlayEntry entry;
   final overlay = Overlay.of(context);
 
   entry = OverlayEntry(
     builder: (ctx) => _CoachMarkOverlay(
       steps: steps,
-      onDone: () {
+      onDone: (shownAny) {
         entry.remove();
-        if (!completer.isCompleted) completer.complete();
+        if (!completer.isCompleted) completer.complete(shownAny);
       },
     ),
   );
@@ -41,7 +45,7 @@ Future<void> showCoachMarkSequence(
 
 class _CoachMarkOverlay extends StatefulWidget {
   final List<CoachMarkStep> steps;
-  final VoidCallback onDone;
+  final void Function(bool shownAny) onDone;
   const _CoachMarkOverlay({required this.steps, required this.onDone});
 
   @override
@@ -51,6 +55,7 @@ class _CoachMarkOverlay extends StatefulWidget {
 class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   late int _index;
   bool _done = false;
+  bool _shownAny = false;
 
   /// Finds the first step from [_index] onward whose target is currently
   /// mounted and laid out. Returns null if none remain.
@@ -74,7 +79,7 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   void _finish() {
     if (!_done) {
       _done = true;
-      widget.onDone();
+      widget.onDone(_shownAny);
     }
   }
 
@@ -126,6 +131,8 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _finish());
       return const SizedBox.shrink();
     }
+
+    _shownAny = true;
 
     final screenSize = MediaQuery.of(context).size;
     final captionBelow = rect.top < screenSize.height / 2;

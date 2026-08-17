@@ -68,7 +68,6 @@ class _ReportScreenState extends State<ReportScreen> {
     super.initState();
     _weekRef = DateTime.now();
     _refresh();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
   }
 
   Future<void> _maybeShowCoachMarks() async {
@@ -76,11 +75,13 @@ class _ReportScreenState extends State<ReportScreen> {
     final shown = await StorageService.instance.getSetting(flag, fallback: '');
     if (shown == 'true' || !mounted) return;
     final l = S.of(context);
-    await showCoachMarkSequence(context, steps: [
+    final shownAny = await showCoachMarkSequence(context, steps: [
       CoachMarkStep(targetKey: _statsRowKey, caption: l.coachReportStats),
       CoachMarkStep(targetKey: _sendButtonsKey, caption: l.coachReportSend),
     ]);
-    await StorageService.instance.setSetting(flag, 'true');
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   @override
@@ -123,6 +124,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (mounted) {
       setState(() => _loading = false);
       _buildReport();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
     }
   }
 

@@ -86,7 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _load();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
   }
 
   Future<void> _maybeShowCoachMarks() async {
@@ -94,11 +93,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final shown = await StorageService.instance.getSetting(flag, fallback: '');
     if (shown == 'true' || !mounted) return;
     final l = S.of(context);
-    await showCoachMarkSequence(context, steps: [
+    final shownAny = await showCoachMarkSequence(context, steps: [
       CoachMarkStep(targetKey: _profileSectionKey, caption: l.coachSettingsProfile),
       CoachMarkStep(targetKey: _notificationsSectionKey, caption: l.coachSettingsNotifications),
     ]);
-    await StorageService.instance.setSetting(flag, 'true');
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   Future<void> _load() async {
@@ -176,7 +177,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await s.setSetting('autoSendChannel', 'whatsapp');
     }
 
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    }
   }
 
   void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
