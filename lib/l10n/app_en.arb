@@ -919,5 +919,8 @@
   "coachStopwatchAddActivity": "Track something not listed here — tap + to add your own activity.",
 
   "coachLogBible": "Log today's Bible reading here — this is where your daily entry starts.",
-  "coachLogQuickLog": "In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast."
+  "coachLogQuickLog": "In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.",
+
+  "coachReportStats": "Your week at a glance — days logged, chapters read, souls reached.",
+  "coachReportSend": "When you're ready, send your report here — by email, WhatsApp, or share it directly."
 }

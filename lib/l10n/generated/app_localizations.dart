@@ -3846,6 +3846,18 @@ abstract class S {
   /// In en, this message translates to:
   /// **'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.'**
   String get coachLogQuickLog;
+
+  /// No description provided for @coachReportStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Your week at a glance — days logged, chapters read, souls reached.'**
+  String get coachReportStats;
+
+  /// No description provided for @coachReportSend.
+  ///
+  /// In en, this message translates to:
+  /// **'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.'**
+  String get coachReportSend;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

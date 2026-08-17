@@ -919,5 +919,8 @@
   "coachStopwatchAddActivity": "Suivez autre chose : appuyez sur + pour ajouter votre propre activité.",
 
   "coachLogBible": "Enregistrez votre lecture biblique du jour ici — c'est le début de votre entrée quotidienne.",
-  "coachLogQuickLog": "Pressé ? Appuyez sur le bouton Journal Rapide dans l'en-tête pour cocher rapidement vos disciplines."
+  "coachLogQuickLog": "Pressé ? Appuyez sur le bouton Journal Rapide dans l'en-tête pour cocher rapidement vos disciplines.",
+
+  "coachReportStats": "Votre semaine en un coup d'œil — jours enregistrés, chapitres lus, âmes touchées.",
+  "coachReportSend": "Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement."
 }

@@ -2121,4 +2121,12 @@ class SEn extends S {
   @override
   String get coachLogQuickLog =>
       'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.';
+
+  @override
+  String get coachReportStats =>
+      'Your week at a glance — days logged, chapters read, souls reached.';
+
+  @override
+  String get coachReportSend =>
+      'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.';
 }

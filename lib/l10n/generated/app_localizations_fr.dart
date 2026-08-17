@@ -2146,4 +2146,12 @@ class SFr extends S {
   @override
   String get coachLogQuickLog =>
       'Pressé ? Appuyez sur le bouton Journal Rapide dans l\'en-tête pour cocher rapidement vos disciplines.';
+
+  @override
+  String get coachReportStats =>
+      'Votre semaine en un coup d\'œil — jours enregistrés, chapitres lus, âmes touchées.';
+
+  @override
+  String get coachReportSend =>
+      'Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement.';
 }
