@@ -41,7 +41,9 @@ actually taken away from anyone.
 Today `SettingsScreen` renders 14 `SectionCard`s flat, top to bottom:
 Profile, Goals, Reading Plan, Disciple Maker, Widget Title, Theme,
 Time-Conscious, Security, Notifications, Auto-Send, Language, Cloud
-Backup, Backup, Report History.
+Backup, Backup, Report History — plus three non-collapsible `Container`
+blocks at the very bottom (How It Works, About, Danger Zone) that add to
+the visible scroll unconditionally.
 
 Introduce one level of grouping via a new lightweight `SettingsGroup`
 widget (header text + list of existing `SectionCard`s, no new visual
@@ -63,10 +65,44 @@ Profile/Disciple Maker. A user who wants everything open still gets there
 in one tap per group; nothing requires more taps than today to reach if
 they already know where it is, and it requires far fewer if they don't.
 
+The How It Works / About / Danger Zone blocks at the bottom are left
+exactly as they are — per explicit decision, decluttering effort here
+stays focused on the Notifications section (1a below) and the grouping
+above, not on restructuring every corner of the screen.
+
 A settings screen this size also benefits from search, but a search
 affordance is deferred — see Future Work. Grouping alone addresses the
 "scattered settings" complaint directly; search is additive polish, not
 required to hit the goal.
+
+### 1a. Notifications section → its own sub-screen
+
+The Notifications `SectionCard` is the single largest contributor to
+clutter: inline sound picker, a full diagnostics/health-check panel (with
+a "tap to see pending notifications" dialog), daily/Sunday time pickers,
+follow-up count sliders, a report cadence picker, a Save button, and 11
+per-discipline reminder rows — all rendered at once whenever
+notifications are enabled.
+
+Split this into two layers:
+
+- **Stays inline** in the Reminders & Delivery group: the on/off switch,
+  the daily reminder time, and the report-day reminder time — the three
+  things nearly every user sets once and rarely revisits.
+- **Moves to a new `NotificationSettingsScreen`** (pushed via a
+  "Notification settings →" row in the inline card, mirroring how
+  `ReportHistoryScreen` is already reached from a button inside its
+  section): notification sound picker, the diagnostics/health-check
+  panel, follow-up count sliders, report cadence picker, and the
+  per-discipline reminder list.
+
+This is a pure move, not a rewrite — the extracted widgets/logic
+(`_followUpSlider`, `_cadencePicker`, `_diagRow`,
+`_disciplineReminderRow`, the sound-picker list, the diagnostics
+container) transplant into the new screen's state largely unchanged,
+since they already only depend on state (`_dailyFollowUps`,
+`_selectedSound`, `_disciplineTimes`, etc.) and `StorageService`/
+`NotificationService` calls that don't care which screen invokes them.
 
 ### 2. Log screen: core vs. more disciplines
 
@@ -112,8 +148,9 @@ screen is visited after onboarding:
   here"), the Quick Log flash button ("busy day? tap here instead").
 - **Report screen** (2 steps): the send button, the report history
   entry.
-- **Settings screen** (2 steps): the new group headers ("tap a category
-  to open it"), the disciple-maker contact field.
+- **Settings screen** (3 steps): the new group headers ("tap a category
+  to open it"), the disciple-maker contact field, the header `?` help
+  icon ("stuck? tap here anytime").
 
 State: one new `StorageService` setting per sequence,
 e.g. `coachmark_log_shown`, `coachmark_report_shown`,
@@ -127,6 +164,40 @@ screen visit.
 This is the piece that directly answers "a sort of way that leads you
 into discovering the application... click here" — it points at the real,
 live UI rather than describing it in an abstract onboarding slide.
+
+### 4. Help & FAQ screen, reached from one global header icon
+
+A new `HelpScreen` collects a usage guide and FAQ (what is DDEG, how
+reports get sent, what Quick Log does, how reminders work, etc.) in one
+scrollable place. The risk flagged during design was real: adding a help
+screen to fix "too much stuff" can itself become one more thing to find
+if it's positioned badly. The mitigation is placement, not content
+scope — see below.
+
+Placement: a small `?` icon in the header row, next to the existing
+Prayer Requests button, present on every screen — not a Settings entry,
+not a fifth bottom-nav tab. Two reasons this beats a Settings-screen
+entry:
+
+- **Settings means "change something."** Every visit to Settings to
+  edit a reminder time or contact would otherwise scroll past a help
+  entry first. A global header icon keeps Settings focused on
+  configuration only.
+- **Confusion happens on whatever screen the user is on.** Someone
+  puzzled by "DDEG" on the Log screen shouldn't have to first navigate
+  to Settings to ask; the icon is already there, in the same place,
+  everywhere.
+
+The header row already hosts the Prayer Requests button and (on the Log
+tab) the Quick Log button — the `?` icon adds one more small icon to an
+existing row, not a new UI region.
+
+Per explicit decision, the existing "How It Works" card in Settings is
+left as-is (see §1) — `HelpScreen` is additive, not a replacement for
+it. It's still a net win for discoverability because it's the one place
+that gathers FAQ-style content (discipline definitions, how auto-send
+works, what Quick Log does) that today doesn't exist in the app at all,
+reached from a spot that costs nothing extra to check.
 
 ### Data flow / error handling
 
@@ -145,7 +216,11 @@ will be manual: run the app, clear `onboarding_complete` and the three
 coach-mark flags via a fresh install/emulator wipe, confirm each
 walkthrough appears once, confirm "Replay tutorial" re-triggers them,
 confirm Settings groups collapse/expand correctly, confirm Log screen's
-Core/More split doesn't hide already-filled-in data.
+Core/More split doesn't hide already-filled-in data, confirm the
+Notifications sub-screen preserves every existing behavior (sound
+preview, diagnostics fix button, per-discipline reminder bottom sheet,
+follow-up sliders all still write the same `StorageService` keys), and
+confirm the header `?` icon opens `HelpScreen` from every tab.
 
 ## Future work (explicitly deferred)
 
