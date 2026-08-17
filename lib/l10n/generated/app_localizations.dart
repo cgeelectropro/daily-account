@@ -145,6 +145,30 @@ abstract class S {
   /// **'Settings'**
   String get tabSettings;
 
+  /// No description provided for @coachMarkNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get coachMarkNext;
+
+  /// No description provided for @coachMarkGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get coachMarkGotIt;
+
+  /// No description provided for @coachMarkSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get coachMarkSkip;
+
+  /// No description provided for @coachMarkStepCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String coachMarkStepCount(int current, int total);
+
   /// No description provided for @markComplete.
   ///
   /// In en, this message translates to:

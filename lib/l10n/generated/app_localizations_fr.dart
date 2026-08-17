@@ -34,6 +34,20 @@ class SFr extends S {
   String get tabSettings => 'Paramètres';
 
   @override
+  String get coachMarkNext => 'Suivant';
+
+  @override
+  String get coachMarkGotIt => 'Compris';
+
+  @override
+  String get coachMarkSkip => 'Passer';
+
+  @override
+  String coachMarkStepCount(int current, int total) {
+    return '$current sur $total';
+  }
+
+  @override
   String get markComplete => 'Marquer le Jour Complet';
 
   @override

@@ -10,6 +10,12 @@
   "tabReport": "Rapport",
   "tabSettings": "Param\u00e8tres",
 
+  "coachMarkNext": "Suivant",
+  "coachMarkGotIt": "Compris",
+  "coachMarkSkip": "Passer",
+  "coachMarkStepCount": "{current} sur {total}",
+  "@coachMarkStepCount": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+
   "markComplete": "Marquer le Jour Complet",
   "markedComplete": "Compl\u00e9t\u00e9",
 

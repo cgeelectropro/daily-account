@@ -34,6 +34,20 @@ class SEn extends S {
   String get tabSettings => 'Settings';
 
   @override
+  String get coachMarkNext => 'Next';
+
+  @override
+  String get coachMarkGotIt => 'Got it';
+
+  @override
+  String get coachMarkSkip => 'Skip';
+
+  @override
+  String coachMarkStepCount(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
   String get markComplete => 'Mark Day Complete';
 
   @override

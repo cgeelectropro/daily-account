@@ -10,6 +10,12 @@
   "tabReport": "Report",
   "tabSettings": "Settings",
 
+  "coachMarkNext": "Next",
+  "coachMarkGotIt": "Got it",
+  "coachMarkSkip": "Skip",
+  "coachMarkStepCount": "{current} of {total}",
+  "@coachMarkStepCount": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+
   "markComplete": "Mark Day Complete",
   "markedComplete": "Completed",
 
