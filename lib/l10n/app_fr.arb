@@ -505,6 +505,13 @@
   "proclamationTopicHint": "ex. Guérison, Salut, Victoire",
   "proclamationRecentTopics": "Sujets récents aujourd'hui",
   "proclamationStartButton": "Commencer la Proclamation",
+  "prayerTitlePrompt": "Pour quoi pries-tu ?",
+  "prayerTitleHint": "ex. Guérison, Provision, Direction",
+  "prayerRecentTitles": "Récents aujourd'hui",
+  "prayerStartButton": "Commencer à Prier",
+  "prayerAloneReflectionPrompt": "Comment s’est passé ton temps de prière ?",
+  "prayerPeopleCountLabel": "Nombre de personnes (optionnel)",
+  "prayerPeopleCountHint": "ex. 5",
   "reportProclamation": "Proclamation : {count} fois ({duration})",
   "@reportProclamation": {
     "placeholders": {

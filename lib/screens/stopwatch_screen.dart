@@ -10,6 +10,7 @@ import '../services/storage_service.dart';
 import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/bible_books.dart';
+import 'prayer_topic_screen.dart';
 import 'proclamation_topic_screen.dart';
 
 class StopwatchScreen extends StatefulWidget {
@@ -303,6 +304,13 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     );
                   } else if (activity == ActivityType.bibleReading) {
                     _showBibleStartDialog();
+                  } else if (activity == ActivityType.prayerAlone ||
+                      activity == ActivityType.prayerOthers) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              PrayerTopicScreen(activityType: activity)),
+                    );
                   } else {
                     _showFieldsAndStart(activity);
                   }
@@ -866,14 +874,9 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       case ActivityType.ddeg:
         return [('ddegScripture', l.ddegScriptureLabel, l.ddegScriptureHint)];
       case ActivityType.prayerAlone:
-        return [
-          ('prayerAloneNotes', l.prayerAloneNotesLabel, l.prayerAloneNotesHint)
-        ];
+        return []; // uses PrayerTopicScreen — see _activityTile
       case ActivityType.prayerOthers:
-        return [
-          ('prayerOthersContext', l.prayerOthersContextLabel,
-              l.prayerOthersContextHint)
-        ];
+        return []; // uses PrayerTopicScreen — see _activityTile
       case ActivityType.evangelism:
         return [
           ('evangelismContacts', l.evangelismContactsLabel,
@@ -1415,6 +1418,10 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
         await _showLiteratureEndDialog(session);
       } else if (key.builtIn == ActivityType.ddeg) {
         await _showDdegEndDialog(session);
+      } else if (key.builtIn == ActivityType.prayerAlone) {
+        await _showPrayerAloneEndDialog(session);
+      } else if (key.builtIn == ActivityType.prayerOthers) {
+        await _showPrayerOthersEndDialog(session);
       } else {
         await ts.stop(key);
       }
@@ -1907,6 +1914,157 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Show optional reflection prompt after a Prayer Alone timer stops.
+  Future<void> _showPrayerAloneEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.prayerAlone.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionPrayerAlone, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesCtrl,
+              autofocus: true,
+              maxLines: 4,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.prayerAloneReflectionPrompt,
+                labelStyle: AppTheme.serif(12, color: accent),
+                alignLabelWithHint: true,
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final notes = notesCtrl.text.trim();
+                  if (notes.isNotEmpty) session.fields['prayerNotes'] = notes;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.prayerAlone));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show optional people-count prompt after a Prayer with Others timer stops.
+  Future<void> _showPrayerOthersEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final countCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.prayerOthers.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionPrayerOthers, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: countCtrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.prayerPeopleCountLabel,
+                hintText: l.prayerPeopleCountHint,
+                labelStyle: AppTheme.serif(12, color: accent),
+                enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final count = countCtrl.text.trim();
+                  if (count.isNotEmpty) session.fields['prayerPeopleCount'] = count;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.prayerOthers));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

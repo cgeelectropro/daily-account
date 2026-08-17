@@ -1062,6 +1062,27 @@ class SEn extends S {
   String get proclamationStartButton => 'Start Proclaiming';
 
   @override
+  String get prayerTitlePrompt => 'What are you praying for?';
+
+  @override
+  String get prayerTitleHint => 'e.g. Healing for my brother';
+
+  @override
+  String get prayerRecentTitles => 'Recent today';
+
+  @override
+  String get prayerStartButton => 'Start Praying';
+
+  @override
+  String get prayerAloneReflectionPrompt => 'How was your prayer time?';
+
+  @override
+  String get prayerPeopleCountLabel => 'Number of people (optional)';
+
+  @override
+  String get prayerPeopleCountHint => 'e.g. 5';
+
+  @override
   String reportProclamation(String count, String duration) {
     return 'Proclamation: $count times ($duration)';
   }
@@ -1147,9 +1168,6 @@ class SEn extends S {
 
   @override
   String get prayerTitleLabel => 'Prayer request';
-
-  @override
-  String get prayerTitleHint => 'e.g. Healing for my brother';
 
   @override
   String get prayerDescLabel => 'Details (optional)';

@@ -1981,6 +1981,48 @@ abstract class S {
   /// **'Start Proclaiming'**
   String get proclamationStartButton;
 
+  /// No description provided for @prayerTitlePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you praying for?'**
+  String get prayerTitlePrompt;
+
+  /// No description provided for @prayerTitleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Healing for my brother'**
+  String get prayerTitleHint;
+
+  /// No description provided for @prayerRecentTitles.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent today'**
+  String get prayerRecentTitles;
+
+  /// No description provided for @prayerStartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Praying'**
+  String get prayerStartButton;
+
+  /// No description provided for @prayerAloneReflectionPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'How was your prayer time?'**
+  String get prayerAloneReflectionPrompt;
+
+  /// No description provided for @prayerPeopleCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of people (optional)'**
+  String get prayerPeopleCountLabel;
+
+  /// No description provided for @prayerPeopleCountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 5'**
+  String get prayerPeopleCountHint;
+
   /// No description provided for @reportProclamation.
   ///
   /// In en, this message translates to:
@@ -2088,12 +2130,6 @@ abstract class S {
   /// In en, this message translates to:
   /// **'Prayer request'**
   String get prayerTitleLabel;
-
-  /// No description provided for @prayerTitleHint.
-  ///
-  /// In en, this message translates to:
-  /// **'e.g. Healing for my brother'**
-  String get prayerTitleHint;
 
   /// No description provided for @prayerDescLabel.
   ///

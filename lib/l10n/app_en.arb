@@ -505,6 +505,13 @@
   "proclamationTopicHint": "e.g. Healing, Salvation, Victory",
   "proclamationRecentTopics": "Recent topics today",
   "proclamationStartButton": "Start Proclaiming",
+  "prayerTitlePrompt": "What are you praying for?",
+  "prayerTitleHint": "e.g. Healing, Provision, Guidance",
+  "prayerRecentTitles": "Recent today",
+  "prayerStartButton": "Start Praying",
+  "prayerAloneReflectionPrompt": "How was your prayer time?",
+  "prayerPeopleCountLabel": "Number of people (optional)",
+  "prayerPeopleCountHint": "e.g. 5",
   "reportProclamation": "Proclamation: {count} times ({duration})",
   "@reportProclamation": {
     "placeholders": {

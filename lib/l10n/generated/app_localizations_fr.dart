@@ -1066,6 +1066,28 @@ class SFr extends S {
   String get proclamationStartButton => 'Commencer la Proclamation';
 
   @override
+  String get prayerTitlePrompt => 'Pour quoi pries-tu ?';
+
+  @override
+  String get prayerTitleHint => 'ex. Guérison pour mon frère';
+
+  @override
+  String get prayerRecentTitles => 'Récents aujourd\'hui';
+
+  @override
+  String get prayerStartButton => 'Commencer à Prier';
+
+  @override
+  String get prayerAloneReflectionPrompt =>
+      'Comment s’est passé ton temps de prière ?';
+
+  @override
+  String get prayerPeopleCountLabel => 'Nombre de personnes (optionnel)';
+
+  @override
+  String get prayerPeopleCountHint => 'ex. 5';
+
+  @override
   String reportProclamation(String count, String duration) {
     return 'Proclamation : $count fois ($duration)';
   }
@@ -1151,9 +1173,6 @@ class SFr extends S {
 
   @override
   String get prayerTitleLabel => 'Sujet de prière';
-
-  @override
-  String get prayerTitleHint => 'ex. Guérison pour mon frère';
 
   @override
   String get prayerDescLabel => 'Détails (optionnel)';
