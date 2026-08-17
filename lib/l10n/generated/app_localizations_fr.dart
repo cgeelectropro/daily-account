@@ -2154,4 +2154,22 @@ class SFr extends S {
   @override
   String get coachReportSend =>
       'Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement.';
+
+  @override
+  String get coachSettingsProfile =>
+      'Commencez ici — votre nom et le contact de votre formateur déterminent comment vos rapports sont envoyés.';
+
+  @override
+  String get coachSettingsNotifications =>
+      'Activez les rappels pour ne jamais oublier d\'enregistrer votre journée.';
+
+  @override
+  String get replayTutorialSection => 'Tutoriel';
+
+  @override
+  String get replayTutorialButton => 'Revoir le tutoriel de l\'application';
+
+  @override
+  String get replayTutorialDone =>
+      'Le tutoriel réapparaîtra lors de votre prochaine visite sur chaque écran';
 }

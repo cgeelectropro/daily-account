@@ -3858,6 +3858,36 @@ abstract class S {
   /// In en, this message translates to:
   /// **'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.'**
   String get coachReportSend;
+
+  /// No description provided for @coachSettingsProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Start here — your name and your disciple maker\'s contact are how your reports get delivered.'**
+  String get coachSettingsProfile;
+
+  /// No description provided for @coachSettingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on reminders so you never forget to log your day.'**
+  String get coachSettingsNotifications;
+
+  /// No description provided for @replayTutorialSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutorial'**
+  String get replayTutorialSection;
+
+  /// No description provided for @replayTutorialButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay app tutorial'**
+  String get replayTutorialButton;
+
+  /// No description provided for @replayTutorialDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutorial will show again next time you visit each screen'**
+  String get replayTutorialDone;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

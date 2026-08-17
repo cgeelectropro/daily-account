@@ -922,5 +922,11 @@
   "coachLogQuickLog": "In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.",
 
   "coachReportStats": "Your week at a glance — days logged, chapters read, souls reached.",
-  "coachReportSend": "When you're ready, send your report here — by email, WhatsApp, or share it directly."
+  "coachReportSend": "When you're ready, send your report here — by email, WhatsApp, or share it directly.",
+
+  "coachSettingsProfile": "Start here — your name and your disciple maker's contact are how your reports get delivered.",
+  "coachSettingsNotifications": "Turn on reminders so you never forget to log your day.",
+  "replayTutorialSection": "Tutorial",
+  "replayTutorialButton": "Replay app tutorial",
+  "replayTutorialDone": "Tutorial will show again next time you visit each screen"
 }

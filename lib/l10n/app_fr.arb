@@ -922,5 +922,11 @@
   "coachLogQuickLog": "Pressé ? Appuyez sur le bouton Journal Rapide dans l'en-tête pour cocher rapidement vos disciplines.",
 
   "coachReportStats": "Votre semaine en un coup d'œil — jours enregistrés, chapitres lus, âmes touchées.",
-  "coachReportSend": "Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement."
+  "coachReportSend": "Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement.",
+
+  "coachSettingsProfile": "Commencez ici — votre nom et le contact de votre formateur déterminent comment vos rapports sont envoyés.",
+  "coachSettingsNotifications": "Activez les rappels pour ne jamais oublier d'enregistrer votre journée.",
+  "replayTutorialSection": "Tutoriel",
+  "replayTutorialButton": "Revoir le tutoriel de l'application",
+  "replayTutorialDone": "Le tutoriel réapparaîtra lors de votre prochaine visite sur chaque écran"
 }

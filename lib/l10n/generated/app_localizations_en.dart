@@ -2129,4 +2129,22 @@ class SEn extends S {
   @override
   String get coachReportSend =>
       'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.';
+
+  @override
+  String get coachSettingsProfile =>
+      'Start here — your name and your disciple maker\'s contact are how your reports get delivered.';
+
+  @override
+  String get coachSettingsNotifications =>
+      'Turn on reminders so you never forget to log your day.';
+
+  @override
+  String get replayTutorialSection => 'Tutorial';
+
+  @override
+  String get replayTutorialButton => 'Replay app tutorial';
+
+  @override
+  String get replayTutorialDone =>
+      'Tutorial will show again next time you visit each screen';
 }
