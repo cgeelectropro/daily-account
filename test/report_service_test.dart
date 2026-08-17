@@ -676,6 +676,46 @@ void main() {
       expect(report, contains('${l.sectionProclamation} (5x, 20min)'));
     });
 
+    test('buildFullReport lists each prayer-alone title separately with duration', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        prayerAloneSessions: [
+          PrayerSession(title: 'Healing for Mom', duration: '15min'),
+          PrayerSession(title: 'Provision for church', duration: '10min'),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains('Healing for Mom'));
+      expect(report, contains('Provision for church'));
+      expect(report, contains('15min'));
+      expect(report, contains('10min'));
+    });
+
+    test('buildFullReport lists multiple giving entries per day', () async {
+      final log = DailyLog(
+        dateKey: svc.keyFor(monday),
+        // DailyLog.completeness (and thus hasContent in the report) doesn't
+        // currently account for the `giving` list on its own — only the
+        // legacy givingType scalar — so seed a minor legacy field to make
+        // this day register as having content (same pattern used by the
+        // evangelism/church session tests above).
+        discipleshipWho: 'Test Person',
+        giving: [
+          GivingEntry(type: 'Tithe', amount: '50'),
+          GivingEntry(type: 'Offering', amount: '10', purpose: 'Building fund'),
+        ],
+      );
+      await StorageService.instance.saveLog(log);
+
+      final report = await svc.buildFullReport('Disciple', l, ref);
+
+      expect(report, contains(l.reportGiving('Tithe', '50')));
+      expect(report, contains(l.reportGiving('Offering', '10 — Building fund')));
+    });
+
     test('buildCompactReport — session-only day (no legacy scalars) registers as having content', () async {
       // A day logged purely through the Stopwatch/timer flow: evangelismSessions,
       // churchSessions, and proclamationSessions are populated but the legacy

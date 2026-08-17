@@ -190,7 +190,7 @@ class ReportService {
     l.prayerOthersSessions.any((s) => s.isNotEmpty) || l.prayerOthersDuration.isNotEmpty,
     l.evangelismContacts.isNotEmpty || l.evangelismSessions.isNotEmpty,
     l.fastingType.isNotEmpty || l.fastingDuration.isNotEmpty,
-    l.givingType.isNotEmpty,
+    l.giving.any((g) => g.isNotEmpty),
     l.churchType.isNotEmpty || l.churchSessions.isNotEmpty,
     l.discipleshipWho.isNotEmpty,
     l.proclamationCount.isNotEmpty || l.proclamationSessions.isNotEmpty,
@@ -394,12 +394,12 @@ class ReportService {
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
         buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
-      if (log.givingType.isNotEmpty) {
+      for (final g in log.giving.where((e) => e.isNotEmpty)) {
         final givingDetail = [
-          if (log.givingAmount.isNotEmpty) log.givingAmount,
-          if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+          if (g.amount.isNotEmpty) g.amount,
+          if (g.purpose.isNotEmpty) g.purpose,
         ].join(' — ');
-        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(g.type, givingDetail)}');
       }
       if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) {
         if (log.churchSessions.isNotEmpty) {
@@ -480,8 +480,9 @@ class ReportService {
     if (sessions.isNotEmpty) {
       for (int i = 0; i < sessions.length; i++) {
         final s = sessions[i];
-        final suffix = sessions.length > 1 ? ' #${i + 1}' : '';
-        buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(s.duration, s.notes)}$suffix');
+        final suffix = sessions.length > 1 && s.title.isEmpty ? ' #${i + 1}' : '';
+        final label = s.title.isNotEmpty ? '${s.title}: ' : '';
+        buf.writeln('\uD83D\uDE4F $label${l.reportPrayerAlone(s.duration, s.notes)}$suffix');
       }
     } else if (log.prayerAloneDuration.isNotEmpty) {
       buf.writeln('\uD83D\uDE4F ${l.reportPrayerAlone(log.prayerAloneDuration, log.prayerAloneNotes)}');
@@ -494,8 +495,19 @@ class ReportService {
     if (sessions.isNotEmpty) {
       for (int i = 0; i < sessions.length; i++) {
         final s = sessions[i];
-        final suffix = sessions.length > 1 ? ' #${i + 1}' : '';
-        buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(s.duration, s.notes)}$suffix');
+        final suffix = sessions.length > 1 && s.title.isEmpty ? ' #${i + 1}' : '';
+        final label = s.title.isNotEmpty ? '${s.title}: ' : '';
+        final peopleSuffix = s.peopleCount.isNotEmpty ? ' (${s.peopleCount})' : '';
+        // `context` (legacy: notes) is unused by session-based Prayer with
+        // Others (title now carries that meaning, rendered as the label
+        // prefix above). Calling reportPrayerOthers with an empty context
+        // would leave a dangling " \u2014 " with nothing after it (the ARB
+        // string is "Prayer (with others): {duration} \u2014 {context}"), so
+        // strip the trailing separator rather than adding a new ARB
+        // placeholder just for this task.
+        final full = l.reportPrayerOthers(s.duration, '');
+        final trimmed = full.endsWith(' \u2014 ') ? full.substring(0, full.length - 3) : full;
+        buf.writeln('\uD83E\uDD1D $label$trimmed$peopleSuffix$suffix');
       }
     } else if (log.prayerOthersDuration.isNotEmpty) {
       buf.writeln('\uD83E\uDD1D ${l.reportPrayerOthers(log.prayerOthersDuration, log.prayerOthersContext)}');
@@ -594,12 +606,12 @@ class ReportService {
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) {
         buf.writeln('\uD83C\uDF7D\uFE0F ${l.reportFasting(log.fastingType, log.fastingDuration, log.fastingPrayerFocus)}');
       }
-      if (log.givingType.isNotEmpty) {
+      for (final g in log.giving.where((e) => e.isNotEmpty)) {
         final givingDetail = [
-          if (log.givingAmount.isNotEmpty) log.givingAmount,
-          if (log.givingPurpose.isNotEmpty) log.givingPurpose,
+          if (g.amount.isNotEmpty) g.amount,
+          if (g.purpose.isNotEmpty) g.purpose,
         ].join(' — ');
-        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(log.givingType, givingDetail)}');
+        buf.writeln('\uD83D\uDCB0 ${l.reportGiving(g.type, givingDetail)}');
       }
       if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) {
         if (log.churchSessions.isNotEmpty) {
@@ -732,7 +744,7 @@ class ReportService {
         parts.add('\uD83D\uDCE2$count');
       }
       if (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty) parts.add('\uD83C\uDF7D\uFE0F');
-      if (log.givingType.isNotEmpty) parts.add('\uD83D\uDCB0');
+      if (log.giving.any((g) => g.isNotEmpty)) parts.add('\uD83D\uDCB0');
       if (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty) parts.add('\u26EA');
       if (log.discipleshipWho.isNotEmpty) parts.add('\uD83D\uDC65');
       if (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty) {
