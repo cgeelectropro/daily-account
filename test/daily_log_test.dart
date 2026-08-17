@@ -820,4 +820,50 @@ void main() {
       expect(restored.evangelismSessions.first.durationSeconds, 1800);
     });
   });
+
+  group('GivingEntry', () {
+    test('toMap/fromMap round-trip', () {
+      final g = GivingEntry(type: 'Tithe', amount: '50000 XAF', purpose: 'General fund');
+      final restored = GivingEntry.fromMap(g.toMap());
+      expect(restored.type, 'Tithe');
+      expect(restored.amount, '50000 XAF');
+      expect(restored.purpose, 'General fund');
+    });
+  });
+
+  group('DailyLog giving list', () {
+    test('constructor defaults to one empty GivingEntry', () {
+      final log = DailyLog(dateKey: '2026-08-17');
+      expect(log.giving.length, 1);
+      expect(log.giving.first.type, '');
+    });
+
+    test('toMap/fromMap round-trips multiple giving entries', () {
+      final log = DailyLog(dateKey: '2026-08-17', giving: [
+        GivingEntry(type: 'Tithe', amount: '50000 XAF'),
+        GivingEntry(type: 'Offering', amount: '5000 XAF', purpose: 'Missions'),
+      ]);
+      final restored = DailyLog.fromMap(log.toMap());
+      expect(restored.giving.length, 2);
+      expect(restored.giving[1].purpose, 'Missions');
+    });
+
+    test('migrates legacy givingType/givingAmount/givingPurpose into one GivingEntry, idempotently', () {
+      final map = {
+        'dateKey': '2026-08-17',
+        'givingType': 'Tithe',
+        'givingAmount': '50000 XAF',
+        'givingPurpose': '',
+        'giving': '', // no persisted list yet
+      };
+      final log = DailyLog.fromMap(map);
+      expect(log.giving.length, 1);
+      expect(log.giving.first.type, 'Tithe');
+      // Second round-trip must not double the entry or resurrect the scalar
+      final secondRoundTrip = DailyLog.fromMap(log.toMap());
+      expect(secondRoundTrip.giving.length, 1);
+      expect(secondRoundTrip.giving.first.type, 'Tithe');
+      expect(secondRoundTrip.givingType, ''); // scalar cleared, not re-persisted
+    });
+  });
 }

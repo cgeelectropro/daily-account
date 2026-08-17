@@ -19,6 +19,27 @@ class LiteratureEntry {
       );
 }
 
+/// A single giving/tithe entry — a disciple may record several distinct
+/// gifts in a day (e.g. a tithe and a separate offering).
+class GivingEntry {
+  String type;
+  String amount;
+  String purpose;
+
+  GivingEntry({this.type = '', this.amount = '', this.purpose = ''});
+
+  Map<String, dynamic> toMap() => {'type': type, 'amount': amount, 'purpose': purpose};
+
+  factory GivingEntry.fromMap(Map<String, dynamic> m) => GivingEntry(
+        type: m['type'] ?? '',
+        amount: m['amount'] ?? '',
+        purpose: m['purpose'] ?? '',
+      );
+
+  bool get isEmpty => type.isEmpty && amount.isEmpty && purpose.isEmpty;
+  bool get isNotEmpty => !isEmpty;
+}
+
 /// A single Bible reading session — start and end reference with auto-calculated chapters.
 class BibleReadingEntry {
   String startBook;    // English canonical name (e.g. "Genesis")
@@ -272,6 +293,9 @@ class DailyLog {
   // Literature (multiple)
   List<LiteratureEntry> literature;
 
+  // Giving/Tithes (multiple)
+  List<GivingEntry> giving;
+
   // Daily Dynamic Encounter with God
   String ddegScripture;
   String ddegTime;
@@ -347,6 +371,7 @@ class DailyLog {
     this.bibleChapters = '',
     List<BibleReadingEntry>? bibleSessions,
     List<LiteratureEntry>? literature,
+    List<GivingEntry>? giving,
     this.ddegScripture = '',
     this.ddegTime = '',
     this.ddegNotes = '',
@@ -391,6 +416,7 @@ class DailyLog {
     this.completed = false,
   }) : bibleSessions = bibleSessions ?? [],
        literature = literature ?? [LiteratureEntry()],
+       giving = giving ?? [GivingEntry()],
        ddegSessions = ddegSessions ?? [],
        prayerAloneSessions = prayerAloneSessions ?? [],
        prayerOthersSessions = prayerOthersSessions ?? [],
@@ -442,6 +468,7 @@ class DailyLog {
         'bibleChapters': bibleChapters,
         'bibleSessions': jsonEncode(bibleSessions.map((s) => s.toMap()).toList()),
         'literature': jsonEncode(literature.map((l) => l.toMap()).toList()),
+        'giving': jsonEncode(giving.map((g) => g.toMap()).toList()),
         'ddegScripture': ddegScripture,
         'ddegTime': ddegTime,
         'ddegNotes': ddegNotes,
@@ -557,6 +584,29 @@ class DailyLog {
       }
     } catch (e) {
       debugPrint('DailyLog.fromMap: failed to parse literature: $e');
+    }
+
+    List<GivingEntry> givingList = [];
+    bool migratedGivingFromScalar = false;
+    try {
+      final raw = m['giving'];
+      if (raw != null && raw.toString().isNotEmpty) {
+        final decoded = jsonDecode(raw) as List;
+        givingList = decoded.map((e) => GivingEntry.fromMap(Map<String, dynamic>.from(e))).toList();
+      }
+    } catch (e) {
+      debugPrint('DailyLog.fromMap: failed to parse giving: $e');
+    }
+    if (givingList.isEmpty) {
+      final oldType = (m['givingType'] ?? '').toString();
+      final oldAmount = (m['givingAmount'] ?? '').toString();
+      final oldPurpose = (m['givingPurpose'] ?? '').toString();
+      if (oldType.isNotEmpty || oldAmount.isNotEmpty || oldPurpose.isNotEmpty) {
+        givingList = [GivingEntry(type: oldType, amount: oldAmount, purpose: oldPurpose)];
+        migratedGivingFromScalar = true;
+      } else {
+        givingList = [GivingEntry()];
+      }
     }
 
     List<BibleReadingEntry> sessions = [];
@@ -708,6 +758,7 @@ class DailyLog {
       bibleChapters: m['bibleChapters'] ?? '',
       bibleSessions: sessions,
       literature: lit,
+      giving: givingList,
       ddegScripture: m['ddegScripture'] ?? '',
       ddegTime: m['ddegTime'] ?? '',
       ddegNotes: m['ddegNotes'] ?? '',
@@ -736,9 +787,9 @@ class DailyLog {
       fastingType: m['fastingType'] ?? '',
       fastingDuration: m['fastingDuration'] ?? '',
       fastingPrayerFocus: m['fastingPrayerFocus'] ?? '',
-      givingType: m['givingType'] ?? '',
-      givingAmount: m['givingAmount'] ?? '',
-      givingPurpose: m['givingPurpose'] ?? '',
+      givingType: migratedGivingFromScalar ? '' : (m['givingType'] ?? ''),
+      givingAmount: migratedGivingFromScalar ? '' : (m['givingAmount'] ?? ''),
+      givingPurpose: migratedGivingFromScalar ? '' : (m['givingPurpose'] ?? ''),
       churchType: m['churchType'] ?? '',
       churchNotes: m['churchNotes'] ?? '',
       discipleshipWho: m['discipleshipWho'] ?? '',
