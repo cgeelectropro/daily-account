@@ -50,6 +50,7 @@ class _CoachMarkOverlay extends StatefulWidget {
 
 class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
   late int _index;
+  bool _done = false;
 
   /// Finds the first step from [_index] onward whose target is currently
   /// mounted and laid out. Returns null if none remain.
@@ -70,10 +71,17 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
     return topLeft & box.size;
   }
 
+  void _finish() {
+    if (!_done) {
+      _done = true;
+      widget.onDone();
+    }
+  }
+
   void _advance() {
     final next = _nextShowableIndex(_index + 1);
     if (next == null) {
-      widget.onDone();
+      _finish();
     } else {
       setState(() => _index = next);
     }
@@ -91,7 +99,7 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
       // Nothing in the whole sequence is showable — schedule end for after
       // the first frame (to avoid calling onDone() from initState).
       _index = 0;
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDone());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _finish());
     } else {
       // first is now the correct starting index; use it immediately.
       _index = first;
@@ -115,7 +123,7 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
     if (rect == null) {
       // Target disappeared between frames — end gracefully rather than
       // draw a spotlight around nothing.
-      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDone());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _finish());
       return const SizedBox.shrink();
     }
 
@@ -165,7 +173,7 @@ class _CoachMarkOverlayState extends State<_CoachMarkOverlay> {
                       ),
                       const Spacer(),
                       TextButton(
-                        onPressed: widget.onDone,
+                        onPressed: _finish,
                         child: Text(l.coachMarkSkip,
                             style: TextStyle(color: AppTheme.mutedColor(context))),
                       ),
