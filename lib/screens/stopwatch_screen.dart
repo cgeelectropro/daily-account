@@ -880,11 +880,8 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       case ActivityType.evangelism:
         return []; // all fields are only knowable after — see _showEvangelismEndDialog
       case ActivityType.fasting:
-        return [
-          ('fastingType', l.fastingTypeLabel, l.fastingTypeHint),
-          ('fastingPrayerFocus', l.fastingPrayerFocusLabel,
-              l.fastingPrayerFocusHint),
-        ];
+        return []; // Fasting is never timed via the stopwatch — see the
+                   // multi-day FastingPeriod tracker in the Log screen instead
       case ActivityType.discipleship:
         return [
           ('discipleshipWho', l.discipleshipWhoLabel, l.discipleshipWhoHint),
