@@ -77,6 +77,11 @@ class PdfReportService {
     final fmtRange = DateFormat('MMM d, yyyy', locale);
     final fmtLong = DateFormat('EEEE, MMM d', locale);
 
+    // Load custom activity names once for ID → display label lookup,
+    // mirroring ReportService's identical pattern.
+    final customActivities = await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
+
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(
         base: await PdfGoogleFonts.loraRegular(),
@@ -110,7 +115,7 @@ class PdfReportService {
 
           // Day-by-day entries
           for (int i = 0; i < dates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i], l, locale));
+            widgets.add(_dayEntry(fmtLong.format(dates[i]), dayLogs[i], l, customNames, locale));
             if (i < dates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -132,6 +137,11 @@ class PdfReportService {
     final fmtLong = DateFormat('EEEE, MMM d', locale);
     final monthDate = DateTime(year, month, 1);
     final lastDay = DateTime(year, month + 1, 0);
+
+    // Load custom activity names once for ID → display label lookup,
+    // mirroring ReportService's identical pattern.
+    final customActivities = await StorageService.instance.getCustomActivities();
+    final customNames = {for (final a in customActivities) a.id: '${a.icon} ${a.name}'};
 
     // Collect all day logs for the month
     final dayDates = <DateTime>[];
@@ -170,7 +180,7 @@ class PdfReportService {
 
           // Full day-by-day entries — same format as weekly PDF
           for (int i = 0; i < dayDates.length; i++) {
-            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i], l, locale));
+            widgets.add(_dayEntry(fmtLong.format(dayDates[i]), dayLogs[i], l, customNames, locale));
             if (i < dayDates.length - 1) widgets.add(pw.SizedBox(height: 8));
           }
 
@@ -333,7 +343,7 @@ class PdfReportService {
     );
   }
 
-  pw.Widget _dayEntry(String dayLabel, DailyLog? log, S l, [String locale = 'en']) {
+  pw.Widget _dayEntry(String dayLabel, DailyLog? log, S l, Map<String, String> customNames, [String locale = 'en']) {
     final hasContent = log != null && log.completeness > 0;
 
     return pw.Container(
@@ -376,7 +386,7 @@ class PdfReportService {
               ),
             )
           else
-            ..._dayDetailRows(log, l, locale),
+            ..._dayDetailRows(log, l, customNames, locale),
         ],
       ),
     );
@@ -402,7 +412,7 @@ class PdfReportService {
     );
   }
 
-  List<pw.Widget> _dayDetailRows(DailyLog log, S l, [String locale = 'en']) {
+  List<pw.Widget> _dayDetailRows(DailyLog log, S l, Map<String, String> customNames, [String locale = 'en']) {
     final rows = <pw.Widget>[];
 
     final bibleRef = log.combinedBibleReference(locale);
@@ -516,7 +526,7 @@ class PdfReportService {
           .where((e) => !e.key.startsWith('_') && e.value.toString().isNotEmpty)
           .map((e) => '${e.key}: ${e.value}')
           .join(', ');
-      final label = entry.key;
+      final label = customNames[entry.key] ?? entry.key;
       rows.add(_detailRow(label, parts.isNotEmpty ? parts : '\u2713'));
     }
 
