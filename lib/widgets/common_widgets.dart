@@ -16,7 +16,7 @@ class SectionCard extends StatefulWidget {
     required this.icon,
     required this.title,
     required this.children,
-    this.initiallyExpanded = true,
+    this.initiallyExpanded = false,
     this.trailing,
   });
 

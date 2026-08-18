@@ -1083,191 +1083,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }),
             const SizedBox(height: 14),
             // ── Notification health check ──
-            Builder(builder: (_) {
-              final diag = NotificationService.instance.diagnostics;
-              final stats = NotificationService.instance.scheduleStats;
-              final allGood = diag.values.every((v) => v);
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: (allGood ? Colors.green : Colors.orange).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: (allGood ? Colors.green : Colors.orange).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(allGood ? '✅' : '⚠️', style: const TextStyle(fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Text(
-                          allGood ? l.notificationsHealthy : l.notificationIssuesDetected,
-                          style: AppTheme.serif(13, color: textCol),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    _diagRow(l.diagPermissionGranted, diag['notificationPermission'] ?? false),
-                    _diagRow(l.diagExactAlarms, diag['exactAlarmPermission'] ?? false),
-                    Row(
-                      children: [
-                        Expanded(child: _diagRow(l.diagBatteryOptimized, diag['batteryOptExempt'] ?? false)),
-                        if (!(diag['batteryOptExempt'] ?? false))
-                          GestureDetector(
-                            onTap: () async {
-                              await NotificationService.instance.requestBatteryOptimizationExemption();
-                              if (mounted) setState(() {});
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
-                              ),
-                              child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (_hasOemAutostart) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l.diagOemAutostart,
-                              style: AppTheme.serif(12, color: mutedCol),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () async {
-                              await NotificationService.instance.openOemAutostartSettings();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
-                              ),
-                              child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          l.diagOemAutostartHint,
-                          style: AppTheme.label(9, color: mutedCol),
-                        ),
-                      ),
-                    ],
-                    Text(
-                      l.diagScheduledFailed(stats.$1, stats.$2),
-                      style: AppTheme.label(10, color: mutedCol),
-                    ),
-                    const SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () async {
-                        final pending = await NotificationService.instance.getPendingNotifications();
-                        if (!mounted) return;
-                        final names = {
-                          1: l.notifNameDaily,
-                          2: l.notifNameSunday,
-                          3: l.notifNameAutoSend,
-                          11: l.notifNameDailyFollowUp1,
-                          12: l.notifNameDailyFollowUp2,
-                          13: l.notifNameDailyFollowUp3,
-                          21: l.notifNameSundayFollowUp1,
-                          22: l.notifNameSundayFollowUp2,
-                          30: l.notifNameMidWeekNudge,
-                          40: l.notifNameSaturdaySummary,
-                        };
-                        final lines = pending.map((n) {
-                          final label = names[n.id] ?? (n.id >= 110 && n.id <= 120
-                              ? l.notifNameDiscipline(n.id - 110)
-                              : '#${n.id}');
-                          return '$label (${n.id})';
-                        }).toList()
-                          ..sort();
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: AppTheme.surfaceColor(context),
-                            title: Text(l.pendingNotificationsTitle(pending.length),
-                                style: AppTheme.display(16, color: accent)),
-                            content: SingleChildScrollView(
-                              child: Text(
-                                lines.isEmpty ? l.noneScheduled : lines.join('\n'),
-                                style: AppTheme.serif(13, color: textCol),
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: Text(l.ok, style: TextStyle(color: accent)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      child: Text(
-                        l.tapToSeePending,
-                        style: AppTheme.label(10, color: accent.withValues(alpha: 0.7)),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () async {
-                              final ok = await NotificationService.instance.testNotification();
-                              if (mounted) _toast(ok ? l.testNotifSent : l.testNotifFailed);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: accent.withValues(alpha: 0.4)),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(l.testNotifButton, style: AppTheme.label(11, color: accent)),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () async {
-                              await NotificationService.instance.rescheduleAll();
-                              if (mounted) {
-                                setState(() {});
-                                _toast(l.allNotificationsRescheduled);
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: accent.withValues(alpha: 0.4)),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(l.rescheduleAll, style: AppTheme.label(11, color: accent)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
+            _NotificationHealthPanel(hasOemAutostart: _hasOemAutostart),
             const SizedBox(height: 14),
             _timeRow(l.dailyReminder, _dailyTime, () => _pickTime(true)),
             const SizedBox(height: 8),
@@ -1931,16 +1747,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+            Expanded(
+              child: Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: accent.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(displayText, style: AppTheme.label(10, color: accent)),
+              child: Text(displayText, style: AppTheme.label(10, color: accent), textAlign: TextAlign.end),
             ),
           ],
         ),
@@ -1978,9 +1796,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           border: Border.all(color: accent.withValues(alpha: 0.2)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+            Expanded(
+              child: Text(label,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -1992,20 +1814,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _diagRow(String label, bool ok) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        children: [
-          Icon(ok ? Icons.check_circle : Icons.cancel,
-              size: 14, color: ok ? Colors.green : Colors.orange),
-          const SizedBox(width: 6),
-          Text(label, style: AppTheme.label(11, color: AppTheme.mutedColor(context))),
-        ],
       ),
     );
   }
@@ -2393,4 +2201,247 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+}
+
+/// Collapsed-by-default notification health summary. Shows a single status
+/// line ("Reminders healthy" / "Action needed") and expands on tap into the
+/// full permission/OEM/pending-notifications detail — keeps this out of the
+/// way for the common case where everything is already working.
+class _NotificationHealthPanel extends StatefulWidget {
+  final bool hasOemAutostart;
+  const _NotificationHealthPanel({required this.hasOemAutostart});
+
+  @override
+  State<_NotificationHealthPanel> createState() => _NotificationHealthPanelState();
+}
+
+class _NotificationHealthPanelState extends State<_NotificationHealthPanel> {
+  bool _expanded = false;
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+
+    final diag = NotificationService.instance.diagnostics;
+    final stats = NotificationService.instance.scheduleStats;
+    final allGood = diag.values.every((v) => v);
+    final statusColor = allGood ? Colors.green : Colors.orange;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Text(allGood ? '✅' : '⚠️', style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    allGood ? l.notificationsHealthy : l.notificationIssuesDetected,
+                    style: AppTheme.serif(13, color: textCol),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: mutedCol,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            _diagRow(context, l.diagPermissionGranted, diag['notificationPermission'] ?? false),
+            _diagRow(context, l.diagExactAlarms, diag['exactAlarmPermission'] ?? false),
+            Row(
+              children: [
+                Expanded(child: _diagRow(context, l.diagBatteryOptimized, diag['batteryOptExempt'] ?? false)),
+                if (!(diag['batteryOptExempt'] ?? false))
+                  GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.requestBatteryOptimizationExemption();
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
+                    ),
+                  ),
+              ],
+            ),
+            if (widget.hasOemAutostart) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l.diagOemAutostart,
+                      style: AppTheme.serif(12, color: mutedCol),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.openOemAutostartSettings();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  l.diagOemAutostartHint,
+                  style: AppTheme.label(9, color: mutedCol),
+                ),
+              ),
+            ],
+            Text(
+              l.diagScheduledFailed(stats.$1, stats.$2),
+              style: AppTheme.label(10, color: mutedCol),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () async {
+                final pending = await NotificationService.instance.getPendingNotifications();
+                if (!mounted) return;
+                final names = {
+                  1: l.notifNameDaily,
+                  2: l.notifNameSunday,
+                  3: l.notifNameAutoSend,
+                  11: l.notifNameDailyFollowUp1,
+                  12: l.notifNameDailyFollowUp2,
+                  13: l.notifNameDailyFollowUp3,
+                  21: l.notifNameSundayFollowUp1,
+                  22: l.notifNameSundayFollowUp2,
+                  30: l.notifNameMidWeekNudge,
+                  40: l.notifNameSaturdaySummary,
+                };
+                final lines = pending.map((n) {
+                  final label = names[n.id] ?? (n.id >= 110 && n.id <= 120
+                      ? l.notifNameDiscipline(n.id - 110)
+                      : '#${n.id}');
+                  return '$label (${n.id})';
+                }).toList()
+                  ..sort();
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: AppTheme.surfaceColor(context),
+                    title: Text(l.pendingNotificationsTitle(pending.length),
+                        style: AppTheme.display(16, color: accent)),
+                    content: SingleChildScrollView(
+                      child: Text(
+                        lines.isEmpty ? l.noneScheduled : lines.join('\n'),
+                        style: AppTheme.serif(13, color: textCol),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(l.ok, style: TextStyle(color: accent)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Text(
+                l.tapToSeePending,
+                style: AppTheme.label(10, color: accent.withValues(alpha: 0.7)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final ok = await NotificationService.instance.testNotification();
+                      if (ok) {
+                        _toast(l.testNotifSent);
+                      } else {
+                        _toast(l.testNotifFailed);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: accent.withValues(alpha: 0.4)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.testNotifButton, style: AppTheme.label(11, color: accent)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.rescheduleAll();
+                      if (mounted) {
+                        setState(() {});
+                        _toast(l.allNotificationsRescheduled);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: accent.withValues(alpha: 0.4)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.rescheduleAll, style: AppTheme.label(11, color: accent)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Widget _diagRow(BuildContext context, String label, bool ok) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Row(
+      children: [
+        Icon(ok ? Icons.check_circle : Icons.cancel,
+            size: 14, color: ok ? Colors.green : Colors.orange),
+        const SizedBox(width: 6),
+        Text(label, style: AppTheme.label(11, color: AppTheme.mutedColor(context))),
+      ],
+    ),
+  );
 }
