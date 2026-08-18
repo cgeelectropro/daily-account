@@ -529,7 +529,10 @@ class TimerService extends ChangeNotifier {
 
   /// Append a proclamation session, merging into an existing same-day
   /// session if the topic matches (case-insensitive, trimmed) instead of
-  /// creating a duplicate.
+  /// creating a duplicate. If the log's session list is just the default
+  /// single empty entry (the Log screen always seeds one via
+  /// _ensureProclamationSession), fill that one in rather than appending a
+  /// second — same rule as _appendBibleSession/_appendDdegSession.
   void _appendProclamationSession(
       DailyLog log, TimerSession session, String durationStr) {
     final topic = (session.fields['proclamationTopic'] ?? '').trim();
@@ -539,6 +542,11 @@ class TimerService extends ChangeNotifier {
       final existing = log.proclamationSessions[existingIndex];
       existing.count += 1;
       existing.duration = _accumulateDuration(existing.duration, durationStr);
+    } else if (log.proclamationSessions.length == 1 && log.proclamationSessions.first.isEmpty) {
+      final entry = log.proclamationSessions.first;
+      entry.topic = topic;
+      entry.count = 1;
+      entry.duration = durationStr;
     } else {
       log.proclamationSessions.add(ProclamationSession(
         topic: topic,
@@ -613,6 +621,11 @@ class TimerService extends ChangeNotifier {
 
   /// Append or merge a Prayer session (Alone or Others) by title match,
   /// mirroring _appendProclamationSession's merge-or-append rule exactly.
+  /// If the log's session list is just the default single empty entry (the
+  /// Log screen always seeds one via _ensurePrayerAloneSession /
+  /// _ensurePrayerOthersSession), fill that one in rather than appending a
+  /// second — same rule as _appendBibleSession/_appendDdegSession/
+  /// _appendProclamationSession.
   void _appendPrayerSession(List<PrayerSession> sessions, TimerSession session,
       String durationStr, String titleFieldKey) {
     final title = (session.fields[titleFieldKey] ?? '').trim();
@@ -625,6 +638,12 @@ class TimerService extends ChangeNotifier {
       existing.duration = _accumulateDuration(existing.duration, durationStr);
       if (notes.isNotEmpty) existing.notes = _appendText(existing.notes, notes);
       if (peopleCount.isNotEmpty) existing.peopleCount = peopleCount;
+    } else if (sessions.length == 1 && sessions.first.isEmpty) {
+      final entry = sessions.first;
+      entry.title = title;
+      entry.duration = durationStr;
+      entry.notes = notes;
+      entry.peopleCount = peopleCount;
     } else {
       sessions.add(PrayerSession(
         title: title,
