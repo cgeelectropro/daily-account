@@ -89,6 +89,9 @@ class SEn extends S {
   String get unknownBibleBook => 'Unknown book — pick one from the list';
 
   @override
+  String get invalidBibleChapter => 'That chapter doesn\'t exist in this book';
+
+  @override
   String get addReadingSession => 'Add reading session';
 
   @override

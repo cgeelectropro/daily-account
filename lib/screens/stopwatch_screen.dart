@@ -1113,6 +1113,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
       ),
       builder: (ctx) {
         String? errorText;
+        String? chapterErrorText;
         return StatefulBuilder(
           builder: (ctx, setSheetState) => Padding(
             padding: EdgeInsets.fromLTRB(
@@ -1137,8 +1138,15 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                     final input = v.text.toLowerCase();
                     return bookNames.where((n) => n.toLowerCase().contains(input));
                   },
+                  onSelected: (selection) {
+                    bookCtrl.text = selection;
+                    setSheetState(() => errorText = null);
+                  },
                   fieldViewBuilder: (ctx2, controller, focusNode, onSubmitted) {
-                    controller.addListener(() => bookCtrl.text = controller.text);
+                    controller.addListener(() {
+                      bookCtrl.text = controller.text;
+                      if (errorText != null) setSheetState(() => errorText = null);
+                    });
                     return TextField(
                       controller: controller,
                       focusNode: focusNode,
@@ -1160,10 +1168,14 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                 TextField(
                   controller: chapterCtrl,
                   keyboardType: TextInputType.number,
+                  onChanged: (_) {
+                    if (chapterErrorText != null) setSheetState(() => chapterErrorText = null);
+                  },
                   style: AppTheme.serif(14, color: AppTheme.textColor(context)),
                   decoration: InputDecoration(
                     labelText: l.bibleStartChapterLabel,
                     labelStyle: AppTheme.serif(12, color: accent),
+                    errorText: chapterErrorText,
                     enabledBorder: UnderlineInputBorder(
                         borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
                     focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
@@ -1174,15 +1186,29 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                   width: double.infinity,
                   child: GestureDetector(
                     onTap: () {
-                      if (bookCtrl.text.trim().isEmpty) {
+                      final typedBook = bookCtrl.text.trim();
+                      if (typedBook.isEmpty) {
                         setSheetState(() => errorText = l.fieldRequiredError);
                         return;
+                      }
+                      final book = BibleBooks.findBook(typedBook);
+                      if (book == null) {
+                        setSheetState(() => errorText = l.unknownBibleBook);
+                        return;
+                      }
+                      final chapterText = chapterCtrl.text.trim();
+                      if (chapterText.isNotEmpty) {
+                        final chapterNum = int.tryParse(chapterText);
+                        if (chapterNum == null || chapterNum < 1 || chapterNum > book.chapters) {
+                          setSheetState(() => chapterErrorText = l.invalidBibleChapter);
+                          return;
+                        }
                       }
                       Navigator.pop(ctx);
                       TimerService.instance.start(
                         TimerKey.builtIn(ActivityType.bibleReading),
                         fields: {
-                          'bibleStartBook': bookCtrl.text.trim(),
+                          'bibleStartBook': book.nameEn,
                           'bibleStartChapter': chapterCtrl.text.trim(),
                         },
                       );
@@ -1535,6 +1561,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                       (ctx, controller, focusNode, onSubmitted) {
                     controller.addListener(() {
                       endRefCtrl.text = controller.text;
+                      if (errorText != null) errorText = null;
                       if (startRef.isNotEmpty &&
                           controller.text.isNotEmpty) {
                         final chapters = BibleBooks.calculateChapters(
@@ -1598,20 +1625,30 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
                       // book+chapter inputs), so split on the last space
                       // and treat the trailing token as the chapter number
                       // when it parses as one; otherwise treat the whole
-                      // string as the book name with chapter 0.
+                      // string as the book name with no explicit chapter.
                       final lastSpace = endRef.lastIndexOf(' ');
-                      String endBook = endRef;
-                      int endChapterNum = 0;
+                      String endBookText = endRef;
+                      int? typedChapter;
                       if (lastSpace > 0) {
                         final trailing = endRef.substring(lastSpace + 1);
                         final parsedChapter = int.tryParse(trailing);
                         if (parsedChapter != null) {
-                          endBook = endRef.substring(0, lastSpace).trim();
-                          endChapterNum = parsedChapter;
+                          endBookText = endRef.substring(0, lastSpace).trim();
+                          typedChapter = parsedChapter;
                         }
                       }
-                      final resolvedBook = BibleBooks.findBook(endBook)?.nameEn ?? endBook;
-                      session.fields['bibleEndBook'] = resolvedBook;
+                      final book = BibleBooks.findBook(endBookText);
+                      if (book == null) {
+                        setSheetState(() => errorText = l.unknownBibleBook);
+                        return;
+                      }
+                      final endChapterNum = typedChapter ?? 0;
+                      if (endChapterNum != 0 &&
+                          (endChapterNum < 1 || endChapterNum > book.chapters)) {
+                        setSheetState(() => errorText = l.invalidBibleChapter);
+                        return;
+                      }
+                      session.fields['bibleEndBook'] = book.nameEn;
                       session.fields['bibleEndChapter'] = '$endChapterNum';
                       // Deliberately NOT writing session.fields['bibleReference']
                       // or ['bibleChapters'] anymore — those were legacy

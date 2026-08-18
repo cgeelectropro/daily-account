@@ -247,6 +247,12 @@ abstract class S {
   /// **'Unknown book — pick one from the list'**
   String get unknownBibleBook;
 
+  /// No description provided for @invalidBibleChapter.
+  ///
+  /// In en, this message translates to:
+  /// **'That chapter doesn\'t exist in this book'**
+  String get invalidBibleChapter;
+
   /// No description provided for @addReadingSession.
   ///
   /// In en, this message translates to:

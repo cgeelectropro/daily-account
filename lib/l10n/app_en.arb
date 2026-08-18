@@ -31,6 +31,7 @@
   "bibleSessionChaptersResult": "= {count} chapter(s)",
   "@bibleSessionChaptersResult": { "placeholders": { "count": { "type": "int" } } },
   "unknownBibleBook": "Unknown book — pick one from the list",
+  "invalidBibleChapter": "That chapter doesn't exist in this book",
   "addReadingSession": "Add reading session",
   "addDdegSession": "Add DDEG session",
   "addPrayerSession": "Add prayer session",

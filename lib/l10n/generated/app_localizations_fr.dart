@@ -90,6 +90,9 @@ class SFr extends S {
       'Livre inconnu — choisissez-en un dans la liste';
 
   @override
+  String get invalidBibleChapter => 'Ce chapitre n\'existe pas dans ce livre';
+
+  @override
   String get addReadingSession => 'Ajouter une session de lecture';
 
   @override
