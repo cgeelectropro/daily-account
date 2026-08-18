@@ -10,6 +10,12 @@
   "tabReport": "Report",
   "tabSettings": "Settings",
 
+  "coachMarkNext": "Next",
+  "coachMarkGotIt": "Got it",
+  "coachMarkSkip": "Skip",
+  "coachMarkStepCount": "{current} of {total}",
+  "@coachMarkStepCount": { "placeholders": { "current": { "type": "int" }, "total": { "type": "int" } } },
+
   "markComplete": "Mark Day Complete",
   "markedComplete": "Completed",
 
@@ -928,5 +934,21 @@
   "reflectNarrativeLabel": "YOUR JOURNEY",
   "reflectEncouragementLabel": "ENCOURAGEMENT",
   "reflectSuggestionLabel": "NEXT STEP",
-  "reflectVerseLabel": "SCRIPTURE"
+  "reflectVerseLabel": "SCRIPTURE",
+
+  "coachStopwatchTimer": "Tap the play button to start timing a discipline — like Bible reading or prayer.",
+  "coachStopwatchProclamation": "Tap here to log a proclamation moment.",
+  "coachStopwatchAddActivity": "Track something not listed here — tap + to add your own activity.",
+
+  "coachLogBible": "Log today's Bible reading here — this is where your daily entry starts.",
+  "coachLogQuickLog": "In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.",
+
+  "coachReportStats": "Your week at a glance — days logged, chapters read, souls reached.",
+  "coachReportSend": "When you're ready, send your report here — by email, WhatsApp, or share it directly.",
+
+  "coachSettingsProfile": "Start here — your name and your disciple maker's contact are how your reports get delivered.",
+  "coachSettingsNotifications": "Turn on reminders so you never forget to log your day.",
+  "replayTutorialSection": "Tutorial",
+  "replayTutorialButton": "Replay app tutorial",
+  "replayTutorialDone": "Tutorial will show again next time you visit each screen"
 }

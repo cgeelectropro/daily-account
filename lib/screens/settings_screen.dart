@@ -16,6 +16,7 @@ import '../services/report_cadence_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coach_mark.dart';
 import '../widgets/common_widgets.dart';
 import 'report_history_screen.dart';
 
@@ -79,6 +80,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     '📢', '🍽️', '💰', '⛪', '👥', '📣',
   ];
 
+  final _profileSectionKey = GlobalKey();
+  final _notificationsSectionKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +93,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     NotificationService.instance.hasKnownOemAutostartSettings().then((v) {
       if (mounted) setState(() => _hasOemAutostart = v);
     });
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_settings_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _profileSectionKey, caption: l.coachSettingsProfile),
+      CoachMarkStep(targetKey: _notificationsSectionKey, caption: l.coachSettingsNotifications),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   Future<void> _load() async {
@@ -166,7 +184,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await s.setSetting('autoSendChannel', 'whatsapp');
     }
 
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    }
   }
 
   void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -178,6 +199,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           side: BorderSide(color: AppTheme.accentGold(context)),
         ),
       ));
+
+  Future<void> _replayTutorial() async {
+    final s = StorageService.instance;
+    await s.setSetting('coachmark_stopwatch_shown', '');
+    await s.setSetting('coachmark_log_shown', '');
+    await s.setSetting('coachmark_report_shown', '');
+    await s.setSetting('coachmark_settings_shown', '');
+    if (mounted) _toast(S.of(context).replayTutorialDone);
+  }
 
   // ── Notifications ──────────────────────────────────────────
 
@@ -848,7 +878,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 20),
 
         // ── Profile ──
-        SectionCard(icon: '👤', title: l.profileSection, children: [
+        SectionCard(key: _profileSectionKey, icon: '👤', title: l.profileSection, children: [
           GoldField(
             label: l.yourNameLabel,
             hint: l.yourNameHint,
@@ -1001,7 +1031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ]),
 
         // ── Notifications ──
-        SectionCard(icon: '🔔', title: l.notificationsSection, children: [
+        SectionCard(key: _notificationsSectionKey, icon: '🔔', title: l.notificationsSection, children: [
           _switchRow(l.notificationsEnabled, _notificationsEnabled, _toggleNotifications),
           if (_notificationsEnabled) ...[
             // Intensity badge
@@ -1327,6 +1357,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _restoreAutoBackup,
               icon: Icon(Icons.restore, color: accent),
               label: Text(l.restoreAutoBackup, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+        ]),
+
+        // ── Replay Tutorial ──
+        SectionCard(icon: '🎓', title: l.replayTutorialSection, initiallyExpanded: false, children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _replayTutorial,
+              icon: Icon(Icons.replay, color: accent),
+              label: Text(l.replayTutorialButton, style: TextStyle(color: accent)),
               style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
             ),
           ),

@@ -561,16 +561,26 @@ class TimerService extends ChangeNotifier {
   }
 
   /// Append a Bible reading session using the start/end reference fields
-  /// captured by the timer's start/stop dialogs (populated by a later task
-  /// that restructures stopwatch_screen.dart's Bible dialogs — until that
-  /// lands, these fields simply won't be present and this method is a no-op
-  /// via the early return below).
+  /// captured by the timer's start/stop dialogs. If the log's Bible session
+  /// list is just the default single empty entry (the Log screen always
+  /// seeds one via _ensureBibleSession), fill that one in rather than
+  /// appending a second — mirrors _upsertLiteratureEntry's rule so a
+  /// timer-completed session doesn't leave an extra blank card behind.
   void _appendBibleSession(DailyLog log, TimerSession session, String durationStr) {
     final startBook = session.fields['bibleStartBook'] ?? '';
     final startChapterStr = session.fields['bibleStartChapter'] ?? '';
     final endBook = session.fields['bibleEndBook'] ?? '';
     final endChapterStr = session.fields['bibleEndChapter'] ?? '';
     if (startBook.isEmpty) return; // nothing to record without a start reference
+    if (log.bibleSessions.length == 1 && log.bibleSessions.first.isEmpty) {
+      final entry = log.bibleSessions.first;
+      entry.startBook = startBook;
+      entry.startChapter = int.tryParse(startChapterStr) ?? 0;
+      entry.endBook = endBook;
+      entry.endChapter = int.tryParse(endChapterStr) ?? 0;
+      entry.recalculate();
+      return;
+    }
     final entry = BibleReadingEntry(
       startBook: startBook,
       startChapter: int.tryParse(startChapterStr) ?? 0,
@@ -582,10 +592,18 @@ class TimerService extends ChangeNotifier {
   }
 
   /// Append a DDEG session from the scripture/notes fields captured by the
-  /// timer's start/stop dialogs.
+  /// timer's start/stop dialogs. Fills the default single empty entry first,
+  /// same rule as _appendBibleSession/_upsertLiteratureEntry.
   void _appendDdegSession(DailyLog log, TimerSession session, String durationStr) {
     final scripture = session.fields['ddegScripture'] ?? '';
     final notes = session.fields['ddegNotes'] ?? '';
+    if (log.ddegSessions.length == 1 && log.ddegSessions.first.isEmpty) {
+      final entry = log.ddegSessions.first;
+      entry.scripture = scripture;
+      entry.time = durationStr;
+      entry.notes = notes;
+      return;
+    }
     log.ddegSessions.add(DdegSession(
       scripture: scripture,
       time: durationStr,

@@ -16,6 +16,7 @@ import '../services/report_cadence_service.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coach_mark.dart';
 import '../widgets/common_widgets.dart';
 
 class ReportScreen extends StatefulWidget {
@@ -38,6 +39,8 @@ class _ReportScreenState extends State<ReportScreen> {
   bool _isReportDay = false;
   int _weeklyEndDay = DateTime.sunday; // configured week-ending weekday
   bool _sending = false; // prevent double-tap sends
+  final _statsRowKey = GlobalKey();
+  final _sendButtonsKey = GlobalKey();
 
   // Week navigation
   late DateTime _weekRef; // any date within the viewed week
@@ -65,6 +68,20 @@ class _ReportScreenState extends State<ReportScreen> {
     super.initState();
     _weekRef = DateTime.now();
     _refresh();
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_report_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _statsRowKey, caption: l.coachReportStats),
+      CoachMarkStep(targetKey: _sendButtonsKey, caption: l.coachReportSend),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   @override
@@ -106,7 +123,8 @@ class _ReportScreenState extends State<ReportScreen> {
     }
     if (mounted) {
       setState(() => _loading = false);
-      _buildReport();
+      await _buildReport();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
     }
   }
 
@@ -543,12 +561,15 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget _buildWeeklyStats(S l) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(child: StatTile(value: '${_stats!.daysLogged}/7', label: l.daysLogged, icon: '\u2705')),
-            const SizedBox(width: 10),
-            Expanded(child: StatTile(value: '${_stats!.totalBibleChapters}', label: l.bibleChapters, icon: '\uD83D\uDCD6')),
-          ],
+        Container(
+          key: _statsRowKey,
+          child: Row(
+            children: [
+              Expanded(child: StatTile(value: '${_stats!.daysLogged}/7', label: l.daysLogged, icon: '\u2705')),
+              const SizedBox(width: 10),
+              Expanded(child: StatTile(value: '${_stats!.totalBibleChapters}', label: l.bibleChapters, icon: '\uD83D\uDCD6')),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
         Row(
@@ -1128,9 +1149,14 @@ class _ReportScreenState extends State<ReportScreen> {
         const SizedBox(height: 20),
 
         // Send buttons
-        _bigButton('\uD83D\uDCE7  ${l.sendEmail}', AppTheme.goldGradient, AppTheme.bg0, _sending ? null : () => _sendEmail()),
-        const SizedBox(height: 10),
-        _bigButton('\uD83D\uDCAC  ${l.sendWhatsApp}', AppTheme.goldGradient, AppTheme.bg0, _sending ? null : () => _sendWhatsApp()),
+        Column(
+          key: _sendButtonsKey,
+          children: [
+            _bigButton('\uD83D\uDCE7  ${l.sendEmail}', AppTheme.goldGradient, AppTheme.bg0, _sending ? null : () => _sendEmail()),
+            const SizedBox(height: 10),
+            _bigButton('\uD83D\uDCAC  ${l.sendWhatsApp}', AppTheme.goldGradient, AppTheme.bg0, _sending ? null : () => _sendWhatsApp()),
+          ],
+        ),
         const SizedBox(height: 10),
         Row(
           children: [

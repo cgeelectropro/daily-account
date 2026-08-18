@@ -34,6 +34,20 @@ class SEn extends S {
   String get tabSettings => 'Settings';
 
   @override
+  String get coachMarkNext => 'Next';
+
+  @override
+  String get coachMarkGotIt => 'Got it';
+
+  @override
+  String get coachMarkSkip => 'Skip';
+
+  @override
+  String coachMarkStepCount(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
   String get markComplete => 'Mark Day Complete';
 
   @override
@@ -2155,4 +2169,50 @@ class SEn extends S {
 
   @override
   String get reflectVerseLabel => 'SCRIPTURE';
+
+  @override
+  String get coachStopwatchTimer =>
+      'Tap the play button to start timing a discipline — like Bible reading or prayer.';
+
+  @override
+  String get coachStopwatchProclamation =>
+      'Tap here to log a proclamation moment.';
+
+  @override
+  String get coachStopwatchAddActivity =>
+      'Track something not listed here — tap + to add your own activity.';
+
+  @override
+  String get coachLogBible =>
+      'Log today\'s Bible reading here — this is where your daily entry starts.';
+
+  @override
+  String get coachLogQuickLog =>
+      'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.';
+
+  @override
+  String get coachReportStats =>
+      'Your week at a glance — days logged, chapters read, souls reached.';
+
+  @override
+  String get coachReportSend =>
+      'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.';
+
+  @override
+  String get coachSettingsProfile =>
+      'Start here — your name and your disciple maker\'s contact are how your reports get delivered.';
+
+  @override
+  String get coachSettingsNotifications =>
+      'Turn on reminders so you never forget to log your day.';
+
+  @override
+  String get replayTutorialSection => 'Tutorial';
+
+  @override
+  String get replayTutorialButton => 'Replay app tutorial';
+
+  @override
+  String get replayTutorialDone =>
+      'Tutorial will show again next time you visit each screen';
 }

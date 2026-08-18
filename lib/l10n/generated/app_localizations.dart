@@ -145,6 +145,30 @@ abstract class S {
   /// **'Settings'**
   String get tabSettings;
 
+  /// No description provided for @coachMarkNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get coachMarkNext;
+
+  /// No description provided for @coachMarkGotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get coachMarkGotIt;
+
+  /// No description provided for @coachMarkSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get coachMarkSkip;
+
+  /// No description provided for @coachMarkStepCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String coachMarkStepCount(int current, int total);
+
   /// No description provided for @markComplete.
   ///
   /// In en, this message translates to:
@@ -3924,6 +3948,78 @@ abstract class S {
   /// In en, this message translates to:
   /// **'SCRIPTURE'**
   String get reflectVerseLabel;
+
+  /// No description provided for @coachStopwatchTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap the play button to start timing a discipline — like Bible reading or prayer.'**
+  String get coachStopwatchTimer;
+
+  /// No description provided for @coachStopwatchProclamation.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap here to log a proclamation moment.'**
+  String get coachStopwatchProclamation;
+
+  /// No description provided for @coachStopwatchAddActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Track something not listed here — tap + to add your own activity.'**
+  String get coachStopwatchAddActivity;
+
+  /// No description provided for @coachLogBible.
+  ///
+  /// In en, this message translates to:
+  /// **'Log today\'s Bible reading here — this is where your daily entry starts.'**
+  String get coachLogBible;
+
+  /// No description provided for @coachLogQuickLog.
+  ///
+  /// In en, this message translates to:
+  /// **'In a hurry? Tap the Quick Log flash button in the header to check off disciplines fast.'**
+  String get coachLogQuickLog;
+
+  /// No description provided for @coachReportStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Your week at a glance — days logged, chapters read, souls reached.'**
+  String get coachReportStats;
+
+  /// No description provided for @coachReportSend.
+  ///
+  /// In en, this message translates to:
+  /// **'When you\'re ready, send your report here — by email, WhatsApp, or share it directly.'**
+  String get coachReportSend;
+
+  /// No description provided for @coachSettingsProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Start here — your name and your disciple maker\'s contact are how your reports get delivered.'**
+  String get coachSettingsProfile;
+
+  /// No description provided for @coachSettingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on reminders so you never forget to log your day.'**
+  String get coachSettingsNotifications;
+
+  /// No description provided for @replayTutorialSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutorial'**
+  String get replayTutorialSection;
+
+  /// No description provided for @replayTutorialButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay app tutorial'**
+  String get replayTutorialButton;
+
+  /// No description provided for @replayTutorialDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutorial will show again next time you visit each screen'**
+  String get replayTutorialDone;
 }
 
 class _SDelegate extends LocalizationsDelegate<S> {

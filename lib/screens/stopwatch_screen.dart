@@ -10,6 +10,7 @@ import '../services/storage_service.dart';
 import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/bible_books.dart';
+import '../widgets/coach_mark.dart';
 import 'prayer_topic_screen.dart';
 import 'proclamation_topic_screen.dart';
 
@@ -25,12 +26,31 @@ class StopwatchScreen extends StatefulWidget {
 
 class _StopwatchScreenState extends State<StopwatchScreen> {
   List<CustomActivity> _customActivities = [];
+  final _firstTimerKey = GlobalKey();
+  final _proclamationKey = GlobalKey();
+  final _addActivityKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     TimerService.instance.addListener(_onTick);
     _loadCustomActivities();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_stopwatch_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _firstTimerKey, caption: l.coachStopwatchTimer),
+      CoachMarkStep(targetKey: _proclamationKey, caption: l.coachStopwatchProclamation),
+      CoachMarkStep(targetKey: _addActivityKey, caption: l.coachStopwatchAddActivity),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   @override
@@ -255,8 +275,14 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     final isPaused = session?.paused ?? false;
     final hasElapsed = session != null && session.currentElapsed > Duration.zero;
     final dark = AppTheme.isDark(context);
+    final wrapperKey = activity == ActivityType.bibleReading
+        ? _firstTimerKey
+        : activity == ActivityType.proclamation
+            ? _proclamationKey
+            : null;
 
     return Container(
+      key: wrapperKey,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isRunning
@@ -440,6 +466,7 @@ class _StopwatchScreenState extends State<StopwatchScreen> {
     return GestureDetector(
       onTap: () => _showAddActivityDialog(l, accent),
       child: Container(
+        key: _addActivityKey,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.06),

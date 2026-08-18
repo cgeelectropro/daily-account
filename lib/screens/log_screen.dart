@@ -20,7 +20,9 @@ import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/bible_books.dart';
+import '../widgets/coach_mark.dart';
 import '../widgets/common_widgets.dart';
+import 'home_shell.dart';
 
 class LogScreen extends StatefulWidget {
   final DateTime date;
@@ -35,6 +37,7 @@ class _LogScreenState extends State<LogScreen> {
   late DailyLog _log;
   bool _loading = true;
   List<CustomActivity> _customActivities = [];
+  final _bibleSectionKey = GlobalKey();
   String get _key => DateFormat('yyyy-MM-dd').format(widget.date);
 
   // Active fasting period
@@ -74,6 +77,20 @@ class _LogScreenState extends State<LogScreen> {
     _loadActiveFast();
   }
 
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_log_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _bibleSectionKey, caption: l.coachLogBible),
+      CoachMarkStep(targetKey: HomeShell.quickLogButtonKey, caption: l.coachLogQuickLog),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
+  }
+
   @override
   void didUpdateWidget(LogScreen old) {
     super.didUpdateWidget(old);
@@ -86,7 +103,10 @@ class _LogScreenState extends State<LogScreen> {
     _log = existing ?? DailyLog(dateKey: _key);
     if (isNew) await _tryAutoFill();
     _timeConscious = (await StorageService.instance.getSetting('timeConscious', fallback: 'false')) == 'true';
-    if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      setState(() => _loading = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    }
     await ReadingPlanService.instance.load();
 
     // Load cached reflection or generate fresh
@@ -857,6 +877,7 @@ class _LogScreenState extends State<LogScreen> {
 
         // Bible (multi-session with auto-calculate)
         SectionCard(
+          key: _bibleSectionKey,
           icon: '\u{1F4D6}',
           title: t.sectionBible,
           initiallyExpanded: _log.bibleSessions.any((s) => s.isNotEmpty) ||

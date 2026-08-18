@@ -34,6 +34,20 @@ class SFr extends S {
   String get tabSettings => 'Paramètres';
 
   @override
+  String get coachMarkNext => 'Suivant';
+
+  @override
+  String get coachMarkGotIt => 'Compris';
+
+  @override
+  String get coachMarkSkip => 'Passer';
+
+  @override
+  String coachMarkStepCount(int current, int total) {
+    return '$current sur $total';
+  }
+
+  @override
   String get markComplete => 'Marquer le Jour Complet';
 
   @override
@@ -2182,4 +2196,50 @@ class SFr extends S {
 
   @override
   String get reflectVerseLabel => 'ÉCRITURE';
+
+  @override
+  String get coachStopwatchTimer =>
+      'Appuyez sur lecture pour chronométrer une discipline — comme la lecture biblique ou la prière.';
+
+  @override
+  String get coachStopwatchProclamation =>
+      'Appuyez ici pour enregistrer un moment de proclamation.';
+
+  @override
+  String get coachStopwatchAddActivity =>
+      'Suivez autre chose : appuyez sur + pour ajouter votre propre activité.';
+
+  @override
+  String get coachLogBible =>
+      'Enregistrez votre lecture biblique du jour ici — c\'est le début de votre entrée quotidienne.';
+
+  @override
+  String get coachLogQuickLog =>
+      'Pressé ? Appuyez sur le bouton Journal Rapide dans l\'en-tête pour cocher rapidement vos disciplines.';
+
+  @override
+  String get coachReportStats =>
+      'Votre semaine en un coup d\'œil — jours enregistrés, chapitres lus, âmes touchées.';
+
+  @override
+  String get coachReportSend =>
+      'Quand vous êtes prêt, envoyez votre rapport ici — par email, WhatsApp, ou partagez-le directement.';
+
+  @override
+  String get coachSettingsProfile =>
+      'Commencez ici — votre nom et le contact de votre formateur déterminent comment vos rapports sont envoyés.';
+
+  @override
+  String get coachSettingsNotifications =>
+      'Activez les rappels pour ne jamais oublier d\'enregistrer votre journée.';
+
+  @override
+  String get replayTutorialSection => 'Tutoriel';
+
+  @override
+  String get replayTutorialButton => 'Revoir le tutoriel de l\'application';
+
+  @override
+  String get replayTutorialDone =>
+      'Le tutoriel réapparaîtra lors de votre prochaine visite sur chaque écran';
 }
