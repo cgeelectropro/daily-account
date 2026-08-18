@@ -1870,6 +1870,17 @@ class _LogScreenState extends State<LogScreen> {
       ('\u26EA', t.sectionChurch, _log.churchType.isNotEmpty),
       ('\uD83D\uDC65', t.sectionDiscipleship, _log.discipleshipWho.isNotEmpty),
       ('\uD83D\uDCE3', t.sectionProclamation, _log.proclamationCount.isNotEmpty || _log.proclamationSessions.any((s) => s.isNotEmpty)),
+      // Custom activities that count toward completeness \u2014 mirrors
+      // DailyLog.completeness's own custom-activity accounting exactly, so
+      // this checklist never disagrees with the progress ring about which
+      // sections are outstanding.
+      for (final activity in _customActivities)
+        if (activity.countsForCompleteness)
+          (
+            activity.icon,
+            activity.name,
+            _log.customActivityData[activity.id]?['done'] == true,
+          ),
     ];
     final allDone = disciplines.every((d) => d.$3);
 

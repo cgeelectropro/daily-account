@@ -100,6 +100,12 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
     'Evangelism', 'Fasting', 'Giving', 'Church', 'Discipleship', 'Proclamation',
   ];
 
+  /// Whether any custom activity was marked done today — used to avoid
+  /// claiming "nothing done yet" when the only thing logged is a
+  /// user-defined activity outside the 11 fixed disciplines.
+  static bool _hasCustomActivityDone(DailyLog l) =>
+      l.customActivityData.values.any((data) => data['done'] == true);
+
   static List<bool> _checks(DailyLog l) => [
     l.bibleReference.isNotEmpty || l.bibleChapters.isNotEmpty ||
         l.bibleSessions.any((s) => s.isNotEmpty),
@@ -139,14 +145,15 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
       DailyLog log, ReflectionContext ctx, String locale) async {
     final checks = _checks(log);
     final filled = checks.where((c) => c).length;
+    final hasCustomActivityDone = _hasCustomActivityDone(log);
     final isMorning = ctx.timeOfDay.hour < 12;
     final isEvening = ctx.timeOfDay.hour >= 18;
     final seed = log.dateKey.hashCode;
     final rng = Random(seed);
 
-    final narrative = _buildNarrative(log, ctx, checks, filled, isMorning, isEvening, rng, locale);
+    final narrative = _buildNarrative(log, ctx, checks, filled, isMorning, isEvening, rng, locale, hasCustomActivityDone);
     final encouragement = _buildEncouragement(log, ctx, checks, filled, rng, locale);
-    final suggestion = _buildSuggestion(log, ctx, checks, filled, isMorning, isEvening, locale);
+    final suggestion = _buildSuggestion(log, ctx, checks, filled, isMorning, isEvening, locale, hasCustomActivityDone);
     final verseResult = _pickVerse(log, ctx, checks, filled, isMorning, isEvening, log.dateKey, locale);
 
     return ReflectionResult(
@@ -162,7 +169,7 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
 
   String _buildNarrative(DailyLog log, ReflectionContext ctx,
       List<bool> checks, int filled, bool isMorning, bool isEvening,
-      Random rng, String locale) {
+      Random rng, String locale, bool hasCustomActivityDone) {
     final isFr = locale.startsWith('fr');
 
     // Pick main narrative based on priority
@@ -237,6 +244,13 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
         'A step is a step. $filled discipline logged — the seed is planted.',
         'You\'ve started. That\'s what matters. Add another when you can.',
       ]);
+    } else if (hasCustomActivityDone) {
+      // None of the 11 fixed disciplines are filled, but a custom activity
+      // is — don't claim the day is a blank page when something real was
+      // logged, just outside the fixed list.
+      main = isFr
+          ? 'Vous avez marqué une activité personnalisée aujourd\'hui — continuez sur cette lancée.'
+          : 'You\'ve logged a custom activity today — build on that momentum.';
     } else if (isMorning) {
       main = isFr
           ? 'Bonjour ! Une page blanche attend votre fidélité aujourd\'hui.'
@@ -416,7 +430,7 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
 
   String _buildSuggestion(DailyLog log, ReflectionContext ctx,
       List<bool> checks, int filled, bool isMorning, bool isEvening,
-      String locale) {
+      String locale, bool hasCustomActivityDone) {
     final isFr = locale.startsWith('fr');
 
     // Find missing disciplines
@@ -465,8 +479,9 @@ class RuleBasedReflectionProvider implements ReflectionProvider {
           : 'All disciplines covered! Tomorrow, try going deeper in $weak.';
     }
 
-    // Priority 6: Morning, nothing yet
-    if (isMorning && filled == 0) {
+    // Priority 6: Morning, nothing yet (unless a custom activity is already
+    // logged today — then it's not really "nothing").
+    if (isMorning && filled == 0 && !hasCustomActivityDone) {
       final strong = ctx.bestDiscipline ?? 'Bible';
       return isFr
           ? 'Commencez par $strong — construisez l\'élan à partir de votre force.'
