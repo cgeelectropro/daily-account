@@ -753,7 +753,7 @@ class _LogScreenState extends State<LogScreen> {
       )).toList();
       _log.fastingType = prev.fastingType;
       _log.fastingDuration = prev.fastingDuration;
-      _log.givingType = prev.givingType;
+      _log.giving = prev.giving.map((g) => GivingEntry(type: g.type)).toList();
       _log.churchType = prev.churchType;
       _log.discipleshipWho = prev.discipleshipWho;
       _log.discipleshipTopic = prev.discipleshipTopic;

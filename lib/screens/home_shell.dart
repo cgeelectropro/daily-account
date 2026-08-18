@@ -7,19 +7,17 @@ import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../l10n/generated/app_localizations.dart';
-import '../l10n/generated/app_localizations_en.dart';
-import '../l10n/generated/app_localizations_fr.dart';
 import '../models/daily_log.dart';
 import '../models/activity_timer.dart';
 import '../models/goal.dart';
-import '../services/cloud_sync_service.dart';
+import '../services/auto_send_runner.dart';
 import '../services/goal_progress_service.dart';
 import '../services/notification_service.dart';
-import '../services/report_cadence_service.dart';
 import '../services/report_service.dart';
 import '../services/storage_service.dart';
 import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
+import 'help_screen.dart';
 import 'log_screen.dart';
 import 'prayer_request_screen.dart';
 import 'proclamation_topic_screen.dart';
@@ -143,7 +141,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       // or OEM power management — re-scheduling guarantees they stay alive.
       NotificationService.instance.rescheduleAll();
       // Re-check auto-send on resume — handles the case where the user
-      // had the app in background past the auto-send time on Sunday.
+      // had the app in background past the auto-send time on the report day.
       _checkAutoSend();
       _checkGoalPace();
     }
@@ -395,7 +393,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       case 'fasting':
         log.fastingType = toggle(log.fastingType);
       case 'giving':
-        log.givingType = toggle(log.givingType);
+        if (log.giving.every((g) => g.isEmpty)) {
+          log.giving = [GivingEntry(type: '✓')];
+        } else if (log.giving.length == 1 && log.giving.first.type == '✓') {
+          log.giving = [GivingEntry()];
+        }
+        // else: real data — don't touch
       case 'church':
         log.churchType = toggle(log.churchType);
       case 'discipleship':
@@ -413,193 +416,22 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (mounted) setState(() => _hasPendingReport = pending != null);
   }
 
-  /// Check if the device has internet connectivity.
-  Future<bool> _hasConnectivity() async {
-    try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 3));
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Retry sending any still-pending report channels (from a previous
-  /// offline attempt). Retries whichever channels haven't succeeded yet.
+  /// offline/failed attempt). Delegates to [AutoSendRunner] so the exact
+  /// same logic also runs from the background guardian service — see
+  /// [BackgroundTimerService].
   Future<void> _trySendPending() async {
-    final s = StorageService.instance;
-    final pending = await s.getPendingReport();
-    if (pending == null) return;
-
-    if (!await _hasConnectivity()) return; // still offline, try next time
-
-    final channels = List<String>.from(pending['channels'] as List? ?? []);
-    final sentChannels = List<String>.from(pending['sentChannels'] as List? ?? []);
-    final compactReport = pending['compactReport'] as String;
-    final fullReport = pending['fullReport'] as String;
-    final name = await s.getSetting('myName');
-    final l = await _getReportLocalizations();
-    final subject = '📖 ${l.reportEmailSubject(
-      name.isEmpty ? "Disciple" : name,
-      DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
-    )}';
-
-    for (final channel in channels) {
-      if (sentChannels.contains(channel)) continue;
-      bool ok = false;
-      if (channel == 'whatsapp') {
-        final whatsapp = pending['whatsapp'] as String? ?? '';
-        if (whatsapp.isNotEmpty) {
-          ok = await ReportService.instance.sendByWhatsApp(whatsapp, compactReport);
-        }
-      } else if (channel == 'email') {
-        final email = pending['email'] as String? ?? '';
-        if (email.isNotEmpty) {
-          ok = await CloudSyncService.instance.sendEmailSilently(
-            toEmail: email,
-            subject: subject,
-            body: fullReport,
-          );
-        }
-      }
-      if (ok) {
-        await s.markPendingChannelSent(channel);
-        final periodKey = await ReportCadenceService.instance.currentPeriodKey();
-        await s.setSetting('lastAutoSend', periodKey);
-      }
-    }
+    await AutoSendRunner.trySendPending();
     _checkPendingReport();
   }
 
-  /// On Sunday, if auto-send is enabled, auto-send the report via WhatsApp.
-  /// If offline, queue the report and send when connectivity returns.
+  /// On the configured report day, if auto-send is enabled, auto-send the
+  /// report. Delegates to [AutoSendRunner]; anything that fails (offline,
+  /// Gmail token expired, etc.) is queued for retry rather than dropped —
+  /// the same queue [BackgroundTimerService]'s periodic tick also drains.
   Future<void> _checkAutoSend() async {
-    final now = DateTime.now();
-    if (!await ReportCadenceService.instance.isReportDay(now)) return;
-
-    final s = StorageService.instance;
-    final autoEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
-    if (!autoEnabled) return;
-
-    // Determine which channels this auto-send run targets before gating on
-    // channel-specific requirements below (e.g. WhatsApp number presence) —
-    // an email-only configuration must not be blocked by a missing WhatsApp
-    // number.
-    final channelSetting = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
-    final channels = channelSetting == 'both' ? ['whatsapp', 'email'] : [channelSetting];
-
-    final whatsapp = await s.getSetting('discipleWhatsApp');
-    if (channels.contains('whatsapp') && whatsapp.isEmpty) return;
-
-    // Check if we already auto-sent this period (week or month)
-    final cadence = await ReportCadenceService.instance.getCadence();
-    final periodKey = await ReportCadenceService.instance.currentPeriodKey(now);
-    final alreadySent = await s.getSetting('lastAutoSend', fallback: '');
-    if (alreadySent == periodKey) return;
-
-    // Check if there's already a pending report queued
-    final pending = await s.getPendingReport();
-    if (pending != null) {
-      final pendingChannels = List<String>.from(pending['channels'] as List? ?? []);
-      if (pendingChannels.isEmpty) {
-        // Corrupt/legacy entry with no channels to retry — clear it so
-        // auto-send isn't permanently blocked by an unrecoverable state.
-        await s.clearPendingReport();
-      } else {
-        return;
-      }
-    }
-
-    // Check if it's past the auto-send time
-    final ash = int.tryParse(await s.getSetting('autoSendHour', fallback: '19')) ?? 19;
-    final asm = int.tryParse(await s.getSetting('autoSendMin', fallback: '0')) ?? 0;
-    if (now.hour < ash || (now.hour == ash && now.minute < asm)) return;
-
-    // Build the report in the user's preferred report language
-    final name = await s.getSetting('myName');
-    if (!mounted) return;
-    final l = await _getReportLocalizations();
-    final String fullReport;
-    final String compactReport;
-    if (cadence == ReportCadence.monthly) {
-      final monthly = await ReportService.instance.buildMonthlyReport(name, l, now.year, now.month);
-      fullReport = monthly;
-      compactReport = monthly; // monthly cadence has one report format
-    } else {
-      fullReport = await ReportService.instance.buildFullReport(name, l);
-      compactReport = await ReportService.instance.buildCompactReport(name, l);
-    }
-
-    final subject = '📖 ${l.reportEmailSubject(
-      name.isEmpty ? "Disciple" : name,
-      DateFormat('MMM d, y', l.localeName).format(DateTime.now()),
-    )}';
-    final email = await s.getSetting('discipleEmail');
-
-    // Check connectivity
-    if (!await _hasConnectivity()) {
-      // Queue for later
-      await s.queuePendingReport(
-        fullReport: fullReport,
-        compactReport: compactReport,
-        channels: channels,
-        whatsapp: whatsapp,
-        email: email,
-      );
-      return;
-    }
-
-    // Send now — use the full detailed report for both channels
-    final sentChannels = <String>[];
-    for (final channel in channels) {
-      bool ok = false;
-      if (channel == 'whatsapp') {
-        ok = await ReportService.instance.sendByWhatsApp(whatsapp, fullReport);
-      } else if (channel == 'email' && email.isNotEmpty) {
-        ok = await CloudSyncService.instance.sendEmailSilently(
-          toEmail: email,
-          subject: subject,
-          body: fullReport,
-        );
-      }
-      if (ok) sentChannels.add(channel);
-    }
-
-    if (sentChannels.isNotEmpty) {
-      await s.setSetting('lastAutoSend', periodKey);
-      // Also save to archive
-      final String archiveStart;
-      final String archiveEnd;
-      if (cadence == ReportCadence.monthly) {
-        final firstOfMonth = DateTime(now.year, now.month, 1);
-        final lastOfMonth = DateTime(now.year, now.month + 1, 0);
-        archiveStart = ReportService.instance.keyFor(firstOfMonth);
-        archiveEnd = ReportService.instance.keyFor(lastOfMonth);
-      } else {
-        final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
-        final dates = ReportService.instance.weekDates(now, endWeekday);
-        archiveStart = ReportService.instance.keyFor(dates.first);
-        archiveEnd = ReportService.instance.keyFor(dates.last);
-      }
-      await s.saveReport(
-        weekStart: archiveStart,
-        weekEnd: archiveEnd,
-        fullReport: fullReport,
-        compactReport: compactReport,
-        sentVia: sentChannels.join(' + '),
-      );
-    }
-
-    final failedChannels = channels.where((c) => !sentChannels.contains(c)).toList();
-    if (failedChannels.isNotEmpty) {
-      await s.queuePendingReport(
-        fullReport: fullReport,
-        compactReport: compactReport,
-        channels: failedChannels,
-        whatsapp: whatsapp,
-        email: email,
-      );
-    }
+    await AutoSendRunner.checkAutoSend();
+    _checkPendingReport();
   }
 
   /// Check all configured goals for whether they're behind pace, and
@@ -614,14 +446,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       if (await GoalProgressService.instance.isBehindPace(goal)) behind.add(goal);
     }
     if (mounted) setState(() => _behindPaceGoals = behind);
-  }
-
-  /// Get the S instance for the user's chosen report language.
-  Future<S> _getReportLocalizations() async {
-    final lang = await StorageService.instance.getSetting('reportLanguage', fallback: '');
-    if (lang == 'en') return SEn();
-    if (lang == 'fr') return SFr();
-    return S.of(context);
   }
 
   /// Schedule the Saturday summary notification with current week stats.
@@ -1084,6 +908,30 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Help & FAQ button — always visible, on every screen
+              Material(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  splashColor: accent.withValues(alpha: 0.2),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HelpScreen()),
+                  ),
+                  child: Tooltip(
+                    message: S.of(context).helpButtonTooltip,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Icon(Icons.help_outline, color: accent, size: 20),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               // Prayer requests button — always visible
               Material(
                 color: accent.withValues(alpha: 0.12),
@@ -1295,8 +1143,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     if (checked['fasting'] == true && log.fastingType.isEmpty) {
       log.fastingType = '\u2713';
     }
-    if (checked['giving'] == true && log.givingType.isEmpty) {
-      log.givingType = '\u2713';
+    if (checked['giving'] == true && log.giving.every((g) => g.isEmpty)) {
+      log.giving = [GivingEntry(type: '\u2713')];
     }
     if (checked['church'] == true && log.churchType.isEmpty) {
       log.churchType = '\u2713';
