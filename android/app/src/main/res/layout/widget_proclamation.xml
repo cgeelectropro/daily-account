@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/proclamation_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_altar_bg"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="8dp">
+
+    <!-- Large counter number (top, full width, very prominent) -->
+    <TextView
+        android:id="@+id/proclamation_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="0"
+        android:textColor="#D4AF64"
+        android:textSize="56sp"
+        android:fontFamily="serif"
+        android:textStyle="bold"
+        android:clickable="true"
+        android:focusable="true" />
+
+    <!-- Proclamation label -->
+    <TextView
+        android:id="@+id/proclamation_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="PROCLAMATIONS"
+        android:textColor="#7A6A4A"
+        android:textSize="8sp"
+        android:fontFamily="serif"
+        android:textAllCaps="true"
+        android:letterSpacing="0.12"
+        android:layout_marginBottom="6dp" />
+
+    <!-- Centered "+" button -->
+    <FrameLayout
+        android:id="@+id/proclamation_btn_plus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- Circular gold button centered -->
+        <TextView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="+"
+            android:textColor="#D4AF64"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:background="@drawable/widget_btn_plus_circle" />
+    </FrameLayout>
+
+</LinearLayout>

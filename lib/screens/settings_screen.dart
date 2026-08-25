@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../main.dart';
+import 'package:local_auth/local_auth.dart';
+import '../data/reading_plans.dart';
+import '../data/goal_metrics.dart';
+import '../models/custom_activity.dart';
+import '../models/goal.dart';
 import '../services/backup_service.dart';
+import '../services/cloud_sync_service.dart';
+import '../services/reading_plan_service.dart';
+import '../services/report_cadence_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/coach_mark.dart';
 import '../widgets/common_widgets.dart';
+import 'report_history_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,18 +29,84 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _name = '', _email = '', _whatsapp = '';
+  String _widgetTitle = '';
   TimeOfDay _dailyTime = const TimeOfDay(hour: 20, minute: 0);
-  TimeOfDay _sundayTime = const TimeOfDay(hour: 18, minute: 0);
+  TimeOfDay _reportDayTime = const TimeOfDay(hour: 18, minute: 0);
   TimeOfDay _autoSendTime = const TimeOfDay(hour: 19, minute: 0);
   bool _notificationsEnabled = true;
   bool _autoSendEnabled = false;
+  String _autoSendChannel = 'whatsapp';
+  bool _gmailSendReady = false;
   bool _isDark = true;
+  bool _appLockEnabled = false;
+  bool _useBiometrics = false;
+  bool _biometricsAvailable = false;
+  int _dailyFollowUps = 3; // default aggressive: 3 follow-ups
+  int _reportDayFollowUps = 2; // default aggressive: 2 follow-ups
+  ReportCadence _reportCadence = ReportCadence.weekly;
+  int _reportWeeklyDay = DateTime.sunday; // 7
+  String _reportMonthlyDay = 'last';
+  String _selectedSound = 'sound_happy_bells';
   bool _loading = true;
+  String _version = '';
+  String _reportLanguage = ''; // empty = same as app
+  bool _hasOemAutostart = false;
+
+  // Time-conscious mode
+  bool _timeConscious = false;
+
+  // Cloud sync
+  bool _cloudSignedIn = false;
+  String _cloudEmail = '';
+  String _cloudLastBackup = '';
+  bool _cloudBusy = false;
+
+  // Reading plan
+  final ReadingPlanService _planService = ReadingPlanService.instance;
+
+  // Goals
+  List<Goal> _goals = [];
+  List<CustomActivity> _customActivitiesForGoals = [];
+  bool _goalPaceRemindersEnabled = true;
+
+  /// Per-discipline reminder times. null = off.
+  final Map<int, TimeOfDay?> _disciplineTimes = {};
+  static const _disciplineNames = [
+    'Bible', 'Literature', 'DDEG', 'Prayer (alone)', 'Prayer (others)',
+    'Evangelism', 'Fasting', 'Giving', 'Church', 'Discipleship', 'Proclamation',
+  ];
+  static const _disciplineIcons = [
+    '📖', '📚', '🔥', '🙏', '🤝',
+    '📢', '🍽️', '💰', '⛪', '👥', '📣',
+  ];
+
+  final _profileSectionKey = GlobalKey();
+  final _notificationsSectionKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     _load();
+    NotificationService.instance.refreshDiagnostics().then((_) {
+      if (mounted) setState(() {});
+    });
+    NotificationService.instance.hasKnownOemAutostartSettings().then((v) {
+      if (mounted) setState(() => _hasOemAutostart = v);
+    });
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_settings_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _profileSectionKey, caption: l.coachSettingsProfile),
+      CoachMarkStep(targetKey: _notificationsSectionKey, caption: l.coachSettingsNotifications),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
   }
 
   Future<void> _load() async {
@@ -35,6 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _name = await s.getSetting('myName');
     _email = await s.getSetting('discipleEmail');
     _whatsapp = await s.getSetting('discipleWhatsApp');
+    _widgetTitle = await s.getSetting('widgetTitle');
     final dh = int.tryParse(await s.getSetting('dailyHour', fallback: '20')) ?? 20;
     final dm = int.tryParse(await s.getSetting('dailyMin', fallback: '0')) ?? 0;
     final sh = int.tryParse(await s.getSetting('sundayHour', fallback: '18')) ?? 18;
@@ -42,12 +122,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ash = int.tryParse(await s.getSetting('autoSendHour', fallback: '19')) ?? 19;
     final asm_ = int.tryParse(await s.getSetting('autoSendMin', fallback: '0')) ?? 0;
     _dailyTime = TimeOfDay(hour: dh, minute: dm);
-    _sundayTime = TimeOfDay(hour: sh, minute: sm);
+    _reportDayTime = TimeOfDay(hour: sh, minute: sm);
     _autoSendTime = TimeOfDay(hour: ash, minute: asm_);
     _notificationsEnabled = (await s.getSetting('notificationsEnabled', fallback: 'true')) == 'true';
     _autoSendEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
     _isDark = (await s.getSetting('themeMode', fallback: 'dark')) == 'dark';
-    if (mounted) setState(() => _loading = false);
+    _timeConscious = (await s.getSetting('timeConscious', fallback: 'false')) == 'true';
+    _appLockEnabled = (await s.getSetting('appLockEnabled', fallback: 'false')) == 'true';
+    _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
+    _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
+    _reportDayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    _reportCadence = await ReportCadenceService.instance.getCadence();
+    _reportWeeklyDay = await ReportCadenceService.instance.getWeeklyDay();
+    _reportMonthlyDay = await ReportCadenceService.instance.getMonthlyDay();
+    _selectedSound = await s.getSetting('notifSound', fallback: 'sound_happy_bells');
+    try {
+      final auth = LocalAuthentication();
+      _biometricsAvailable = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+    } catch (_) {
+      _biometricsAvailable = false;
+    }
+    try {
+      final info = await PackageInfo.fromPlatform();
+      _version = '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      _version = '1.2.0';
+    }
+    // Load report language
+    _reportLanguage = await s.getSetting('reportLanguage', fallback: '');
+    // Load goals
+    _goals = await StorageService.instance.getGoals();
+    _customActivitiesForGoals = await StorageService.instance.getCustomActivities();
+    _goalPaceRemindersEnabled = (await s.getSetting('goalPaceRemindersEnabled', fallback: 'true')) == 'true';
+    // Load per-discipline reminder times
+    for (int i = 0; i < 11; i++) {
+      final raw = await s.getSetting('discReminder_$i', fallback: '');
+      if (raw.isNotEmpty) {
+        final parts = raw.split(':');
+        if (parts.length == 2) {
+          _disciplineTimes[i] = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
+      }
+    }
+    // Load reading plan state
+    await _planService.load();
+    // Load cloud sync state
+    final cloud = CloudSyncService.instance;
+    _cloudSignedIn = cloud.isSignedIn;
+    _cloudEmail = cloud.currentUser?.email ?? '';
+    _cloudLastBackup = await s.getSetting('cloudLastBackupDate', fallback: '');
+
+    // Load auto-send channel + validate it's still usable
+    _autoSendChannel = await s.getSetting('autoSendChannel', fallback: 'whatsapp');
+    _gmailSendReady = CloudSyncService.instance.isSignedIn &&
+        await CloudSyncService.instance.hasGmailSendScope();
+    if ((_autoSendChannel == 'email' || _autoSendChannel == 'both') && !_canUseEmailChannel) {
+      _autoSendChannel = 'whatsapp';
+      await s.setSetting('autoSendChannel', 'whatsapp');
+    }
+
+    if (mounted) {
+      setState(() => _loading = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+    }
   }
 
   void _toast(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -59,6 +199,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           side: BorderSide(color: AppTheme.accentGold(context)),
         ),
       ));
+
+  Future<void> _replayTutorial() async {
+    final s = StorageService.instance;
+    await s.setSetting('coachmark_stopwatch_shown', '');
+    await s.setSetting('coachmark_log_shown', '');
+    await s.setSetting('coachmark_report_shown', '');
+    await s.setSetting('coachmark_settings_shown', '');
+    if (mounted) _toast(S.of(context).replayTutorialDone);
+  }
 
   // ── Notifications ──────────────────────────────────────────
 
@@ -75,53 +224,97 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Compute the localized reminder title text for the current cadence
+  /// setting, e.g. "Friday — Send Your Account" or "The 25th — Send Your
+  /// Account" or "Month-end — Send Your Account".
+  String _reportReminderTitle(S l) {
+    if (_reportCadence == ReportCadence.weekly) {
+      final dayName = DateFormat('EEEE', l.localeName).format(
+        DateTime(2026, 1, 4 + _reportWeeklyDay), // 2026-01-05 is a Monday (weekday=1); offset gives each weekday 1-7
+      );
+      return l.notifReportTitleWeekly(dayName);
+    }
+    if (_reportMonthlyDay == 'last') {
+      return l.notifReportTitleMonthlyLast;
+    }
+    return l.notifReportTitleMonthlyDay(_reportMonthlyDay);
+  }
+
   Future<void> _scheduleAllNotifications() async {
     final l = S.of(context);
+    final s = StorageService.instance;
+
+    // Persist localized strings so they can be re-used on app restart
+    // (notification re-scheduling runs without BuildContext)
+    await s.setSetting('notifDailyTitle', l.notifDailyTitle);
+    await s.setSetting('notifDailyBody', l.notifDailyBody);
+    await s.setSetting('notifSundayTitle', _reportReminderTitle(l));
+    await s.setSetting('notifSundayBody', l.notifReportBody);
+    await s.setSetting('notifSatTitle', l.saturdaySummaryTitle);
+    await s.setSetting('notifMidWeekTitle', l.midWeekNudgeTitle);
+
     await NotificationService.instance.scheduleDailyReminder(
       _dailyTime.hour, _dailyTime.minute,
       title: l.notifDailyTitle,
       body: l.notifDailyBody,
+      followUpCount: _dailyFollowUps,
     );
-    await NotificationService.instance.scheduleSundayReminder(
-      _sundayTime.hour, _sundayTime.minute,
-      title: l.notifSundayTitle,
-      body: l.notifSundayBody,
+    await NotificationService.instance.scheduleReportReminder(
+      _reportDayTime.hour, _reportDayTime.minute,
+      title: _reportReminderTitle(l),
+      body: l.notifReportBody,
+      followUpCount: _reportDayFollowUps,
     );
     if (_autoSendEnabled) {
       await NotificationService.instance.scheduleAutoSendReminder(
         _autoSendTime.hour, _autoSendTime.minute,
-        title: l.notifSundayTitle,
-        body: l.notifSundayBody,
+        title: _reportReminderTitle(l),
+        body: l.notifReportBody,
       );
     }
   }
 
-  Future<void> _saveReminders() async {
+  Future<void> _saveReminders({bool showToast = true}) async {
     final l = S.of(context);
-    // Email validation
-    if (_email.isNotEmpty && !RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(_email)) {
-      _toast(l.invalidEmail);
-      return;
-    }
-    // WhatsApp validation
-    if (_whatsapp.isNotEmpty && !RegExp(r'^\d{10,15}$').hasMatch(_whatsapp)) {
-      _toast(l.invalidWhatsapp);
-      return;
-    }
     final s = StorageService.instance;
     await s.setSetting('dailyHour', '${_dailyTime.hour}');
     await s.setSetting('dailyMin', '${_dailyTime.minute}');
-    await s.setSetting('sundayHour', '${_sundayTime.hour}');
-    await s.setSetting('sundayMin', '${_sundayTime.minute}');
+    await s.setSetting('sundayHour', '${_reportDayTime.hour}');
+    await s.setSetting('sundayMin', '${_reportDayTime.minute}');
 
     if (_notificationsEnabled) {
       await _scheduleAllNotifications();
     }
     if (!mounted) return;
-    _toast(l.remindersSaved);
+    if (showToast) _toast(l.remindersSaved);
+  }
+
+  Future<void> _setCadence(ReportCadence cadence) async {
+    setState(() => _reportCadence = cadence);
+    await ReportCadenceService.instance.setCadence(cadence);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
+  }
+
+  Future<void> _setWeeklyDay(int weekday) async {
+    setState(() => _reportWeeklyDay = weekday);
+    await ReportCadenceService.instance.setWeeklyDay(weekday);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
+  }
+
+  Future<void> _setMonthlyDay(String day) async {
+    setState(() => _reportMonthlyDay = day);
+    await ReportCadenceService.instance.setMonthlyDay(day);
+    if (_notificationsEnabled) await _scheduleAllNotifications();
   }
 
   // ── Auto-send ──────────────────────────────────────────────
+
+  bool get _hasValidEmail {
+    final email = _email.trim();
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
+  bool get _canUseEmailChannel => _hasValidEmail && _gmailSendReady;
 
   Future<void> _toggleAutoSend(bool enabled) async {
     final l = S.of(context);
@@ -132,8 +325,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await StorageService.instance.setSetting('autoSendMin', '${_autoSendTime.minute}');
       await NotificationService.instance.scheduleAutoSendReminder(
         _autoSendTime.hour, _autoSendTime.minute,
-        title: l.notifSundayTitle,
-        body: l.notifSundayBody,
+        title: _reportReminderTitle(l),
+        body: l.notifReportBody,
       );
     } else {
       await NotificationService.instance.cancel(3);
@@ -154,11 +347,187 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (_autoSendEnabled && _notificationsEnabled) {
         await NotificationService.instance.scheduleAutoSendReminder(
           picked.hour, picked.minute,
-          title: l.notifSundayTitle,
-          body: l.notifSundayBody,
+          title: _reportReminderTitle(l),
+          body: l.notifReportBody,
         );
       }
     }
+  }
+
+  // ── App Lock ───────────────────────────────────────────────
+
+  Future<void> _toggleAppLock(bool enabled) async {
+    if (enabled) {
+      // Ask user to set a PIN
+      final pin = await _showSetPinDialog();
+      if (pin == null) return; // cancelled
+      await StorageService.instance.setSetting('appPin', pin);
+      await StorageService.instance.setSetting('appLockEnabled', 'true');
+      setState(() => _appLockEnabled = true);
+      if (mounted) _toast(S.of(context).pinSet);
+    } else {
+      await StorageService.instance.setSetting('appLockEnabled', 'false');
+      await StorageService.instance.setSetting('appPin', '');
+      await StorageService.instance.setSetting('useBiometrics', 'false');
+      setState(() {
+        _appLockEnabled = false;
+        _useBiometrics = false;
+      });
+      if (mounted) _toast(S.of(context).pinRemoved);
+    }
+  }
+
+  Future<void> _toggleBiometrics(bool enabled) async {
+    setState(() => _useBiometrics = enabled);
+    await StorageService.instance.setSetting('useBiometrics', enabled ? 'true' : 'false');
+  }
+
+  Future<String?> _showSetPinDialog() async {
+    String pin = '';
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+
+    // Step 1: Enter PIN
+    final firstPin = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        String entered = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            backgroundColor: AppTheme.surfaceColor(context),
+            title: Text(l.setPinTitle, style: AppTheme.display(18, color: accent)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.setPinBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(4, (i) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < entered.length ? accent : Colors.transparent,
+                      border: Border.all(color: accent, width: 1.5),
+                    ),
+                  )),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.display(24, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    entered = v;
+                    setDialogState(() {});
+                    if (v.length == 4) Navigator.pop(ctx, v);
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (firstPin == null || firstPin.length != 4) return null;
+    pin = firstPin;
+
+    if (!mounted) return null;
+
+    // Step 2: Confirm PIN
+    final confirmed = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        String entered = '';
+        String error = '';
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            backgroundColor: AppTheme.surfaceColor(context),
+            title: Text(l.confirmPinTitle, style: AppTheme.display(18, color: accent)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.confirmPinBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(4, (i) => Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    width: 14, height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < entered.length ? accent : Colors.transparent,
+                      border: Border.all(color: accent, width: 1.5),
+                    ),
+                  )),
+                ),
+                if (error.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(error, style: AppTheme.serif(12, color: AppTheme.rust)),
+                ],
+                const SizedBox(height: 16),
+                TextField(
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.display(24, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    entered = v;
+                    setDialogState(() { error = ''; });
+                    if (v.length == 4) {
+                      if (v == pin) {
+                        Navigator.pop(ctx, v);
+                      } else {
+                        setDialogState(() { error = l.pinMismatch; entered = ''; });
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return confirmed;
   }
 
   // ── Theme ──────────────────────────────────────────────────
@@ -201,7 +570,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Replace', style: TextStyle(color: AppTheme.rust)),
+            child: Text(l.replaceData, style: const TextStyle(color: AppTheme.rust)),
           ),
         ],
       ),
@@ -209,6 +578,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (merge == null) return;
     final success = await BackupService.instance.importData(data, merge: merge);
     if (mounted) _toast(success ? l.importSuccess : l.importFailed);
+  }
+
+  // ── Auto-backup restore ────────────────────────────────────
+
+  Future<void> _restoreAutoBackup() async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final data = await BackupService.instance.getLatestAutoBackup();
+    if (data == null) {
+      if (mounted) _toast(l.noAutoBackup);
+      return;
+    }
+    final exportDate = data['exportDate'] as String? ?? '';
+    final dateStr = exportDate.isNotEmpty
+        ? exportDate.substring(0, 16).replaceFirst('T', ' ')
+        : '?';
+    final logs = data['logs'] as List? ?? [];
+    if (!mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.restoreAutoBackup, style: AppTheme.display(18, color: accent)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.autoBackupFound(dateStr),
+                style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+            const SizedBox(height: 8),
+            Text(l.importPreview(logs.length),
+                style: AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.restoreButton, style: TextStyle(color: accent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final success = await BackupService.instance.importData(data, merge: true);
+    if (mounted) _toast(success ? l.importSuccess : l.importFailed);
+  }
+
+  // ── Cloud Sync ─────────────────────────────────────────────
+
+  Future<void> _cloudSignIn() async {
+    final l = S.of(context);
+    setState(() => _cloudBusy = true);
+    final ok = await CloudSyncService.instance.signIn();
+    if (!mounted) return;
+    if (ok) {
+      final gmailReady = await CloudSyncService.instance.hasGmailSendScope();
+      if (!mounted) return;
+      setState(() {
+        _cloudSignedIn = true;
+        _cloudEmail = CloudSyncService.instance.currentUser?.email ?? '';
+        _gmailSendReady = gmailReady;
+        _cloudBusy = false;
+      });
+    } else {
+      setState(() => _cloudBusy = false);
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudSignInFailed} $detail');
+    }
+  }
+
+  Future<void> _cloudSignOut() async {
+    await CloudSyncService.instance.signOut();
+    if (!mounted) return;
+    setState(() {
+      _cloudSignedIn = false;
+      _cloudEmail = '';
+      _cloudLastBackup = '';
+      _gmailSendReady = false;
+    });
+  }
+
+  Future<void> _cloudBackup() async {
+    final l = S.of(context);
+    setState(() => _cloudBusy = true);
+    final ok = await CloudSyncService.instance.backupToDrive();
+    if (!mounted) return;
+    setState(() => _cloudBusy = false);
+    if (ok) {
+      final now = DateTime.now().toIso8601String();
+      setState(() => _cloudLastBackup = now);
+      _toast(l.cloudBackupSuccess);
+    } else {
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudBackupFailed} $detail');
+    }
+  }
+
+  Future<void> _cloudRestore() async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.cloudRestoreConfirmTitle, style: AppTheme.display(18, color: accent)),
+        content: Text(l.cloudRestoreConfirmBody, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel, style: TextStyle(color: AppTheme.mutedColor(context))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.restoreButton, style: TextStyle(color: accent)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _cloudBusy = true);
+    final data = await CloudSyncService.instance.downloadFromDrive();
+    if (!mounted) return;
+    if (data == null) {
+      setState(() => _cloudBusy = false);
+      final detail = CloudSyncService.instance.lastError ?? '';
+      _toast('${l.cloudNoBackupFound} $detail');
+      return;
+    }
+    final ok = await BackupService.instance.importData(data, merge: false);
+    if (!mounted) return;
+    setState(() => _cloudBusy = false);
+    _toast(ok ? l.cloudRestoreSuccess : l.cloudRestoreFailed);
   }
 
   // ── Reset ──────────────────────────────────────────────────
@@ -279,7 +784,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final accent = AppTheme.accentGold(context);
     return Expanded(
       child: GestureDetector(
-        onTap: () => DailyAccountApp.setLocale(context, Locale(code)),
+        onTap: () async {
+          DailyAccountApp.setLocale(context, Locale(code));
+          await StorageService.instance.setSetting('appLocale', code);
+          try {
+            await HomeWidget.saveWidgetData('widget_locale', code);
+            await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
+            await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
+            await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+          } catch (_) {}
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
@@ -341,11 +855,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _pickTime(bool daily) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: daily ? _dailyTime : _sundayTime,
+      initialTime: daily ? _dailyTime : _reportDayTime,
       builder: _timePickerBuilder,
     );
     if (picked != null) {
-      setState(() => daily ? _dailyTime = picked : _sundayTime = picked);
+      setState(() => daily ? _dailyTime = picked : _reportDayTime = picked);
+      // Auto-save and schedule immediately so the user doesn't have to tap Save
+      await _saveReminders(showToast: false);
     }
   }
 
@@ -366,13 +882,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 20),
 
         // ── Profile ──
-        SectionCard(icon: '👤', title: l.profileSection, children: [
+        SectionCard(key: _profileSectionKey, icon: '👤', title: l.profileSection, children: [
           GoldField(
             label: l.yourNameLabel,
             hint: l.yourNameHint,
             value: _name,
             onChanged: (v) { _name = v; StorageService.instance.setSetting('myName', v); },
           ),
+        ]),
+
+        // ── Goals ──
+        SectionCard(icon: '🎯', title: l.goalsSection, initiallyExpanded: false, children: [
+          _switchRow(l.goalPaceRemindersEnabled, _goalPaceRemindersEnabled, _toggleGoalPaceReminders),
+          const SizedBox(height: 12),
+          _goalFrequencySubsection(GoalFrequency.daily, l.dailyGoalsLabel, l),
+          const SizedBox(height: 16),
+          _goalFrequencySubsection(GoalFrequency.weekly, l.weeklyGoalsLabel, l),
+          const SizedBox(height: 16),
+          _goalFrequencySubsection(GoalFrequency.monthly, l.monthlyGoalsLabel, l),
+        ]),
+
+        // ── Bible Reading Plan ──
+        SectionCard(icon: '📖', title: l.planSectionTitle, initiallyExpanded: false, children: [
+          _buildPlanSection(l),
         ]),
 
         // ── Disciple Maker ──
@@ -393,6 +925,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ]),
 
+        // ── Home Widget ──
+        SectionCard(icon: '\u{1F3E0}', title: l.widgetTitleSection, children: [
+          GoldField(
+            label: l.widgetTitleLabel,
+            hint: l.widgetTitleHint,
+            value: _widgetTitle,
+            onChanged: (v) async {
+              _widgetTitle = v;
+              await StorageService.instance.setSetting('widgetTitle', v);
+              await HomeWidget.saveWidgetData('widget_title', v);
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              l.widgetTitleDescription,
+              style: AppTheme.serif(11, color: AppTheme.mutedColor(context).withValues(alpha: 0.7)),
+            ),
+          ),
+        ]),
+
         // ── Appearance ──
         SectionCard(icon: '🎨', title: l.themeSection, children: [
           Row(
@@ -402,16 +955,201 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _themeCard(l.themeLight, Icons.light_mode, false),
             ],
           ),
+          const SizedBox(height: 16),
+          // Text size slider
+          Text(l.textSizeLabel.toUpperCase(),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(l.textSizeSmall, style: AppTheme.serif(13, color: mutedCol)),
+              Expanded(
+                child: Slider(
+                  value: DailyAccountApp.getTextScale(context),
+                  min: 0.8,
+                  max: 1.6,
+                  divisions: 8,
+                  activeColor: accent,
+                  inactiveColor: accent.withValues(alpha: 0.2),
+                  label: '${(DailyAccountApp.getTextScale(context) * 100).round()}%',
+                  onChanged: (v) {
+                    DailyAccountApp.setTextScale(context, v);
+                  },
+                ),
+              ),
+              Text(l.textSizeLarge, style: AppTheme.display(18, color: mutedCol)),
+            ],
+          ),
+          // Preview
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.12)),
+            ),
+            child: Text(l.textSizePreview,
+                style: AppTheme.serif(14, color: textCol)),
+          ),
+        ]),
+
+        // ── Time-conscious mode ──
+        SectionCard(icon: '⏱', title: l.timeConsciousLabel, initiallyExpanded: false, children: [
+          _switchRow(l.timeConsciousLabel, _timeConscious, (v) async {
+            setState(() => _timeConscious = v);
+            await StorageService.instance.setSetting('timeConscious', v.toString());
+          }),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(
+              l.timeConsciousDescription,
+              style: AppTheme.serif(11, color: textCol.withValues(alpha: 0.5)),
+            ),
+          ),
+        ]),
+
+        // ── Security ──
+        SectionCard(icon: '🔒', title: l.securitySection, initiallyExpanded: false, children: [
+          _switchRow(l.appLockEnabled, _appLockEnabled, _toggleAppLock),
+          if (_appLockEnabled) ...[
+            if (_biometricsAvailable)
+              _switchRow(l.useBiometrics, _useBiometrics, _toggleBiometrics),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final pin = await _showSetPinDialog();
+                  if (pin != null && mounted) {
+                    await StorageService.instance.setSetting('appPin', pin);
+                    _toast(l.pinSet);
+                  }
+                },
+                icon: Icon(Icons.lock_reset, color: accent),
+                label: Text(l.changePin, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+          ],
         ]),
 
         // ── Notifications ──
-        SectionCard(icon: '🔔', title: l.notificationsSection, children: [
+        SectionCard(key: _notificationsSectionKey, icon: '🔔', title: l.notificationsSection, children: [
           _switchRow(l.notificationsEnabled, _notificationsEnabled, _toggleNotifications),
           if (_notificationsEnabled) ...[
-            const SizedBox(height: 8),
+            // Intensity badge
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: accent.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🚨', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l.intensityAggressive, style: AppTheme.serif(13, color: textCol)),
+                        Text(l.intensityAggressiveDesc, style: AppTheme.label(10, color: mutedCol)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            // ── Notification sound picker ──
+            Text(l.notificationSoundLabel,
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            ...NotificationService.notificationSounds.entries.map((entry) {
+              final selected = _selectedSound == entry.key;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: GestureDetector(
+                  onTap: () async {
+                    setState(() => _selectedSound = entry.key);
+                    await NotificationService.instance.setNotificationSound(entry.key);
+                    await NotificationService.instance.previewSound(entry.key);
+                    await _saveReminders(showToast: false);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? accent.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected
+                            ? accent
+                            : accent.withValues(alpha: 0.15),
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          selected ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: selected ? accent : mutedCol,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '🔔 ${entry.value}',
+                          style: AppTheme.serif(13, color: selected ? textCol : mutedCol),
+                        ),
+                        const Spacer(),
+                        if (selected)
+                          Text(l.soundPlaying, style: AppTheme.label(10, color: accent)),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 14),
+            // ── Notification health check ──
+            _NotificationHealthPanel(hasOemAutostart: _hasOemAutostart),
+            const SizedBox(height: 14),
             _timeRow(l.dailyReminder, _dailyTime, () => _pickTime(true)),
             const SizedBox(height: 8),
-            _timeRow(l.sundayReminder, _sundayTime, () => _pickTime(false)),
+            // Daily follow-ups slider
+            _followUpSlider(
+              label: l.followUpReminders,
+              value: _dailyFollowUps,
+              max: 3,
+              displayText: l.followUpCount(_dailyFollowUps),
+              onChanged: (v) async {
+                setState(() => _dailyFollowUps = v);
+                await StorageService.instance.setSetting('dailyFollowUps', '$v');
+                await _saveReminders(showToast: false);
+              },
+            ),
+            const SizedBox(height: 12),
+            _timeRow(l.reportDayReminder, _reportDayTime, () => _pickTime(false)),
+            const SizedBox(height: 8),
+            // Report-day follow-ups slider
+            _followUpSlider(
+              label: l.sundayFollowUps,
+              value: _reportDayFollowUps,
+              max: 2,
+              displayText: l.sundayFollowUpCount(_reportDayFollowUps),
+              onChanged: (v) async {
+                setState(() => _reportDayFollowUps = v);
+                await StorageService.instance.setSetting('sundayFollowUps', '$v');
+                await _saveReminders(showToast: false);
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(l.followUpDescription, style: AppTheme.serif(11, color: mutedCol)),
             const SizedBox(height: 14),
             GestureDetector(
               onTap: _saveReminders,
@@ -426,7 +1164,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(l.saveReminders, style: AppTheme.display(15, color: AppTheme.bg0)),
               ),
             ),
+            const SizedBox(height: 20),
+            // ── Per-discipline reminders ──
+            Text(l.disciplineReminders.toUpperCase(),
+                style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+            const SizedBox(height: 4),
+            Text(l.disciplineRemindersDesc,
+                style: AppTheme.serif(11, color: mutedCol)),
+            const SizedBox(height: 8),
+            ...List.generate(11, (i) => _disciplineReminderRow(i, accent, textCol, mutedCol)),
           ],
+        ]),
+
+        // ── Report Cadence ──
+        SectionCard(icon: '🗓️', title: l.reportCadenceSection, children: [
+          _cadencePicker(l),
         ]),
 
         // ── Auto-Send ──
@@ -435,6 +1187,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (_autoSendEnabled) ...[
             const SizedBox(height: 8),
             _timeRow(l.autoSendTime, _autoSendTime, _pickAutoSendTime),
+            const SizedBox(height: 12),
+            Text(l.autoSendChannelLabel.toUpperCase(),
+                style: AppTheme.label(11, color: AppTheme.accentGold(context).withValues(alpha: 0.7))),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _channelButton(l.autoSendChannelWhatsApp, 'whatsapp', enabled: true),
+                const SizedBox(width: 8),
+                _channelButton(l.autoSendChannelEmail, 'email', enabled: _canUseEmailChannel),
+                const SizedBox(width: 8),
+                _channelButton(l.autoSendChannelBoth, 'both', enabled: _canUseEmailChannel),
+              ],
+            ),
+            if (!_canUseEmailChannel) ...[
+              const SizedBox(height: 6),
+              Text(l.autoSendEmailDisabledHint,
+                  style: AppTheme.serif(11, color: AppTheme.mutedColor(context))),
+            ],
             const SizedBox(height: 8),
             Text(l.autoSendDescription, style: AppTheme.serif(12, color: mutedCol)),
           ],
@@ -449,10 +1219,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _languageCard('🇫🇷', l.languageFrench, 'fr'),
             ],
           ),
+          const SizedBox(height: 16),
+          // Report language
+          Text(l.reportLanguageSection.toUpperCase(),
+              style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+          const SizedBox(height: 4),
+          Text(l.reportLanguageDesc,
+              style: AppTheme.serif(11, color: mutedCol)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _reportLanguageCard(l.reportLanguageSameAsApp, '', accent, textCol),
+              const SizedBox(width: 8),
+              _reportLanguageCard('English', 'en', accent, textCol),
+              const SizedBox(width: 8),
+              _reportLanguageCard('Français', 'fr', accent, textCol),
+            ],
+          ),
+        ]),
+
+        // ── Cloud Backup ──
+        SectionCard(icon: '☁️', title: l.cloudBackupSection, children: [
+          if (!_cloudSignedIn) ...[
+            Text(l.cloudBackupDescription, style: AppTheme.serif(12, color: mutedCol)),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudSignIn,
+                icon: _cloudBusy
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                    : const Icon(Icons.login, color: AppTheme.bg0),
+                label: Text(l.signInWithGoogle, style: const TextStyle(color: AppTheme.bg0)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accent,
+                  disabledBackgroundColor: accent.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ] else ...[
+            // Signed-in status bar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.green.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.cloud_done, color: AppTheme.green, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(l.signedInAs(_cloudEmail), style: AppTheme.serif(12, color: AppTheme.green))),
+                    ],
+                  ),
+                  if (_cloudLastBackup.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      l.lastCloudBackup(_cloudLastBackup.substring(0, 16).replaceFirst('T', ' ')),
+                      style: AppTheme.serif(11, color: mutedCol),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudBackup,
+                icon: _cloudBusy
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent))
+                    : Icon(Icons.cloud_upload, color: accent),
+                label: Text(l.backupToDrive, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _cloudBusy ? null : _cloudRestore,
+                icon: Icon(Icons.cloud_download, color: accent),
+                label: Text(l.restoreFromDrive, style: TextStyle(color: accent)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _cloudBusy ? null : _cloudSignOut,
+                child: Text(l.signOut, style: AppTheme.serif(12, color: mutedCol)),
+              ),
+            ),
+          ],
         ]),
 
         // ── Backup ──
         SectionCard(icon: '💾', title: l.backupSection, children: [
+          // Auto-backup info
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.green.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.green.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_done, color: AppTheme.green, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(l.autoBackupInfo, style: AppTheme.serif(11, color: AppTheme.green))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -469,6 +1354,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _import,
               icon: Icon(Icons.download, color: accent),
               label: Text(l.importData, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _restoreAutoBackup,
+              icon: Icon(Icons.restore, color: accent),
+              label: Text(l.restoreAutoBackup, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+        ]),
+
+        // ── Replay Tutorial ──
+        SectionCard(icon: '🎓', title: l.replayTutorialSection, initiallyExpanded: false, children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _replayTutorial,
+              icon: Icon(Icons.replay, color: accent),
+              label: Text(l.replayTutorialButton, style: TextStyle(color: accent)),
+              style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
+            ),
+          ),
+        ]),
+
+        // ── Report Archive ──
+        SectionCard(icon: '📜', title: l.reportHistorySection, initiallyExpanded: false, children: [
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ReportHistoryScreen()),
+              ),
+              icon: Icon(Icons.history, color: accent),
+              label: Text(l.reportHistory, style: TextStyle(color: accent)),
               style: OutlinedButton.styleFrom(side: BorderSide(color: accent.withValues(alpha: 0.3))),
             ),
           ),
@@ -504,11 +1427,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           child: Column(
             children: [
-              Text('✝️', style: TextStyle(fontSize: 28, color: accent)),
+              Image.asset('assets/cmfilogo.png', width: 55, height: 55),
               const SizedBox(height: 8),
               Text(l.appTitle, style: AppTheme.display(18, color: accent)),
               const SizedBox(height: 4),
-              Text(l.appVersion('1.1.0'), style: AppTheme.serif(12, color: mutedCol)),
+              Text(l.appVersion(_version), style: AppTheme.serif(12, color: mutedCol)),
+              const SizedBox(height: 4),
+              Text('CMFI', style: AppTheme.label(10, color: accent.withValues(alpha: 0.7))),
               const SizedBox(height: 12),
               Text(l.aboutDescription, textAlign: TextAlign.center, style: AppTheme.serif(13, color: textCol)),
               const SizedBox(height: 8),
@@ -550,6 +1475,363 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  // ── Bible Reading Plan ─────────────────────────────────────────────────────
+
+  Widget _buildPlanSection(dynamic l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final active = _planService.activePlan;
+
+    // Helper: list of all plans to browse
+    Widget planList() {
+      return Column(
+        children: ReadingPlans.all.map((plan) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accent.withValues(alpha: 0.18)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plan.name(locale),
+                          style: AppTheme.serif(14,
+                              color: textCol,
+                              weight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          plan.description(locale),
+                          style: AppTheme.serif(12, color: mutedCol),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  GestureDetector(
+                    onTap: () async {
+                      await _planService.activate(plan.id);
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: accent,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        l.planStart,
+                        style: AppTheme.serif(12,
+                            color: AppTheme.bg0,
+                            weight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    // ── No active plan ──
+    if (active == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.planNoActive, style: AppTheme.serif(13, color: mutedCol)),
+          const SizedBox(height: 12),
+          planList(),
+        ],
+      );
+    }
+
+    // ── Plan completed ──
+    if (active.isComplete) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 22)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l.planCompleted,
+                    style: AppTheme.serif(13, color: accent)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          planList(),
+        ],
+      );
+    }
+
+    // ── Active plan in progress ──
+    final plan = ReadingPlans.getById(active.planId);
+    final planName =
+        plan != null ? plan.name(locale) : active.planId;
+    final percent = (active.progress * 100).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(planName,
+            style: AppTheme.serif(15,
+                color: textCol, weight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: active.progress,
+            minHeight: 7,
+            backgroundColor: accent.withValues(alpha: 0.15),
+            valueColor: AlwaysStoppedAnimation<Color>(accent),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${l.planDayOf(active.currentDay, active.totalDays)}  •  ${l.planProgress(percent)}',
+          style: AppTheme.serif(12, color: mutedCol),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await _planService.pause();
+                  if (mounted) setState(() {});
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: Text(l.planPause,
+                    style: AppTheme.serif(13, color: accent)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () async {
+                  await _planService.reset();
+                  if (mounted) setState(() {});
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                      color: AppTheme.rust.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: Text(l.planReset,
+                    style: AppTheme.serif(13, color: AppTheme.rust)),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _channelButton(String label, String value, {required bool enabled}) {
+    final accent = AppTheme.accentGold(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final selected = _autoSendChannel == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: enabled ? () async {
+          setState(() => _autoSendChannel = value);
+          await StorageService.instance.setSetting('autoSendChannel', value);
+        } : null,
+        child: Opacity(
+          opacity: enabled ? 1.0 : 0.4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+            ),
+            alignment: Alignment.center,
+            child: Text(label, style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _cadencePicker(S l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+
+    Widget segButton(String label, bool selected, VoidCallback onTap) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+            ),
+            alignment: Alignment.center,
+            child: Text(label,
+                style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(l.reportCadenceLabel.toUpperCase(),
+            style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            segButton(l.reportCadenceWeekly, _reportCadence == ReportCadence.weekly,
+                () => _setCadence(ReportCadence.weekly)),
+            const SizedBox(width: 8),
+            segButton(l.reportCadenceMonthly, _reportCadence == ReportCadence.monthly,
+                () => _setCadence(ReportCadence.monthly)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (_reportCadence == ReportCadence.weekly) ...[
+          Text(l.reportWeeklyDayLabel, style: AppTheme.serif(13, color: textCol)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(7, (i) {
+              final weekday = i + 1; // 1=Monday..7=Sunday
+              final dayName = DateFormat('EEE', l.localeName)
+                  .format(DateTime(2026, 1, 4 + weekday));
+              final selected = _reportWeeklyDay == weekday;
+              return GestureDetector(
+                onTap: () => _setWeeklyDay(weekday),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(dayName,
+                      style: AppTheme.label(12, color: selected ? accent : mutedCol)),
+                ),
+              );
+            }),
+          ),
+        ] else ...[
+          Text(l.reportMonthlyDayLabel, style: AppTheme.serif(13, color: textCol)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...List.generate(31, (i) {
+                final day = '${i + 1}';
+                final selected = _reportMonthlyDay == day;
+                return GestureDetector(
+                  onTap: () => _setMonthlyDay(day),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: selected ? accent : accent.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(day,
+                        style: AppTheme.label(11, color: selected ? accent : mutedCol)),
+                  ),
+                );
+              }),
+              GestureDetector(
+                onTap: () => _setMonthlyDay('last'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _reportMonthlyDay == 'last'
+                        ? accent.withValues(alpha: 0.18) : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                        color: _reportMonthlyDay == 'last' ? accent : accent.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(l.reportMonthlyDayLast,
+                      style: AppTheme.label(11,
+                          color: _reportMonthlyDay == 'last' ? accent : mutedCol)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _followUpSlider({
+    required String label,
+    required int value,
+    required int max,
+    required String displayText,
+    required ValueChanged<int> onChanged,
+  }) {
+    final accent = AppTheme.accentGold(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(label, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(displayText, style: AppTheme.label(10, color: accent), textAlign: TextAlign.end),
+            ),
+          ],
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: accent,
+            inactiveTrackColor: accent.withValues(alpha: 0.15),
+            thumbColor: accent,
+            overlayColor: accent.withValues(alpha: 0.1),
+            trackHeight: 4,
+          ),
+          child: Slider(
+            value: value.toDouble(),
+            min: 0,
+            max: max.toDouble(),
+            divisions: max,
+            onChanged: (v) => onChanged(v.round()),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _timeRow(String label, TimeOfDay time, VoidCallback onTap) {
     final accent = AppTheme.accentGold(context);
     return GestureDetector(
@@ -564,9 +1846,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           border: Border.all(color: accent.withValues(alpha: 0.2)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+            Expanded(
+              child: Text(label,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -581,4 +1867,631 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
+
+  Widget _disciplineReminderRow(int index, Color accent, Color textCol, Color mutedCol) {
+    final time = _disciplineTimes[index];
+    final name = _disciplineNames[index];
+    final icon = _disciplineIcons[index];
+    final l = S.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () async {
+          if (time != null) {
+            // Show option to change or turn off
+            final action = await showModalBottomSheet<String>(
+              context: context,
+              backgroundColor: AppTheme.surfaceColor(context),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              builder: (ctx) => Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$icon $name', style: AppTheme.display(18, color: accent)),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: Icon(Icons.access_time, color: accent),
+                      title: Text(l.disciplineReminderSet, style: AppTheme.serif(14, color: textCol)),
+                      onTap: () => Navigator.pop(ctx, 'change'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.notifications_off, color: AppTheme.rust),
+                      title: Text(l.disciplineReminderOff, style: AppTheme.serif(14, color: AppTheme.rust)),
+                      onTap: () => Navigator.pop(ctx, 'off'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+            if (action == 'change') {
+              await _pickDisciplineTime(index);
+            } else if (action == 'off') {
+              setState(() => _disciplineTimes.remove(index));
+              await StorageService.instance.setSetting('discReminder_$index', '');
+              await NotificationService.instance.cancelDisciplineReminder(index);
+            }
+          } else {
+            await _pickDisciplineTime(index);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: time != null
+                ? accent.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: time != null
+                  ? accent.withValues(alpha: 0.2)
+                  : AppTheme.faintColor(context).withValues(alpha: 0.15),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(name, style: AppTheme.serif(13, color: textCol)),
+              ),
+              if (time != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(time.format(context),
+                      style: AppTheme.label(10, color: accent)),
+                )
+              else
+                Text(l.disciplineReminderOff,
+                    style: AppTheme.label(10, color: mutedCol)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _reportLanguageCard(String label, String code, Color accent, Color textCol) {
+    final isSelected = _reportLanguage == code;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() => _reportLanguage = code);
+          StorageService.instance.setSetting('reportLanguage', code);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? accent.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? accent : accent.withValues(alpha: 0.2),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(label,
+              style: AppTheme.serif(12, color: isSelected ? accent : textCol),
+              textAlign: TextAlign.center),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addGoal(GoalFrequency frequency) async {
+    final metric = await _pickGoalMetric(frequency);
+    if (metric == null) return;
+    final result = await _pickGoalTarget(metric);
+    if (result == null) return;
+    final (target, unit) = result;
+    setState(() {
+      _goals.add(Goal(
+        id: metric.key,
+        metricKey: metric.key,
+        frequency: frequency,
+        target: target,
+        unit: unit,
+      ));
+    });
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  Future<void> _editGoal(Goal goal) async {
+    final metric = _metricFor(goal.metricKey);
+    if (metric == null) return;
+    final result = await _pickGoalTarget(metric, initialTarget: goal.target, initialUnit: goal.unit);
+    if (result == null) return;
+    final (target, unit) = result;
+    setState(() {
+      goal.target = target;
+      goal.unit = unit;
+    });
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  Future<void> _removeGoal(Goal goal) async {
+    setState(() => _goals.remove(goal));
+    await StorageService.instance.saveGoals(_goals);
+  }
+
+  GoalMetric? _metricFor(String metricKey) {
+    final all = [...GoalMetrics.builtIn, ...GoalMetrics.fromCustomActivities(_customActivitiesForGoals)];
+    for (final m in all) {
+      if (m.key == metricKey) return m;
+    }
+    return null;
+  }
+
+  Future<GoalMetric?> _pickGoalMetric(GoalFrequency frequency) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final alreadyGoaled = _goals.where((g) => g.frequency == frequency).map((g) => g.metricKey).toSet();
+    final builtIn = GoalMetrics.builtIn.where((m) => !alreadyGoaled.contains(m.key)).toList();
+    final custom = GoalMetrics.fromCustomActivities(_customActivitiesForGoals)
+        .where((m) => !alreadyGoaled.contains(m.key)).toList();
+
+    return showModalBottomSheet<GoalMetric>(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l.selectMetric, style: AppTheme.display(16, color: accent)),
+                const SizedBox(height: 12),
+                if (builtIn.isNotEmpty) ...[
+                  Text(l.builtInMetrics.toUpperCase(), style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+                  ...builtIn.map((m) => ListTile(
+                        leading: Text(m.icon, style: const TextStyle(fontSize: 20)),
+                        title: Text(m.label(l), style: AppTheme.serif(14, color: textCol)),
+                        onTap: () => Navigator.pop(ctx, m),
+                      )),
+                ],
+                if (custom.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(l.yourActivities.toUpperCase(), style: AppTheme.label(11, color: accent.withValues(alpha: 0.7))),
+                  ...custom.map((m) => ListTile(
+                        leading: Text(m.icon, style: const TextStyle(fontSize: 20)),
+                        title: Text(m.label(l), style: AppTheme.serif(14, color: textCol)),
+                        onTap: () => Navigator.pop(ctx, m),
+                      )),
+                ],
+                if (builtIn.isEmpty && custom.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(l.noGoalsYetForFrequency, style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<(int, GoalUnit)?> _pickGoalTarget(GoalMetric metric, {int? initialTarget, GoalUnit? initialUnit}) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final showUnitToggle = metric.baseUnit == GoalUnit.minutes;
+    GoalUnit selectedUnit = initialUnit ?? metric.baseUnit;
+    final displayValue = initialTarget != null && selectedUnit == GoalUnit.hours
+        ? (initialTarget / 60).toStringAsFixed(1)
+        : (initialTarget?.toString() ?? '');
+    final controller = TextEditingController(text: displayValue);
+
+    return showModalBottomSheet<(int, GoalUnit)>(
+      context: context,
+      backgroundColor: AppTheme.surfaceColor(context),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Text(metric.icon, style: const TextStyle(fontSize: 22)),
+                const SizedBox(width: 10),
+                Text(metric.label(l), style: AppTheme.display(16, color: accent)),
+              ]),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(labelText: l.enterTarget),
+              ),
+              if (showUnitToggle) ...[
+                const SizedBox(height: 12),
+                Row(children: [
+                  ChoiceChip(
+                    label: Text(l.minutesUnit),
+                    selected: selectedUnit == GoalUnit.minutes,
+                    onSelected: (_) => setSheetState(() => selectedUnit = GoalUnit.minutes),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: Text(l.hoursUnit),
+                    selected: selectedUnit == GoalUnit.hours,
+                    onSelected: (_) => setSheetState(() => selectedUnit = GoalUnit.hours),
+                  ),
+                ]),
+              ],
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  final raw = double.tryParse(controller.text) ?? 0;
+                  final minutesOrCount = selectedUnit == GoalUnit.hours ? (raw * 60).round() : raw.round();
+                  Navigator.pop(ctx, (minutesOrCount, selectedUnit));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(gradient: AppTheme.goldGradient, borderRadius: BorderRadius.circular(12)),
+                  alignment: Alignment.center,
+                  child: Text(l.saveGoals, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _goalFrequencySubsection(GoalFrequency frequency, String title, S l) {
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+    final goalsForFrequency = _goals.where((g) => g.frequency == frequency).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title.toUpperCase(), style: AppTheme.label(12, color: accent)),
+        const SizedBox(height: 8),
+        if (goalsForFrequency.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(l.noGoalsYetForFrequency, style: AppTheme.serif(12, color: mutedCol)),
+          )
+        else
+          ...goalsForFrequency.map((goal) => _goalRow(goal, l, accent, textCol, mutedCol)),
+        GestureDetector(
+          onTap: () => _addGoal(frequency),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border.all(color: accent.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            alignment: Alignment.center,
+            child: Text(l.addGoal, style: AppTheme.label(12, color: accent)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _toggleGoalPaceReminders(bool value) async {
+    setState(() => _goalPaceRemindersEnabled = value);
+    await StorageService.instance.setSetting('goalPaceRemindersEnabled', value ? 'true' : 'false');
+    await NotificationService.instance.scheduleGoalPaceChecks(); // re-arm with the new setting
+  }
+
+  Widget _goalRow(Goal goal, S l, Color accent, Color textCol, Color mutedCol) {
+    final metric = _metricFor(goal.metricKey);
+    final icon = goal.customIcon ?? metric?.icon ?? '✨';
+    final label = goal.customLabel ?? metric?.label(l) ?? goal.metricKey;
+    final displayTarget = goal.unit == GoalUnit.hours ? '${(goal.target / 60).toStringAsFixed(1)}h' : '${goal.target}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: GestureDetector(
+        onTap: () => _editGoal(goal),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: accent.withValues(alpha: 0.2)),
+          ),
+          child: Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 16)),
+              const SizedBox(width: 8),
+              Expanded(child: Text(label, style: AppTheme.serif(13, color: textCol))),
+              Text(displayTarget, style: AppTheme.label(12, color: accent)),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _removeGoal(goal),
+                child: Icon(Icons.close, size: 16, color: mutedCol),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDisciplineTime(int index) async {
+    final accent = AppTheme.accentGold(context);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _disciplineTimes[index] ?? const TimeOfDay(hour: 6, minute: 0),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: AppTheme.isDark(context)
+              ? ColorScheme.dark(primary: accent, surface: AppTheme.bg2, onSurface: AppTheme.cream)
+              : ColorScheme.light(primary: accent, surface: AppTheme.lightBg2, onSurface: AppTheme.lightText),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() => _disciplineTimes[index] = picked);
+      final s = StorageService.instance;
+      await s.setSetting('discReminder_$index', '${picked.hour}:${picked.minute}');
+      await s.setSetting('discName_$index', _disciplineNames[index]);
+      await NotificationService.instance.scheduleDisciplineReminder(
+        index, picked.hour, picked.minute, _disciplineNames[index],
+      );
+    }
+  }
+}
+
+/// Collapsed-by-default notification health summary. Shows a single status
+/// line ("Reminders healthy" / "Action needed") and expands on tap into the
+/// full permission/OEM/pending-notifications detail — keeps this out of the
+/// way for the common case where everything is already working.
+class _NotificationHealthPanel extends StatefulWidget {
+  final bool hasOemAutostart;
+  const _NotificationHealthPanel({required this.hasOemAutostart});
+
+  @override
+  State<_NotificationHealthPanel> createState() => _NotificationHealthPanelState();
+}
+
+class _NotificationHealthPanelState extends State<_NotificationHealthPanel> {
+  bool _expanded = false;
+
+  void _toast(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final textCol = AppTheme.textColor(context);
+    final mutedCol = AppTheme.mutedColor(context);
+
+    final diag = NotificationService.instance.diagnostics;
+    final stats = NotificationService.instance.scheduleStats;
+    final allGood = diag.values.every((v) => v);
+    final statusColor = allGood ? Colors.green : Colors.orange;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Text(allGood ? '✅' : '⚠️', style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    allGood ? l.notificationsHealthy : l.notificationIssuesDetected,
+                    style: AppTheme.serif(13, color: textCol),
+                  ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: mutedCol,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            _diagRow(context, l.diagPermissionGranted, diag['notificationPermission'] ?? false),
+            _diagRow(context, l.diagExactAlarms, diag['exactAlarmPermission'] ?? false),
+            Row(
+              children: [
+                Expanded(child: _diagRow(context, l.diagBatteryOptimized, diag['batteryOptExempt'] ?? false)),
+                if (!(diag['batteryOptExempt'] ?? false))
+                  GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.requestBatteryOptimizationExemption();
+                      if (mounted) setState(() {});
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
+                    ),
+                  ),
+              ],
+            ),
+            if (widget.hasOemAutostart) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l.diagOemAutostart,
+                      style: AppTheme.serif(12, color: mutedCol),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.openOemAutostartSettings();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(l.diagFix, style: AppTheme.label(10, color: Colors.orange)),
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  l.diagOemAutostartHint,
+                  style: AppTheme.label(9, color: mutedCol),
+                ),
+              ),
+            ],
+            Text(
+              l.diagScheduledFailed(stats.$1, stats.$2),
+              style: AppTheme.label(10, color: mutedCol),
+            ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              onTap: () async {
+                final pending = await NotificationService.instance.getPendingNotifications();
+                if (!mounted) return;
+                final names = {
+                  1: l.notifNameDaily,
+                  2: l.notifNameSunday,
+                  3: l.notifNameAutoSend,
+                  11: l.notifNameDailyFollowUp1,
+                  12: l.notifNameDailyFollowUp2,
+                  13: l.notifNameDailyFollowUp3,
+                  21: l.notifNameSundayFollowUp1,
+                  22: l.notifNameSundayFollowUp2,
+                  30: l.notifNameMidWeekNudge,
+                  40: l.notifNameSaturdaySummary,
+                };
+                final lines = pending.map((n) {
+                  final label = names[n.id] ?? (n.id >= 110 && n.id <= 120
+                      ? l.notifNameDiscipline(n.id - 110)
+                      : '#${n.id}');
+                  return '$label (${n.id})';
+                }).toList()
+                  ..sort();
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: AppTheme.surfaceColor(context),
+                    title: Text(l.pendingNotificationsTitle(pending.length),
+                        style: AppTheme.display(16, color: accent)),
+                    content: SingleChildScrollView(
+                      child: Text(
+                        lines.isEmpty ? l.noneScheduled : lines.join('\n'),
+                        style: AppTheme.serif(13, color: textCol),
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(l.ok, style: TextStyle(color: accent)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Text(
+                l.tapToSeePending,
+                style: AppTheme.label(10, color: accent.withValues(alpha: 0.7)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final ok = await NotificationService.instance.testNotification();
+                      if (ok) {
+                        _toast(l.testNotifSent);
+                      } else {
+                        _toast(l.testNotifFailed);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: accent.withValues(alpha: 0.4)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.testNotifButton, style: AppTheme.label(11, color: accent)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      await NotificationService.instance.rescheduleAll();
+                      if (mounted) {
+                        setState(() {});
+                        _toast(l.allNotificationsRescheduled);
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: accent.withValues(alpha: 0.4)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.rescheduleAll, style: AppTheme.label(11, color: accent)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Widget _diagRow(BuildContext context, String label, bool ok) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 2),
+    child: Row(
+      children: [
+        Icon(ok ? Icons.check_circle : Icons.cancel,
+            size: 14, color: ok ? Colors.green : Colors.orange),
+        const SizedBox(width: 6),
+        Text(label, style: AppTheme.label(11, color: AppTheme.mutedColor(context))),
+      ],
+    ),
+  );
 }

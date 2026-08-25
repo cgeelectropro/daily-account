@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto Backup rules (API 31+) -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="database" path="daily_account.db" />
+        <include domain="sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="database" path="daily_account.db" />
+        <include domain="sharedpref" path="." />
+    </device-transfer>
+</data-extraction-rules>

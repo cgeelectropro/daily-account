@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Votre tableau spirituel — disciplines, chronomètre, série &amp; écriture quotidienne</string>
+
+    <!-- Scripture Card -->
+    <string name="widget_scripture_desc">Carte d\'écriture quotidienne — verset, proclamation &amp; votre parole du jour</string>
+    <string name="widget_daily_verse">Verset du Jour</string>
+    <string name="widget_proclamation_label">Proclamation</string>
+    <string name="widget_your_word_today">Votre Parole Aujourd\'hui</string>
+    <string name="widget_proclamation_text">JÉSUS-CHRIST EST LE SEIGNEUR</string>
+
+    <!-- Discipline Bar -->
+    <string name="widget_discipline_bar_desc">Basculer les disciplines &amp; suivre vos progrès quotidiens</string>
+
+    <!-- Full Altar -->
+    <string name="widget_full_altar_desc">Tableau complet — écriture, disciplines &amp; contrôles du chronomètre</string>
+    <string name="widget_start_timer">Démarrer</string>
+    <string name="widget_open_log">Ouvrir Journal</string>
+    <string name="widget_keep_streak">Maintenez votre série!</string>
+    <string name="widget_days_this_week">%1$d sur 7 jours cette semaine</string>
+    <string name="widget_prayer">Prière</string>
+    <string name="widget_bible">Bible</string>
+    <string name="widget_literature">Littérature</string>
+
+    <!-- Proclamation Counter -->
+    <string name="widget_proclamation_counter_desc">Appuyez pour proclamer — Jésus-Christ est le Seigneur</string>
+    <string name="widget_proclamations_today">Proclamations Aujourd\'hui</string>
+</resources>

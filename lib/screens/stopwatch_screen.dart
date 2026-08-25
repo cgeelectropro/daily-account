@@ -1,0 +1,2369 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
+import '../l10n/generated/app_localizations.dart';
+import '../models/activity_timer.dart';
+import '../models/custom_activity.dart';
+import '../models/daily_log.dart';
+import '../services/storage_service.dart';
+import '../services/timer_service.dart';
+import '../theme/app_theme.dart';
+import '../utils/bible_books.dart';
+import '../widgets/coach_mark.dart';
+import '../widgets/common_widgets.dart';
+import 'prayer_topic_screen.dart';
+import 'proclamation_topic_screen.dart';
+
+class StopwatchScreen extends StatefulWidget {
+  /// Called when a timer is stopped so the parent can refresh the log.
+  final VoidCallback? onTimerStopped;
+
+  const StopwatchScreen({super.key, this.onTimerStopped});
+
+  @override
+  State<StopwatchScreen> createState() => _StopwatchScreenState();
+}
+
+class _StopwatchScreenState extends State<StopwatchScreen> {
+  List<CustomActivity> _customActivities = [];
+  final _firstTimerKey = GlobalKey();
+  final _proclamationKey = GlobalKey();
+  final _addActivityKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    TimerService.instance.addListener(_onTick);
+    _loadCustomActivities();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowCoachMarks());
+  }
+
+  Future<void> _maybeShowCoachMarks() async {
+    const flag = 'coachmark_stopwatch_shown';
+    final shown = await StorageService.instance.getSetting(flag, fallback: '');
+    if (shown == 'true' || !mounted) return;
+    final l = S.of(context);
+    final shownAny = await showCoachMarkSequence(context, steps: [
+      CoachMarkStep(targetKey: _firstTimerKey, caption: l.coachStopwatchTimer),
+      CoachMarkStep(targetKey: _proclamationKey, caption: l.coachStopwatchProclamation),
+      CoachMarkStep(targetKey: _addActivityKey, caption: l.coachStopwatchAddActivity),
+    ]);
+    if (shownAny) {
+      await StorageService.instance.setSetting(flag, 'true');
+    }
+  }
+
+  @override
+  void dispose() {
+    TimerService.instance.removeListener(_onTick);
+    super.dispose();
+  }
+
+  void _onTick() {
+    if (!mounted) return;
+    setState(() {});
+    final ts = TimerService.instance;
+    if (ts.pendingCancelKey != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final pendingKey = ts.pendingCancelKey;
+        if (pendingKey != null) {
+          ts.clearPendingCancel();
+          _cancelTimer(pendingKey);
+        }
+      });
+    }
+  }
+
+  Future<void> _loadCustomActivities() async {
+    final list = await StorageService.instance.getCustomActivities();
+    if (mounted) setState(() => _customActivities = list);
+  }
+
+  /// Localised label for each activity type.
+  String _label(S l, ActivityType type) {
+    switch (type) {
+      case ActivityType.bibleReading:
+        return l.sectionBible;
+      case ActivityType.literature:
+        return l.sectionLiterature;
+      case ActivityType.ddeg:
+        return l.ddegShort;
+      case ActivityType.prayerAlone:
+        return l.sectionPrayerAlone;
+      case ActivityType.prayerOthers:
+        return l.sectionPrayerOthers;
+      case ActivityType.evangelism:
+        return l.sectionEvangelism;
+      case ActivityType.fasting:
+        return l.sectionFasting;
+      case ActivityType.discipleship:
+        return l.sectionDiscipleship;
+      case ActivityType.church:
+        return l.sectionChurch;
+      case ActivityType.proclamation:
+        return l.sectionProclamation;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = S.of(context);
+    final ts = TimerService.instance;
+    final accent = AppTheme.accentGold(context);
+    final runningKey = ts.activeKey;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 120),
+      children: [
+        // Title
+        Text(l.stopwatchTitle, style: AppTheme.display(24, color: accent)),
+        Text(l.stopwatchSubtitle,
+            style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+        const SizedBox(height: 16),
+
+        // Active timer hero (if running or paused)
+        if (runningKey != null) ...[
+          _activeTimerHero(runningKey, ts, accent, paused: false),
+          const SizedBox(height: 20),
+        ] else ...[
+          // Check for paused timer to show hero with Resume
+          for (final entry in ts.sessions.entries)
+            if (entry.value.paused) ...[
+              _activeTimerHero(entry.key, ts, accent, paused: true),
+              const SizedBox(height: 20),
+            ],
+        ],
+
+        // Today's total
+        _todayTotalBanner(ts, accent),
+        const SizedBox(height: 16),
+
+        // Activity grid
+        _activityGrid(l, ts, accent),
+      ],
+    );
+  }
+
+  Widget _activeTimerHero(TimerKey key, TimerService ts, Color accent, {bool paused = false}) {
+    final session = ts.getSession(key)!;
+    final icon = key.isBuiltIn
+        ? key.builtIn!.icon
+        : _customActivities
+            .where((c) => c.id == key.customId)
+            .map((c) => c.icon)
+            .firstOrNull ?? '\u2728';
+    final label = key.isBuiltIn
+        ? _label(S.of(context), key.builtIn!)
+        : _customActivities
+            .where((c) => c.id == key.customId)
+            .map((c) => c.name)
+            .firstOrNull ?? '';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: [
+          accent.withValues(alpha: 0.2),
+          AppTheme.goldDeep.withValues(alpha: 0.1),
+        ]),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 8),
+          Text(label,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+          const SizedBox(height: 12),
+          Text(session.stopwatchDisplay,
+              style: AppTheme.display(48, color: accent)),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _controlButton(
+                icon: Icons.close_rounded,
+                color: Colors.grey,
+                onTap: () => _cancelTimer(key),
+              ),
+              const SizedBox(width: 24),
+              if (!paused)
+                _controlButton(
+                  icon: Icons.pause_rounded,
+                  color: AppTheme.goldSoft,
+                  onTap: () => ts.pause(key),
+                )
+              else
+                _controlButton(
+                  icon: Icons.play_arrow_rounded,
+                  color: AppTheme.green,
+                  onTap: () => ts.start(key),
+                ),
+              const SizedBox(width: 24),
+              _controlButton(
+                icon: Icons.stop_rounded,
+                color: AppTheme.rust,
+                onTap: () => _stopTimer(key),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn().scale(begin: const Offset(0.96, 0.96));
+  }
+
+  Widget _todayTotalBanner(TimerService ts, Color accent) {
+    final total = ts.todayTotal;
+    final h = total.inHours;
+    final m = total.inMinutes % 60;
+    final display = h > 0 ? '${h}h ${m.toString().padLeft(2, '0')}m' : '${m}m';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Text('\u23F1\uFE0F', style: TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(S.of(context).todayTotal,
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+          ),
+          Text(display, style: AppTheme.display(20, color: accent)),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityGrid(S l, TimerService ts, Color accent) {
+    final builtIn = ActivityType.values.where((a) => a != ActivityType.fasting).toList();
+    final totalCount = builtIn.length + _customActivities.length + 1;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.3,
+      ),
+      itemCount: totalCount,
+      itemBuilder: (ctx, i) {
+        if (i < builtIn.length) {
+          return _activityTile(builtIn[i], l, ts, accent);
+        }
+        final customIdx = i - builtIn.length;
+        if (customIdx < _customActivities.length) {
+          return _customActivityTile(_customActivities[customIdx], ts, accent);
+        }
+        return _addActivityTile(l, accent);
+      },
+    );
+  }
+
+  Widget _activityTile(
+      ActivityType activity, S l, TimerService ts, Color accent) {
+    final key = TimerKey.builtIn(activity);
+    final session = ts.getSession(key);
+    final isRunning = session?.isRunning ?? false;
+    final isPaused = session?.paused ?? false;
+    final hasElapsed = session != null && session.currentElapsed > Duration.zero;
+    final dark = AppTheme.isDark(context);
+    final wrapperKey = activity == ActivityType.bibleReading
+        ? _firstTimerKey
+        : activity == ActivityType.proclamation
+            ? _proclamationKey
+            : null;
+
+    return Container(
+      key: wrapperKey,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isRunning
+            ? accent.withValues(alpha: 0.15)
+            : dark
+                ? Colors.white.withValues(alpha: 0.04)
+                : Colors.black.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isRunning
+              ? accent.withValues(alpha: 0.5)
+              : accent.withValues(alpha: 0.12),
+          width: isRunning ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(activity.icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(_label(l, activity),
+                    style:
+                        AppTheme.serif(11, color: AppTheme.textColor(context)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+          const Spacer(),
+          if (hasElapsed)
+            Text(session.formattedDuration,
+                style: AppTheme.display(16, color: accent)),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (!isRunning && !isPaused)
+                _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                  if (activity == ActivityType.proclamation) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ProclamationTopicScreen()),
+                    );
+                  } else if (activity == ActivityType.bibleReading) {
+                    _showBibleStartDialog();
+                  } else if (activity == ActivityType.prayerAlone ||
+                      activity == ActivityType.prayerOthers) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              PrayerTopicScreen(activityType: activity)),
+                    );
+                  } else {
+                    _showFieldsAndStart(activity);
+                  }
+                }),
+              if (isRunning) ...[
+                _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                const SizedBox(width: 8),
+                _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
+                  ts.pause(key);
+                }),
+                const SizedBox(width: 8),
+                _tileButton(
+                    Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+              ],
+              if (isPaused) ...[
+                _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                const SizedBox(width: 8),
+                _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                  ts.start(key);
+                }),
+                const SizedBox(width: 8),
+                _tileButton(
+                    Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Custom activity tiles ────────────────────────────────────
+
+  Widget _customActivityTile(
+      CustomActivity ca, TimerService ts, Color accent) {
+    final key = TimerKey.custom(ca.id);
+    final session = ts.getSession(key);
+    final isRunning = session?.isRunning ?? false;
+    final isPaused = session?.paused ?? false;
+    final hasElapsed = session != null && session.currentElapsed > Duration.zero;
+    final dark = AppTheme.isDark(context);
+
+    return Tooltip(
+      message: S.of(context).longPressToDeleteActivity,
+      child: GestureDetector(
+        onLongPress: () => _confirmDeleteActivity(ca),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isRunning
+                ? accent.withValues(alpha: 0.15)
+                : dark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isRunning
+                  ? accent.withValues(alpha: 0.5)
+                  : accent.withValues(alpha: 0.12),
+              width: isRunning ? 1.5 : 1,
+            ),
+          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(ca.icon, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(ca.name,
+                      style: AppTheme.serif(11,
+                          color: AppTheme.textColor(context)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+              ],
+            ),
+            const Spacer(),
+            if (hasElapsed)
+              Text(session.formattedDuration,
+                  style: AppTheme.display(16, color: accent)),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (!isRunning && !isPaused)
+                  _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                    // If activity has a counter field, open counter modal
+                    final hasCounter = ca.fields.any((f) => f.type == CustomFieldType.counter);
+                    if (hasCounter) {
+                      _openCustomCounterModal(ca);
+                    } else {
+                      _showCustomFieldsAndStart(ca);
+                    }
+                  }),
+                if (isRunning) ...[
+                  _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                  const SizedBox(width: 8),
+                  _tileButton(Icons.pause_rounded, AppTheme.goldSoft, () {
+                    ts.pause(key);
+                  }),
+                  const SizedBox(width: 8),
+                  _tileButton(
+                      Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+                ],
+                if (isPaused) ...[
+                  _tileButton(Icons.close_rounded, Colors.grey, () => _cancelTimer(key)),
+                  const SizedBox(width: 8),
+                  _tileButton(Icons.play_arrow_rounded, AppTheme.green, () {
+                    ts.start(key);
+                  }),
+                  const SizedBox(width: 8),
+                  _tileButton(
+                      Icons.stop_rounded, AppTheme.rust, () => _stopTimer(key)),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+    );
+  }
+
+  Widget _addActivityTile(S l, Color accent) {
+    return GestureDetector(
+      onTap: () => _showAddActivityDialog(l, accent),
+      child: Container(
+        key: _addActivityKey,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: accent.withValues(alpha: 0.2),
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_rounded, color: accent, size: 32),
+            const SizedBox(height: 6),
+            Text(l.addActivity,
+                style: AppTheme.serif(11, color: accent),
+                textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddActivityDialog(S l, Color accent) {
+    String name = '';
+    String icon = '\u2728';
+    final fields = <CustomField>[];
+    bool countsForProgress = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.isDark(context) ? AppTheme.bg1 : AppTheme.lightBg1,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Text(l.customActivityTitle,
+                    style: AppTheme.display(18, color: AppTheme.accentGold(ctx))),
+                const SizedBox(height: 16),
+
+                // Name + Icon row
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        style: AppTheme.serif(14, color: AppTheme.textColor(ctx)),
+                        decoration: InputDecoration(
+                          labelText: l.customActivityName,
+                          hintText: l.customActivityNameHint,
+                          labelStyle: AppTheme.serif(12, color: AppTheme.accentGold(ctx)),
+                          hintStyle: AppTheme.serif(12, color: AppTheme.faintColor(ctx)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: AppTheme.accentGold(ctx).withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: AppTheme.accentGold(ctx))),
+                        ),
+                        onChanged: (v) => setModalState(() => name = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () async {
+                        final emojis = ['\u2728', '\uD83D\uDE4F', '\uD83C\uDFB5',
+                          '\uD83D\uDCAA', '\u2764\uFE0F', '\uD83D\uDD25', '\u2B50',
+                          '\uD83C\uDF1F', '\uD83D\uDC51', '\uD83C\uDF3F',
+                          '\uD83D\uDCA1', '\uD83C\uDFAF', '\u270D\uFE0F', '\uD83D\uDCD6'];
+                        final picked = await showDialog<String>(
+                          context: ctx,
+                          builder: (_) => AlertDialog(
+                            title: Text(l.customActivityIcon),
+                            content: Wrap(
+                              spacing: 12, runSpacing: 12,
+                              children: emojis.map((e) => GestureDetector(
+                                onTap: () => Navigator.pop(ctx, e),
+                                child: Text(e, style: const TextStyle(fontSize: 28)),
+                              )).toList(),
+                            ),
+                          ),
+                        );
+                        if (picked != null) setModalState(() => icon = picked);
+                      },
+                      child: Container(
+                        width: 52, height: 52,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: AppTheme.accentGold(ctx).withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                            child: Text(icon, style: const TextStyle(fontSize: 28))),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Quick templates
+                Text(l.customActivityTemplates,
+                    style: AppTheme.label(12,
+                        color: AppTheme.textColor(ctx).withValues(alpha: 0.6))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _templateChip(l.customActivityTemplateSimple, [], fields, setModalState),
+                    _templateChip(l.customActivityTemplateTimed, [
+                      CustomField(label: 'Duration', type: CustomFieldType.duration),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                    _templateChip(l.customActivityTemplateCounted, [
+                      CustomField(label: 'Count', type: CustomFieldType.counter),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                    _templateChip(l.customActivityTemplateFull, [
+                      CustomField(label: 'Duration', type: CustomFieldType.duration),
+                      CustomField(label: 'Count', type: CustomFieldType.number),
+                      CustomField(label: 'Person', type: CustomFieldType.text),
+                      CustomField(label: 'Notes', type: CustomFieldType.notes),
+                    ], fields, setModalState),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Custom fields list
+                ...fields.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final f = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              hintText: l.customActivityFieldLabel,
+                              isDense: true,
+                            ),
+                            controller: TextEditingController(text: f.label),
+                            onChanged: (v) => f.label = v,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: DropdownButtonFormField<CustomFieldType>(
+                            initialValue: f.type,
+                            isDense: true,
+                            decoration: const InputDecoration(isDense: true),
+                            items: CustomFieldType.values
+                                .map((ft) => DropdownMenuItem(
+                                    value: ft,
+                                    child: Text(_fieldTypeName(ft, ctx, l))))
+                                .toList(),
+                            onChanged: (v) =>
+                                setModalState(() => f.type = v!),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () =>
+                              setModalState(() => fields.removeAt(i)),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+
+                // Add field button
+                if (fields.length < 8)
+                  TextButton.icon(
+                    onPressed: () => setModalState(() => fields
+                        .add(CustomField(label: '', type: CustomFieldType.text))),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l.customActivityAddField),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(l.customActivityMaxFields,
+                        style: AppTheme.serif(11, color: AppTheme.rust)),
+                  ),
+                const SizedBox(height: 8),
+
+                // Counts for progress toggle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                        child: Text(l.customActivityCountsForProgress,
+                            style: AppTheme.serif(14,
+                                color: AppTheme.textColor(ctx)))),
+                    Switch.adaptive(
+                      value: countsForProgress,
+                      activeTrackColor: AppTheme.accentGold(ctx),
+                      onChanged: (v) =>
+                          setModalState(() => countsForProgress = v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Save button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentGold(ctx),
+                      foregroundColor: AppTheme.bg0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: name.trim().isEmpty
+                        ? null
+                        : () async {
+                            fields.removeWhere((f) => f.label.trim().isEmpty);
+                            final activity = CustomActivity(
+                              id: DateTime.now()
+                                  .millisecondsSinceEpoch
+                                  .toString(),
+                              name: name.trim(),
+                              icon: icon,
+                              fields: List<CustomField>.from(fields),
+                              countsForCompleteness: countsForProgress,
+                            );
+                            final nav = Navigator.of(ctx);
+                            await StorageService.instance
+                                .addCustomActivity(activity);
+                            if (!mounted) return;
+                            nav.pop();
+                            _loadCustomActivities();
+                          },
+                    child: Text(l.save),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _templateChip(String label, List<CustomField> template,
+      List<CustomField> target, StateSetter setModalState) {
+    return ActionChip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      onPressed: () => setModalState(() {
+        target.clear();
+        target.addAll(
+            template.map((f) => CustomField(label: f.label, type: f.type)));
+      }),
+    );
+  }
+
+  String _fieldTypeName(CustomFieldType type, BuildContext ctx, S l) {
+    switch (type) {
+      case CustomFieldType.text:
+        return l.customFieldTypeText;
+      case CustomFieldType.number:
+        return l.customFieldTypeNumber;
+      case CustomFieldType.duration:
+        return l.customFieldTypeDuration;
+      case CustomFieldType.yesNo:
+        return l.customFieldTypeYesNo;
+      case CustomFieldType.notes:
+        return l.customFieldTypeNotes;
+      case CustomFieldType.counter:
+        return l.customFieldTypeCounter;
+    }
+  }
+
+  void _confirmDeleteActivity(CustomActivity ca) {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.deleteActivityConfirm,
+            style: AppTheme.display(18, color: accent)),
+        content: Text('${ca.icon} ${ca.name}',
+            style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancel,
+                style: TextStyle(color: AppTheme.mutedColor(context))),
+          ),
+          TextButton(
+            onPressed: () async {
+              await StorageService.instance.removeCustomActivity(ca.id);
+              Navigator.pop(ctx);
+              _loadCustomActivities();
+            },
+            child: Text(l.deleteReport,
+                style: const TextStyle(color: AppTheme.rust)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show fields for a custom activity, then start its timer.
+  void _showCustomFieldsAndStart(CustomActivity ca) {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final key = TimerKey.custom(ca.id);
+    final controllers = List.generate(
+        ca.fields.length, (_) => TextEditingController());
+
+    if (ca.fields.isEmpty) {
+      // No fields — start directly
+      TimerService.instance.start(key, fields: {'_customName': ca.name});
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(ca.icon, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(ca.name,
+                        style: AppTheme.display(18, color: accent))),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(l.stopwatchFillFields,
+                style:
+                    AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            ...List.generate(
+              ca.fields.length,
+              (i) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controllers[i],
+                  style: AppTheme.serif(14,
+                      color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: ca.fields[i].label,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () {
+                  final fieldMap = <String, String>{
+                    '_customName': ca.name,
+                  };
+                  for (var i = 0; i < controllers.length; i++) {
+                    if (controllers[i].text.isNotEmpty) {
+                      fieldMap[ca.fields[i].label] = controllers[i].text;
+                    }
+                  }
+                  for (final c in controllers) {
+                    c.dispose();
+                  }
+                  Navigator.pop(ctx);
+                  TimerService.instance.start(key, fields: fieldMap);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.play_arrow_rounded,
+                          color: AppTheme.bg0, size: 22),
+                      const SizedBox(width: 8),
+                      Text(l.startTimer,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Field definitions per activity ──────────────────────────
+
+  List<(String, String, String)> _fieldsFor(S l, ActivityType type) {
+    switch (type) {
+      case ActivityType.bibleReading:
+        return []; // Bible uses a dedicated start dialog — see _showBibleStartDialog
+      case ActivityType.literature:
+        return [('literatureTitle', l.bookTitleLabel, l.bookTitleHint)];
+      case ActivityType.ddeg:
+        return [('ddegScripture', l.ddegScriptureLabel, l.ddegScriptureHint)];
+      case ActivityType.prayerAlone:
+        return []; // uses PrayerTopicScreen — see _activityTile
+      case ActivityType.prayerOthers:
+        return []; // uses PrayerTopicScreen — see _activityTile
+      case ActivityType.evangelism:
+        return []; // all fields are only knowable after — see _showEvangelismEndDialog
+      case ActivityType.fasting:
+        return []; // Fasting is never timed via the stopwatch — see the
+                   // multi-day FastingPeriod tracker in the Log screen instead
+      case ActivityType.discipleship:
+        return [
+          ('discipleshipWho', l.discipleshipWhoLabel, l.discipleshipWhoHint),
+          ('discipleshipTopic', l.discipleshipTopicLabel,
+              l.discipleshipTopicHint),
+        ];
+      case ActivityType.church:
+        return [('churchType', l.churchTypeLabel, l.churchTypeHint)];
+      case ActivityType.proclamation:
+        return [];
+    }
+  }
+
+  /// Show bottom sheet with fields, then start timer.
+  void _showFieldsAndStart(ActivityType activity) {
+    final l = S.of(context);
+    final fields = _fieldsFor(l, activity);
+    final key = TimerKey.builtIn(activity);
+
+    if (fields.isEmpty) {
+      // No fields to collect — start directly, matching
+      // _showCustomFieldsAndStart's equivalent guard for custom activities.
+      TimerService.instance.start(key);
+      return;
+    }
+
+    final accent = AppTheme.accentGold(context);
+    final controllers = <String, TextEditingController>{};
+    for (final f in fields) {
+      controllers[f.$1] = TextEditingController();
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(activity.icon, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(_label(l, activity),
+                        style: AppTheme.display(18, color: accent))),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(l.stopwatchFillFields,
+                style:
+                    AppTheme.serif(12, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            ...fields.map((f) {
+              final needsAutocomplete =
+                  f.$1 == 'bibleStartRef' || f.$1 == 'ddegScripture';
+              if (needsAutocomplete) {
+                final locale = Localizations.localeOf(context).languageCode;
+                final bookNames = BibleBooks.bookNames(locale);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Autocomplete<String>(
+                    optionsBuilder: (textEditingValue) {
+                      if (textEditingValue.text.isEmpty) return const [];
+                      final input = textEditingValue.text.toLowerCase();
+                      return bookNames
+                          .where((name) => name.toLowerCase().contains(input));
+                    },
+                    fieldViewBuilder:
+                        (ctx2, controller, focusNode, onSubmitted) {
+                      controller.addListener(() {
+                        controllers[f.$1]!.text = controller.text;
+                      });
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        style: AppTheme.serif(14,
+                            color: AppTheme.textColor(context)),
+                        decoration: InputDecoration(
+                          labelText: f.$2,
+                          hintText: f.$3,
+                          labelStyle: AppTheme.serif(12, color: accent),
+                          hintStyle: AppTheme.serif(12,
+                              color: AppTheme.faintColor(context)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: accent.withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: accent)),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: TextField(
+                  controller: controllers[f.$1],
+                  style:
+                      AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: f.$2,
+                    hintText: f.$3,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    hintStyle: AppTheme.serif(12,
+                        color: AppTheme.faintColor(context)),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(
+                            color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () {
+                  final fieldMap = <String, String>{};
+                  for (final entry in controllers.entries) {
+                    if (entry.value.text.isNotEmpty) {
+                      fieldMap[entry.key] = entry.value.text;
+                    }
+                  }
+                  for (final c in controllers.values) {
+                    c.dispose();
+                  }
+                  Navigator.pop(ctx);
+                  TimerService.instance.start(key, fields: fieldMap);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.play_arrow_rounded,
+                          color: AppTheme.bg0, size: 22),
+                      const SizedBox(width: 8),
+                      Text(l.startTimer,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: GestureDetector(
+                onTap: () {
+                  for (final c in controllers.values) {
+                    c.dispose();
+                  }
+                  Navigator.pop(ctx);
+                  TimerService.instance.start(key);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Text(l.skip,
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show a dedicated start dialog for Bible reading — collects the
+  /// starting book/chapter (book required) before the timer begins, since a
+  /// Bible entry is meaningless without a reference to attach it to. Uses
+  /// the same GoldField book+chapter row layout as the Log screen's Bible
+  /// session cards, so both entry paths look and behave identically.
+  void _showBibleStartDialog() {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final locale = Localizations.localeOf(context).languageCode;
+    final bookNames = BibleBooks.bookNames(locale);
+    String bookRaw = '';
+    String chapterText = '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String? bookErrorText;
+        String? chapterErrorText;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(ActivityType.bibleReading.icon, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(l.sectionBible,
+                            style: AppTheme.display(18, color: accent))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: GoldField(
+                        label: l.bibleSessionBook,
+                        hint: l.bibleStartHint,
+                        value: bookRaw,
+                        suggestions: bookNames,
+                        onChanged: (v) {
+                          bookRaw = v;
+                          if (bookErrorText != null) setSheetState(() => bookErrorText = null);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: GoldField(
+                        label: l.bibleSessionChapter,
+                        hint: '1',
+                        value: chapterText,
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) {
+                          chapterText = v;
+                          if (chapterErrorText != null) setSheetState(() => chapterErrorText = null);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (bookErrorText != null || chapterErrorText != null) ...[
+                  const SizedBox(height: 6),
+                  Text(bookErrorText ?? chapterErrorText!,
+                      style: AppTheme.serif(12, color: AppTheme.rust)),
+                ],
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () {
+                      final typedBook = bookRaw.trim();
+                      if (typedBook.isEmpty) {
+                        setSheetState(() => bookErrorText = l.fieldRequiredError);
+                        return;
+                      }
+                      final book = BibleBooks.findBook(typedBook);
+                      if (book == null) {
+                        setSheetState(() => bookErrorText = l.unknownBibleBook);
+                        return;
+                      }
+                      final chapterInput = chapterText.trim();
+                      if (chapterInput.isNotEmpty) {
+                        final chapterNum = int.tryParse(chapterInput);
+                        if (chapterNum == null || chapterNum < 1 || chapterNum > book.chapters) {
+                          setSheetState(() => chapterErrorText = l.invalidBibleChapter);
+                          return;
+                        }
+                      }
+                      Navigator.pop(ctx);
+                      TimerService.instance.start(
+                        TimerKey.builtIn(ActivityType.bibleReading),
+                        fields: {
+                          'bibleStartBook': book.nameEn,
+                          'bibleStartChapter': chapterInput,
+                        },
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.startTimer, style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Open a reusable counter modal for a custom activity with a counter field.
+  void _openCustomCounterModal(CustomActivity ca) {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final counterField = ca.fields.firstWhere(
+        (f) => f.type == CustomFieldType.counter);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        int count = 0;
+        bool timerRunning = false;
+        final stopwatch = Stopwatch();
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final elapsed = stopwatch.elapsed;
+            final h = elapsed.inHours;
+            final m = elapsed.inMinutes % 60;
+            final s = elapsed.inSeconds % 60;
+            final timerDisplay = h > 0
+                ? '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}'
+                : '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                  20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(ca.icon, style: const TextStyle(fontSize: 36)),
+                  const SizedBox(height: 8),
+                  Text(ca.name,
+                      style: AppTheme.display(20, color: accent)),
+                  const SizedBox(height: 4),
+                  Text(counterField.label,
+                      style: AppTheme.serif(13,
+                          color: AppTheme.mutedColor(context))),
+                  const SizedBox(height: 24),
+                  Text('$count', style: AppTheme.display(72, color: accent)),
+                  const SizedBox(height: 8),
+                  Text(l.proclamationTap,
+                      style: AppTheme.serif(13,
+                          color: AppTheme.mutedColor(context))),
+                  const SizedBox(height: 20),
+                  GestureDetector(
+                    onTap: () {
+                      setSheetState(() => count++);
+                      if (!timerRunning && !stopwatch.isRunning) {
+                        stopwatch.start();
+                        timerRunning = true;
+                        Future.doWhile(() async {
+                          await Future.delayed(const Duration(seconds: 1));
+                          if (ctx.mounted && stopwatch.isRunning) {
+                            setSheetState(() {});
+                            return true;
+                          }
+                          return false;
+                        });
+                      }
+                    },
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppTheme.goldGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: accent.withValues(alpha: 0.3),
+                            blurRadius: 20,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                          child:
+                              Icon(Icons.add, color: AppTheme.bg0, size: 48)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (timerRunning || stopwatch.elapsed > Duration.zero)
+                    Text(timerDisplay,
+                        style: AppTheme.display(20,
+                            color: AppTheme.mutedColor(context))),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (stopwatch.isRunning)
+                        _controlButton(
+                          icon: Icons.pause_rounded,
+                          color: AppTheme.goldSoft,
+                          onTap: () => setSheetState(() => stopwatch.stop()),
+                        ),
+                      if (!stopwatch.isRunning && timerRunning)
+                        _controlButton(
+                          icon: Icons.play_arrow_rounded,
+                          color: AppTheme.green,
+                          onTap: () {
+                            stopwatch.start();
+                            setSheetState(() {});
+                            Future.doWhile(() async {
+                              await Future.delayed(
+                                  const Duration(seconds: 1));
+                              if (ctx.mounted && stopwatch.isRunning) {
+                                setSheetState(() {});
+                                return true;
+                              }
+                              return false;
+                            });
+                          },
+                        ),
+                      const SizedBox(width: 24),
+                      GestureDetector(
+                        onTap: () async {
+                          stopwatch.stop();
+                          Navigator.pop(ctx);
+                          if (count > 0) {
+                            String durationStr = '';
+                            final d = stopwatch.elapsed;
+                            if (d.inMinutes > 0) {
+                              final dh = d.inHours;
+                              final dm = d.inMinutes % 60;
+                              if (dh > 0) {
+                                durationStr = '${dh}h ${dm}min';
+                              } else {
+                                durationStr = '${dm}min';
+                              }
+                            }
+                            final dateKey = _todayKey;
+                            final log = await StorageService.instance
+                                    .getLog(dateKey) ??
+                                DailyLog(dateKey: dateKey);
+                            // Update custom activity data
+                            final data = Map<String, dynamic>.from(
+                                log.customActivityData[ca.id] ?? {});
+                            data['done'] = true;
+                            final fields = Map<String, dynamic>.from(
+                                data['fields'] as Map? ?? {});
+                            final existing = int.tryParse(
+                                    fields[counterField.label]?.toString() ?? '') ?? 0;
+                            fields[counterField.label] = '${existing + count}';
+                            if (durationStr.isNotEmpty) {
+                              fields['_duration'] = durationStr;
+                            }
+                            data['fields'] = fields;
+                            log.customActivityData[ca.id] =
+                                Map<String, dynamic>.from(data);
+                            await StorageService.instance.saveLog(log);
+                            widget.onTimerStopped?.call();
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.goldGradient,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(l.proclamationSave,
+                              style:
+                                  AppTheme.display(16, color: AppTheme.bg0)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  /// Cancel a timer without saving — shows confirmation for timers >= 10s.
+  void _cancelTimer(TimerKey key) {
+    final ts = TimerService.instance;
+    final session = ts.sessions[key];
+    if (session == null) return;
+
+    if (session.currentElapsed.inSeconds < 10) {
+      ts.cancelTimer(key);
+      return;
+    }
+
+    final l = S.of(context);
+    final elapsed = session.formattedDuration;
+    final name = key.isBuiltIn
+        ? _label(l, key.builtIn!)
+        : (session.fields['_customName'] ?? 'Activity');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.cancelTimerTitle),
+        content: Text(l.cancelTimerContent(elapsed, name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l.cancelTimerKeep),
+          ),
+          TextButton(
+            onPressed: () {
+              ts.cancelTimer(key);
+              Navigator.pop(ctx);
+            },
+            child: Text(l.cancelTimerDiscard, style: const TextStyle(color: AppTheme.rust)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Unified stop handler for both built-in and custom activities.
+  Future<void> _stopTimer(TimerKey key) async {
+    HapticFeedback.mediumImpact();
+    final ts = TimerService.instance;
+    final session = ts.getSession(key);
+    if (session == null) return;
+
+    if (key.isBuiltIn) {
+      if (key.builtIn == ActivityType.bibleReading) {
+        await _showBibleEndDialog(session);
+      } else if (key.builtIn == ActivityType.literature) {
+        await _showLiteratureEndDialog(session);
+      } else if (key.builtIn == ActivityType.ddeg) {
+        await _showDdegEndDialog(session);
+      } else if (key.builtIn == ActivityType.prayerAlone) {
+        await _showPrayerAloneEndDialog(session);
+      } else if (key.builtIn == ActivityType.prayerOthers) {
+        await _showPrayerOthersEndDialog(session);
+      } else if (key.builtIn == ActivityType.evangelism) {
+        await _showEvangelismEndDialog(session);
+      } else if (key.builtIn == ActivityType.church) {
+        await _showChurchEndDialog(session);
+      } else {
+        await ts.stop(key);
+      }
+    } else {
+      // Custom activity — just stop, data goes to customActivityData
+      await ts.stop(key);
+    }
+    widget.onTimerStopped?.call();
+  }
+
+  /// Show dialog after Bible reading timer stops asking where the user finished.
+  Future<void> _showBibleEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final startBook = session.fields['bibleStartBook'] ?? '';
+    final startChapter = session.fields['bibleStartChapter'] ?? '';
+    final startRef = startBook.isEmpty ? '' : (startChapter.isEmpty ? startBook : '$startBook $startChapter');
+    final ts = TimerService.instance;
+
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    final locale = Localizations.localeOf(context).languageCode;
+    final bookNames = BibleBooks.bookNames(locale);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        int? calculatedChapters;
+        String? bookErrorText;
+        String? chapterErrorText;
+        String endBookRaw = '';
+        String endChapterText = '';
+
+        void recalcPreview(void Function(void Function()) setSheetState) {
+          final book = BibleBooks.findBook(endBookRaw);
+          if (startRef.isNotEmpty && book != null) {
+            final endRefForCalc = endChapterText.trim().isNotEmpty
+                ? '${book.nameEn} ${endChapterText.trim()}'
+                : book.nameEn;
+            final chapters = BibleBooks.calculateChapters(startRef, endRefForCalc);
+            setSheetState(() => calculatedChapters = chapters);
+          } else {
+            setSheetState(() => calculatedChapters = null);
+          }
+        }
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('\uD83D\uDCD6',
+                        style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(l.sectionBible,
+                            style: AppTheme.display(18, color: accent))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(l.timerStoppedDuration(duration),
+                    style: AppTheme.serif(13,
+                        color: AppTheme.mutedColor(context))),
+                if (startRef.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('${l.bibleStartRef}: $startRef',
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
+                ],
+                const SizedBox(height: 16),
+                Text(l.enterEndReference,
+                    style: AppTheme.serif(14,
+                        color: AppTheme.textColor(context))),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: GoldField(
+                        label: l.bibleSessionBook,
+                        hint: l.bibleEndHint,
+                        value: endBookRaw,
+                        suggestions: bookNames,
+                        onChanged: (v) {
+                          endBookRaw = v;
+                          if (bookErrorText != null) bookErrorText = null;
+                          recalcPreview(setSheetState);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 1,
+                      child: GoldField(
+                        label: l.bibleSessionChapter,
+                        hint: '1',
+                        value: endChapterText,
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) {
+                          endChapterText = v;
+                          if (chapterErrorText != null) chapterErrorText = null;
+                          recalcPreview(setSheetState);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (bookErrorText != null || chapterErrorText != null) ...[
+                  const SizedBox(height: 6),
+                  Text(bookErrorText ?? chapterErrorText!,
+                      style: AppTheme.serif(12, color: AppTheme.rust)),
+                ],
+                if (calculatedChapters != null) ...[
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.green.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '\u2705 ${l.bibleChaptersRead(calculatedChapters!)}',
+                      style: AppTheme.serif(13, color: AppTheme.green),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final typedBook = endBookRaw.trim();
+                      if (typedBook.isEmpty) {
+                        setSheetState(() => bookErrorText = l.fieldRequiredError);
+                        return;
+                      }
+                      final book = BibleBooks.findBook(typedBook);
+                      if (book == null) {
+                        setSheetState(() => bookErrorText = l.unknownBibleBook);
+                        return;
+                      }
+                      final chapterInput = endChapterText.trim();
+                      int endChapterNum = 0;
+                      if (chapterInput.isNotEmpty) {
+                        final parsedChapter = int.tryParse(chapterInput);
+                        if (parsedChapter == null ||
+                            parsedChapter < 1 ||
+                            parsedChapter > book.chapters) {
+                          setSheetState(() => chapterErrorText = l.invalidBibleChapter);
+                          return;
+                        }
+                        endChapterNum = parsedChapter;
+                      }
+                      session.fields['bibleEndBook'] = book.nameEn;
+                      session.fields['bibleEndChapter'] = '$endChapterNum';
+                      // Deliberately NOT writing session.fields['bibleReference']
+                      // or ['bibleChapters'] anymore — those were legacy
+                      // scalar targets. The structured BibleReadingEntry built
+                      // by _appendBibleSession (already landed in Task 5)
+                      // recalculates chaptersRead itself from the start/end
+                      // book+chapter fields via entry.recalculate(), so a
+                      // separate scalar write would be a second, redundant
+                      // source of truth.
+                      session.fields.remove('bibleStartRef'); // legacy key from the old single-field start flow, no longer used
+
+                      Navigator.pop(ctx);
+                      await ts.stop(TimerKey.builtIn(ActivityType.bibleReading));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.done,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show dialog after Literature timer stops asking how much was read.
+  Future<void> _showLiteratureEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final amountCtrl = TextEditingController();
+    final ts = TimerService.instance;
+    final title = session.fields['literatureTitle'] ?? '';
+
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    String selectedUnit = 'pages';
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('\uD83D\uDCDA',
+                        style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Text(l.sectionLiterature,
+                            style: AppTheme.display(18, color: accent))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(l.timerStoppedDuration(duration),
+                    style: AppTheme.serif(13,
+                        color: AppTheme.mutedColor(context))),
+                if (title.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('${l.bookTitleLabel}: $title',
+                      style: AppTheme.serif(12,
+                          color: AppTheme.mutedColor(context))),
+                ],
+                const SizedBox(height: 16),
+                Text(l.amountLabel,
+                    style: AppTheme.serif(14,
+                        color: AppTheme.textColor(context))),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: amountCtrl,
+                        autofocus: true,
+                        keyboardType: TextInputType.number,
+                        style: AppTheme.serif(14,
+                            color: AppTheme.textColor(context)),
+                        decoration: InputDecoration(
+                          hintText: l.amountHint,
+                          errorText: errorText,
+                          hintStyle: AppTheme.serif(12,
+                              color: AppTheme.faintColor(context)),
+                          enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: accent.withValues(alpha: 0.3))),
+                          focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(color: accent)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.isDark(context)
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.black.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: accent.withValues(alpha: 0.25)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedUnit,
+                          dropdownColor: AppTheme.surfaceColor(context),
+                          style: AppTheme.serif(14,
+                              color: AppTheme.textColor(context)),
+                          items: [
+                            DropdownMenuItem(
+                                value: 'pages', child: Text(l.unitPages)),
+                            DropdownMenuItem(
+                                value: 'chapters',
+                                child: Text(l.unitChapters)),
+                            DropdownMenuItem(
+                                value: 'books', child: Text(l.unitBooks)),
+                          ],
+                          onChanged: (v) =>
+                              setSheetState(() => selectedUnit = v ?? 'pages'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () async {
+                      if (amountCtrl.text.trim().isEmpty) {
+                        setSheetState(() => errorText = l.fieldRequiredError);
+                        return;
+                      }
+                      Navigator.pop(ctx);
+
+                      final dateKey = _todayKey;
+                      final log =
+                          await StorageService.instance.getLog(dateKey) ??
+                              DailyLog(dateKey: dateKey);
+
+                      final amount = amountCtrl.text.trim();
+                      if (title.isNotEmpty || amount.isNotEmpty) {
+                        if (log.literature.length == 1 &&
+                            log.literature.first.title.isEmpty) {
+                          log.literature[0] = LiteratureEntry(
+                            title: title,
+                            amount: amount,
+                            unit: selectedUnit,
+                          );
+                        } else {
+                          log.literature.add(LiteratureEntry(
+                            title: title,
+                            amount: amount,
+                            unit: selectedUnit,
+                          ));
+                        }
+                      }
+                      await StorageService.instance.saveLog(log);
+
+                      await ts.stop(TimerKey.builtIn(ActivityType.literature));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.done,
+                          style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show dialog after DDEG timer stops asking what God spoke.
+  Future<void> _showDdegEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    final scriptureCtrl =
+        TextEditingController(text: session.fields['ddegScripture'] ?? '');
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('\uD83D\uDD25',
+                      style: TextStyle(fontSize: 24)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Text(l.sectionDDEG,
+                          style: AppTheme.display(18, color: accent))),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(l.timerStoppedDuration(duration),
+                  style: AppTheme.serif(13,
+                      color: AppTheme.mutedColor(context))),
+              const SizedBox(height: 16),
+              // Scripture field
+              TextField(
+                controller: scriptureCtrl,
+                style:
+                    AppTheme.serif(14, color: AppTheme.textColor(context)),
+                decoration: InputDecoration(
+                  labelText: l.ddegScriptureLabel,
+                  hintText: l.ddegScriptureHint,
+                  labelStyle: AppTheme.serif(12, color: accent),
+                  hintStyle: AppTheme.serif(12,
+                      color: AppTheme.faintColor(context)),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(
+                          color: accent.withValues(alpha: 0.3))),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: accent)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Notes field — "What God Spoke to You"
+              TextField(
+                controller: notesCtrl,
+                autofocus: true,
+                maxLines: 4,
+                style:
+                    AppTheme.serif(14, color: AppTheme.textColor(context)),
+                decoration: InputDecoration(
+                  labelText: l.ddegNotesLabel,
+                  hintText: l.ddegNotesHint,
+                  labelStyle: AppTheme.serif(12, color: accent),
+                  hintStyle: AppTheme.serif(12,
+                      color: AppTheme.faintColor(context)),
+                  alignLabelWithHint: true,
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(
+                          color: accent.withValues(alpha: 0.3))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: accent)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Done button
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: () async {
+                    final scripture = scriptureCtrl.text.trim();
+                    final notes = notesCtrl.text.trim();
+                    if (scripture.isNotEmpty) {
+                      session.fields['ddegScripture'] = scripture;
+                    }
+                    if (notes.isNotEmpty) {
+                      session.fields['ddegNotes'] = notes;
+                    }
+                    Navigator.pop(ctx);
+                    await ts.stop(TimerKey.builtIn(ActivityType.ddeg));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.goldGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(l.done,
+                        style: AppTheme.display(16, color: AppTheme.bg0)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show optional reflection prompt after a Prayer Alone timer stops.
+  Future<void> _showPrayerAloneEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.prayerAlone.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionPrayerAlone, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesCtrl,
+              autofocus: true,
+              maxLines: 4,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.prayerAloneReflectionPrompt,
+                labelStyle: AppTheme.serif(12, color: accent),
+                alignLabelWithHint: true,
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final notes = notesCtrl.text.trim();
+                  if (notes.isNotEmpty) session.fields['prayerNotes'] = notes;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.prayerAlone));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show optional people-count prompt after a Prayer with Others timer stops.
+  Future<void> _showPrayerOthersEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final countCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.prayerOthers.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionPrayerOthers, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: countCtrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.prayerPeopleCountLabel,
+                hintText: l.prayerPeopleCountHint,
+                labelStyle: AppTheme.serif(12, color: accent),
+                enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final count = countCtrl.text.trim();
+                  if (count.isNotEmpty) session.fields['prayerPeopleCount'] = count;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.prayerOthers));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show dialog after Evangelism timer stops — every field here is only
+  /// knowable once the outreach is complete, so nothing is asked at start.
+  Future<void> _showEvangelismEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+
+    final contactsCtrl = TextEditingController();
+    final outcomeCtrl = TextEditingController();
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        String? contactsError;
+        String? outcomeError;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text(ActivityType.evangelism.icon, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(l.sectionEvangelism, style: AppTheme.display(18, color: accent))),
+                ]),
+                const SizedBox(height: 8),
+                Text(l.timerStoppedDuration(duration),
+                    style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: contactsCtrl,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismContactsLabel,
+                    hintText: l.evangelismContactsHint,
+                    errorText: contactsError,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: outcomeCtrl,
+                  keyboardType: TextInputType.number,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismOutcomeLabel,
+                    hintText: l.evangelismOutcomeHint,
+                    errorText: outcomeError,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    enabledBorder: UnderlineInputBorder(
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesCtrl,
+                  maxLines: 3,
+                  style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+                  decoration: InputDecoration(
+                    labelText: l.evangelismNotesLabel,
+                    hintText: l.evangelismNotesHint,
+                    labelStyle: AppTheme.serif(12, color: accent),
+                    alignLabelWithHint: true,
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(color: accent)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final contacts = contactsCtrl.text.trim();
+                      final outcome = outcomeCtrl.text.trim();
+                      bool hasError = false;
+                      if (contacts.isEmpty) {
+                        contactsError = l.fieldRequiredError;
+                        hasError = true;
+                      }
+                      if (outcome.isEmpty) {
+                        outcomeError = l.fieldRequiredError;
+                        hasError = true;
+                      }
+                      if (hasError) {
+                        setSheetState(() {});
+                        return;
+                      }
+                      session.fields['evangelismContacts'] = contacts;
+                      session.fields['evangelismOutcome'] = outcome;
+                      final notes = notesCtrl.text.trim();
+                      if (notes.isNotEmpty) session.fields['evangelismNotes'] = notes;
+                      Navigator.pop(ctx);
+                      await ts.stop(TimerKey.builtIn(ActivityType.evangelism));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Show optional notes prompt after a Church timer stops.
+  Future<void> _showChurchEndDialog(TimerSession session) async {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final ts = TimerService.instance;
+    ts.pause(session.key);
+    final duration = session.formattedDuration;
+    final notesCtrl = TextEditingController();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(ActivityType.church.icon, style: const TextStyle(fontSize: 24)),
+              const SizedBox(width: 10),
+              Expanded(child: Text(l.sectionChurch, style: AppTheme.display(18, color: accent))),
+            ]),
+            const SizedBox(height: 8),
+            Text(l.timerStoppedDuration(duration),
+                style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: notesCtrl,
+              autofocus: true,
+              maxLines: 4,
+              style: AppTheme.serif(14, color: AppTheme.textColor(context)),
+              decoration: InputDecoration(
+                labelText: l.churchNotesLabel,
+                hintText: l.churchNotesHint,
+                labelStyle: AppTheme.serif(12, color: accent),
+                alignLabelWithHint: true,
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent.withValues(alpha: 0.3))),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: accent)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: () async {
+                  final notes = notesCtrl.text.trim();
+                  if (notes.isNotEmpty) session.fields['churchNotes'] = notes;
+                  Navigator.pop(ctx);
+                  await ts.stop(TimerKey.builtIn(ActivityType.church));
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.goldGradient,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(l.done, style: AppTheme.display(16, color: AppTheme.bg0)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _controlButton({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 52,
+        height: 52,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withValues(alpha: 0.15),
+          border: Border.all(color: color.withValues(alpha: 0.4)),
+        ),
+        child: Icon(icon, color: color, size: 28),
+      ),
+    );
+  }
+
+  Widget _tileButton(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withValues(alpha: 0.15),
+        ),
+        child: Icon(icon, color: color, size: 24),
+      ),
+    );
+  }
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scripture_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_altar_bg"
+    android:padding="12dp">
+
+    <!-- Cross watermark at 10% opacity -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="&#10013;"
+        android:textSize="48sp"
+        android:textColor="#1AD4AF64"
+        android:alpha="0.1" />
+
+    <!-- Scripture text — centered vertically -->
+    <TextView
+        android:id="@+id/scripture_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:layout_above="@+id/scripture_divider"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:text="Your word is a lamp to my feet..."
+        android:textColor="#D4AF64"
+        android:textSize="13sp"
+        android:fontFamily="serif"
+        android:textStyle="italic"
+        android:maxLines="4"
+        android:ellipsize="end" />
+
+    <!-- Scripture reference -->
+    <TextView
+        android:id="@+id/scripture_ref"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/scripture_text"
+        android:layout_above="@+id/scripture_divider"
+        android:gravity="center"
+        android:text="&#8212; Psalm 119:105"
+        android:textColor="#A09070"
+        android:textSize="10sp"
+        android:fontFamily="serif"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Gold divider -->
+    <ImageView
+        android:id="@+id/scripture_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_above="@+id/scripture_label"
+        android:layout_marginBottom="4dp"
+        android:src="@drawable/widget_gold_divider"
+        android:scaleType="fitXY"
+        android:contentDescription="" />
+
+    <!-- Label: "Daily Verse" or "Proclamation" -->
+    <TextView
+        android:id="@+id/scripture_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="center"
+        android:text="DAILY VERSE"
+        android:textColor="#7A6A4A"
+        android:textSize="8sp"
+        android:fontFamily="serif"
+        android:textAllCaps="true"
+        android:letterSpacing="0.15" />
+
+</RelativeLayout>

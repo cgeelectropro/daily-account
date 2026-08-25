@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>21627369169-lhcggublufnihf88484fjig772qp9maq.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.21627369169-lhcggublufnihf88484fjig772qp9maq</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.jilengineering.dailyaccount</string>
+	<key>PROJECT_ID</key>
+	<string>cmfi-daily-account</string>
+	<key>GCM_SENDER_ID</key>
+	<string>21627369169</string>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+</dict>
+</plist>

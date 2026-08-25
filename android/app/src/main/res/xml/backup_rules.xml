@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android Auto Backup rules (API < 31) -->
+<!-- Backs up the SQLite database and SharedPreferences to Google Drive -->
+<full-backup-content>
+    <include domain="database" path="daily_account.db" />
+    <include domain="sharedpref" path="." />
+</full-backup-content>

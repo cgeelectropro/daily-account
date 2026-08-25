@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- android/app/src/main/res/layout/widget_discipline_bar.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/disc_bar_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_altar_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="10dp">
+
+    <!-- Left: Completion ring + streak -->
+    <LinearLayout
+        android:id="@+id/disc_bar_ring_area"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:layout_marginEnd="10dp">
+
+        <FrameLayout
+            android:layout_width="56dp"
+            android:layout_height="56dp">
+
+            <ImageView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:src="@drawable/widget_progress_bg"
+                android:contentDescription="Progress" />
+
+            <TextView
+                android:id="@+id/disc_bar_completion"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="0%"
+                android:textColor="#D4AF64"
+                android:textSize="16sp"
+                android:fontFamily="serif"
+                android:textStyle="bold" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/disc_bar_streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="🔥 0"
+            android:textColor="#A09070"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Right: 5 discipline icons in a row -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <!-- Bible -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/disc_bar_ic_bible"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/widget_disc_pill_undone"
+                android:text="📖"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/disc_bar_lbl_bible"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BIB"
+                android:textColor="#7A6A4A"
+                android:textSize="7sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Literature -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/disc_bar_ic_lit"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/widget_disc_pill_undone"
+                android:text="📚"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/disc_bar_lbl_lit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LIT"
+                android:textColor="#7A6A4A"
+                android:textSize="7sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- DDEG -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/disc_bar_ic_ddeg"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/widget_disc_pill_undone"
+                android:text="🔥"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/disc_bar_lbl_ddeg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DDG"
+                android:textColor="#7A6A4A"
+                android:textSize="7sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Prayer -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/disc_bar_ic_prayer"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/widget_disc_pill_undone"
+                android:text="🙏"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/disc_bar_lbl_prayer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PRY"
+                android:textColor="#7A6A4A"
+                android:textSize="7sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Evangelism -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+            <TextView
+                android:id="@+id/disc_bar_ic_evangelism"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/widget_disc_pill_undone"
+                android:text="📢"
+                android:textSize="16sp" />
+            <TextView
+                android:id="@+id/disc_bar_lbl_evangelism"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EVG"
+                android:textColor="#7A6A4A"
+                android:textSize="7sp"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

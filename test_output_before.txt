@@ -1,0 +1,82 @@
+﻿00:00 +0: loading C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart
+flutter : test/daily_log_test.dart:521:31: Error: No named parameter with the name 'title'.
+At line:1 char:367
++ ... ts\daily_account"; flutter test test/daily_log_test.dart 2>&1 | Tee-O ...
++                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (test/daily_log_...e name 'title'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+      final s = PrayerSession(title: 'Healing for Mom', duration: '15min', notes: 'Felt peace', peopleCount: '3');
+                              ^^^^^
+lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+  PrayerSession({this.duration = '', this.notes = ''});
+  ^^^^^^^^^^^^^
+test/daily_log_test.dart:528:39: Error: No named parameter with the name 'title'.
+      final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+                                      ^^^^^
+lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+  PrayerSession({this.duration = '', this.notes = ''});
+  ^^^^^^^^^^^^^
+test/daily_log_test.dart:529:33: Error: Member not found: 'PrayerSession.findMatchingIndex'.
+      final idx = PrayerSession.findMatchingIndex(sessions, '  healing FOR MOM  ');
+                                ^^^^^^^^^^^^^^^^^
+test/daily_log_test.dart:534:39: Error: No named parameter with the name 'title'.
+      final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+                                      ^^^^^
+lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+  PrayerSession({this.duration = '', this.notes = ''});
+  ^^^^^^^^^^^^^
+test/daily_log_test.dart:535:33: Error: Member not found: 'PrayerSession.findMatchingIndex'.
+      final idx = PrayerSession.findMatchingIndex(sessions, 'General intercession');
+                                ^^^^^^^^^^^^^^^^^
+test/daily_log_test.dart:523:23: Error: The getter 'title' isn't defined for the type 'PrayerSession'.
+ - 'PrayerSession' is from 'package:daily_account/models/daily_log.dart' ('lib/models/daily_log.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'title'.
+      expect(restored.title, 'Healing for Mom');
+                      ^^^^^
+test/daily_log_test.dart:524:23: Error: The getter 'peopleCount' isn't defined for the type 'PrayerSession'.
+ - 'PrayerSession' is from 'package:daily_account/models/daily_log.dart' ('lib/models/daily_log.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'peopleCount'.
+      expect(restored.peopleCount, '3');
+                      ^^^^^^^^^^^
+00:00 +0 -1: loading C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart [E]
+  Failed to load "C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart":
+  Compilation failed for testPath=C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart: test/daily_log_test.dart:521:31: Error: No named parameter with the name 'title'.
+        final s = PrayerSession(title: 'Healing for Mom', duration: '15min', notes: 'Felt peace', peopleCount: '3');
+                                ^^^^^
+  lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+    PrayerSession({this.duration = '', this.notes = ''});
+    ^^^^^^^^^^^^^
+  test/daily_log_test.dart:528:39: Error: No named parameter with the name 'title'.
+        final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+                                        ^^^^^
+  lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+    PrayerSession({this.duration = '', this.notes = ''});
+    ^^^^^^^^^^^^^
+  test/daily_log_test.dart:529:33: Error: Member not found: 'PrayerSession.findMatchingIndex'.
+        final idx = PrayerSession.findMatchingIndex(sessions, '  healing FOR MOM  ');
+                                  ^^^^^^^^^^^^^^^^^
+  test/daily_log_test.dart:534:39: Error: No named parameter with the name 'title'.
+        final sessions = [PrayerSession(title: 'Healing for Mom', duration: '10min')];
+                                        ^^^^^
+  lib/models/daily_log.dart:133:3: Context: Found this candidate, but the arguments don't match.
+    PrayerSession({this.duration = '', this.notes = ''});
+    ^^^^^^^^^^^^^
+  test/daily_log_test.dart:535:33: Error: Member not found: 'PrayerSession.findMatchingIndex'.
+        final idx = PrayerSession.findMatchingIndex(sessions, 'General intercession');
+                                  ^^^^^^^^^^^^^^^^^
+  test/daily_log_test.dart:523:23: Error: The getter 'title' isn't defined for the type 'PrayerSession'.
+   - 'PrayerSession' is from 'package:daily_account/models/daily_log.dart' ('lib/models/daily_log.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'title'.
+        expect(restored.title, 'Healing for Mom');
+                        ^^^^^
+  test/daily_log_test.dart:524:23: Error: The getter 'peopleCount' isn't defined for the type 'PrayerSession'.
+   - 'PrayerSession' is from 'package:daily_account/models/daily_log.dart' ('lib/models/daily_log.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'peopleCount'.
+        expect(restored.peopleCount, '3');
+                        ^^^^^^^^^^^
+  .
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart: loading C:/Users/goodn/Developement/Flutter projects/daily_account/test/daily_log_test.dart

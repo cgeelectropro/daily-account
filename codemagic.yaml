@@ -1,0 +1,83 @@
+workflows:
+  # ── Android Release ──
+  android-release:
+    name: Android Release
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: 3.41.6
+      java: 17
+      groups:
+        - android_keystore
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+        - pattern: feature/*
+          include: true
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+
+      - name: Run static analysis
+        script: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Run tests
+        script: flutter test
+
+      - name: Set up keystore
+        script: |
+          echo $KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/app-release.jks
+          cat > $CM_BUILD_DIR/android/key.properties <<PROPS
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=app-release.jks
+          PROPS
+
+      - name: Build release APK
+        script: flutter build apk --release --no-tree-shake-icons
+
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+
+  # ── iOS Release ──
+  ios-release:
+    name: iOS Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.41.6
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+    integrations:
+      app_store_connect: Codemagic
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+
+      - name: Install CocoaPods
+        script: cd ios && pod install --repo-update
+
+      - name: Set up code signing
+        script: xcode-project use-profiles
+
+      - name: Build IPA
+        script: flutter build ipa --release --no-tree-shake-icons --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        expire_build_submitted_for_review: true

@@ -1,36 +1,479 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../l10n/generated/app_localizations.dart';
+import '../models/daily_log.dart';
+import '../models/activity_timer.dart';
+import '../models/goal.dart';
+import '../services/auto_send_runner.dart';
+import '../services/goal_progress_service.dart';
+import '../services/notification_service.dart';
+import '../services/report_service.dart';
 import '../services/storage_service.dart';
+import '../services/timer_service.dart';
 import '../theme/app_theme.dart';
+import 'help_screen.dart';
 import 'log_screen.dart';
+import 'prayer_request_screen.dart';
+import 'proclamation_topic_screen.dart';
 import 'report_screen.dart';
 import 'settings_screen.dart';
+import 'stopwatch_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
+
+  /// Exposes the Quick Log button's key so other screens (e.g. `LogScreen`)
+  /// can target it in a coach-mark sequence without a new callback layer.
+  static final quickLogButtonKey = GlobalKey();
 
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _tab = 0;
   DateTime _selected = DateTime.now();
+  /// The Monday anchor of the currently viewed week.
+  late DateTime _weekMonday;
   Map<String, bool> _weekCompletion = {};
   int _reportKey = 0; // forces ReportScreen rebuild on data change
+  bool _hasPendingReport = false;
+  List<Goal> _behindPaceGoals = [];
+  StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _weekMonday = _mondayOf(DateTime.now());
+    _syncWidgetChangesToDb();
     _loadWeekCompletion();
+    _updateHomeWidget();
+    _checkPendingReport();
+    _trySendPending(); // retry any queued report first
+    _checkAutoSend();
+    _checkGoalPace();
+    _scheduleSaturdaySummary();
+    _handleWidgetClicks();
+    // Navigate to report tab when tapping a report notification,
+    // or to the log tab when a Bible Reading timer is stopped.
+    NotificationService.instance.onNotificationTap = (payload) {
+      if (payload == 'navigate_report' && mounted) {
+        setState(() => _tab = 2);
+      } else if (payload == 'stopwatch_bible' && mounted) {
+        // Navigate to the log tab so the user can review their Bible entry.
+        setState(() => _tab = 1);
+      }
+    };
+    // Update widget on timer ticks
+    TimerService.instance.addListener(_onTimerTick);
+    _maybePromptBatteryExemption();
   }
 
-  List<DateTime> get _weekDates {
-    final today = DateTime.now();
-    final monday = today.subtract(Duration(days: (today.weekday + 6) % 7));
-    return List.generate(7, (i) => DateTime(monday.year, monday.month, monday.day + i));
+  /// Ask once, up front, for the battery-optimization exemption that lets
+  /// scheduled reminders fire reliably — instead of leaving it buried in a
+  /// Settings health panel the user may never open. Runs after the first
+  /// frame so it doesn't compete with initial layout, and only once ever
+  /// (tracked via a persisted flag), whether or not the user grants it.
+  Future<void> _maybePromptBatteryExemption() async {
+    if (!Platform.isAndroid) return;
+    final s = StorageService.instance;
+    final asked = await s.getSetting('batteryExemptionPrompted', fallback: '');
+    if (asked == 'true') return;
+    await s.setSetting('batteryExemptionPrompted', 'true');
+
+    // Let the first frame settle before showing the system dialog.
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (!mounted) return;
+
+    final diag = NotificationService.instance.diagnostics;
+    if (diag['batteryOptExempt'] == true) return; // already exempt
+
+    if (!mounted) return;
+    final l = S.of(context);
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(context),
+        title: Text(l.batteryPromptTitle, style: AppTheme.display(16, color: AppTheme.gold)),
+        content: Text(l.batteryPromptBody, style: AppTheme.serif(13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.batteryPromptLater),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.batteryPromptAllow, style: const TextStyle(color: AppTheme.gold)),
+          ),
+        ],
+      ),
+    );
+    if (proceed == true) {
+      await NotificationService.instance.requestBatteryOptimizationExemption();
+    }
   }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _widgetClickSub?.cancel();
+    NotificationService.instance.onNotificationTap = null;
+    TimerService.instance.removeListener(_onTimerTick);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Sync any changes made by widget broadcasts (toggles, proclamation++)
+      // back into the SQLite log before refreshing the UI.
+      _syncWidgetChangesToDb();
+      // Re-schedule notifications on every foreground return.
+      // Android can silently drop alarms after Doze, battery optimization,
+      // or OEM power management — re-scheduling guarantees they stay alive.
+      NotificationService.instance.rescheduleAll();
+      // Re-check auto-send on resume — handles the case where the user
+      // had the app in background past the auto-send time on the report day.
+      _checkAutoSend();
+      _checkGoalPace();
+    }
+  }
+
+  /// Sync widget-side changes back to the SQLite database.
+  ///
+  /// When widgets handle actions via broadcast (toggle disciplines,
+  /// increment proclamation), they write directly to SharedPreferences
+  /// but can't update SQLite. This method reads the widget prefs and
+  /// merges any changes into today's DailyLog.
+  Future<void> _syncWidgetChangesToDb() async {
+    try {
+      final key = _key(DateTime.now());
+      final storage = StorageService.instance;
+      final existing = await storage.getLog(key);
+      final log = existing ?? DailyLog(dateKey: key);
+      bool changed = false;
+
+      // Sync proclamation count — only trust the widget's count if it was
+      // recorded today; a stale prior-day count must not leak into today's log.
+      // Compared against the untitled (empty-topic) session's count, not the
+      // legacy scalar — proclamationSessions is the live source of truth
+      // post-migration (see DailyLog.fromMap), so comparing against the
+      // scalar here would always read 0 and clobber real session data.
+      final widgetProcDate = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
+      final todayKey = _key(DateTime.now());
+      if (widgetProcDate == todayKey) {
+        final widgetProcCount = await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0';
+        final widgetCount = int.tryParse(widgetProcCount) ?? 0;
+        final untitledIndex = ProclamationSession.findMatchingIndex(log.proclamationSessions, '');
+        final dbCount = untitledIndex != -1 ? log.proclamationSessions[untitledIndex].count : 0;
+        if (widgetCount > dbCount) {
+          if (untitledIndex != -1) {
+            log.proclamationSessions[untitledIndex].count = widgetCount;
+          } else {
+            log.proclamationSessions.add(ProclamationSession(topic: '', count: widgetCount));
+          }
+          changed = true;
+        }
+      }
+
+      // Sync discipline toggles
+      final toggleMap = {
+        'd_bible': () => log.bibleReference,
+        'd_lit': () => log.literature.any((l) => l.title.isNotEmpty) ? '1' : '',
+        'd_ddeg': () => log.ddegScripture,
+        'd_prayer': () => log.prayerAloneDuration,
+        'd_evangelism': () => log.evangelismContacts,
+      };
+      final setters = <String, void Function(bool)>{
+        'd_bible': (on) => log.bibleReference = on ? '\u2713' : '',
+        'd_lit': (on) => log.literature = on ? [LiteratureEntry(title: '\u2713')] : [LiteratureEntry()],
+        'd_ddeg': (on) => log.ddegScripture = on ? '\u2713' : '',
+        'd_prayer': (on) => log.prayerAloneDuration = on ? '\u2713' : '',
+        'd_evangelism': (on) => log.evangelismContacts = on ? '1' : '',
+      };
+
+      for (final entry in toggleMap.entries) {
+        final widgetVal = await HomeWidget.getWidgetData<String>(entry.key) ?? '0';
+        final widgetOn = widgetVal == '1';
+        final dbOn = entry.value().isNotEmpty;
+        if (widgetOn != dbOn) {
+          setters[entry.key]!(widgetOn);
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        await storage.saveLog(log);
+        _onDataChanged();
+      }
+    } catch (_) {
+      // Never crash from widget sync
+    }
+  }
+
+  void _onTimerTick() {
+    _updateHomeWidget();
+  }
+
+  /// Listen for widget click deep links.
+  void _handleWidgetClicks() {
+    _widgetClickSub = HomeWidget.widgetClicked.listen((uri) {
+      if (uri == null) return;
+      _processWidgetUri(uri);
+    });
+    // Also check initial launch URI
+    HomeWidget.initiallyLaunchedFromHomeWidget().then((uri) {
+      if (uri == null) return;
+      _processWidgetUri(uri);
+    });
+  }
+
+  Future<void> _processWidgetUri(Uri uri) async {
+    try {
+      switch (uri.host) {
+        case 'toggle':
+          if (uri.pathSegments.isNotEmpty) {
+            await _toggleDisciplineFromWidget(uri.pathSegments.first);
+          }
+        case 'timer':
+          if (uri.pathSegments.isNotEmpty) {
+            await _handleTimerFromWidget(uri.pathSegments);
+          }
+        case 'proclamation':
+          if (uri.pathSegments.isNotEmpty &&
+              uri.pathSegments.first == 'increment') {
+            await _incrementProclamationFromWidget();
+          }
+        case 'open':
+          if (uri.pathSegments.isNotEmpty) {
+            switch (uri.pathSegments.first) {
+              case 'log':
+                setState(() => _tab = 1);
+              case 'proclamation':
+                // Land on the Log tab underneath, then push the topic
+                // quick-picker on top — matches how the Stopwatch screen's
+                // proclamation tile opens it (Navigator.push), just reached
+                // from a widget deep link instead of a tap. `context` is
+                // safe to use here: HomeShell is the app's root shell and
+                // stays mounted for the app's lifetime once built, but this
+                // callback can fire from an async widget-click stream
+                // before that first frame — hence the `mounted` guard.
+                setState(() => _tab = 1);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ProclamationTopicScreen()),
+                  );
+                });
+            }
+          }
+      }
+    } catch (_) {
+      // Never crash from widget URI processing
+    }
+  }
+
+  /// Handle timer deep links from the widget.
+  Future<void> _handleTimerFromWidget(List<String> segments) async {
+    final action = segments.first;
+    final ts = TimerService.instance;
+
+    switch (action) {
+      case 'start':
+        if (segments.length > 1) {
+          final discipline = segments[1];
+          // Map discipline string to ActivityType
+          ActivityType? activity;
+          switch (discipline) {
+            case 'prayerAlone':
+              activity = ActivityType.prayerAlone;
+            case 'bible':
+              activity = ActivityType.bibleReading;
+            case 'literature':
+              activity = ActivityType.literature;
+          }
+          if (activity != null) {
+            ts.startBuiltIn(activity);
+            await HomeWidget.saveWidgetData('show_timer_picker', '0');
+            _updateHomeWidget();
+          }
+        }
+      case 'pause':
+        final running = ts.activeKey;
+        if (running != null) {
+          ts.pause(running);
+        } else {
+          // Resume paused timer
+          for (final entry in ts.sessions.entries) {
+            if (entry.value.paused) {
+              ts.start(entry.key);
+              break;
+            }
+          }
+        }
+        _updateHomeWidget();
+      case 'stop':
+        final running = ts.activeKey;
+        if (running != null) {
+          await ts.stop(running);
+        } else {
+          // Stop any paused timer
+          for (final key in ts.sessions.keys.toList()) {
+            await ts.stop(key);
+          }
+        }
+        _onDataChanged();
+      case 'picker':
+        // Show timer discipline picker on widget
+        await HomeWidget.saveWidgetData('show_timer_picker', '1');
+        await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
+    }
+  }
+
+  /// Increment proclamation count from widget tap.
+  ///
+  /// Writes through to `proclamationSessions` (an empty-topic session,
+  /// merged via the same topic-matching rule TimerService uses) rather than
+  /// the legacy `proclamationCount` scalar — the widget has no topic
+  /// picker, so this always targets the untitled session, keeping the
+  /// session list as the single source of truth alongside topic-tagged
+  /// entries from the stopwatch flow.
+  Future<void> _incrementProclamationFromWidget() async {
+    final key = _key(DateTime.now());
+    final storage = StorageService.instance;
+    final existing = await storage.getLog(key);
+    final log = existing ?? DailyLog(dateKey: key);
+
+    ProclamationSession.incrementTopic(log.proclamationSessions, '');
+
+    await storage.saveLog(log);
+    _onDataChanged();
+  }
+
+  /// Quick-toggle a discipline from the widget without opening the log screen.
+  /// Only toggles between empty ↔ checkmark. Never overwrites real user data.
+  Future<void> _toggleDisciplineFromWidget(String discipline) async {
+    final key = _key(DateTime.now());
+    final storage = StorageService.instance;
+    final existing = await storage.getLog(key);
+    final log = existing ?? DailyLog(dateKey: key);
+
+    // Helper: toggle only if current value is empty or a checkmark placeholder.
+    // Protects real data (e.g. "Genesis 1-3") from being overwritten.
+    String toggle(String current, [String onVal = '\u2713']) {
+      if (current.isEmpty) return onVal;
+      if (current == '\u2713' || current == '1') return '';
+      return current; // real data — don't touch
+    }
+
+    switch (discipline) {
+      case 'bible':
+        log.bibleReference = toggle(log.bibleReference);
+      case 'literature':
+        if (log.literature.every((l) => l.title.isEmpty)) {
+          log.literature = [LiteratureEntry(title: '\u2713')];
+        } else if (log.literature.length == 1 && log.literature.first.title == '\u2713') {
+          log.literature = [LiteratureEntry()];
+        }
+        // else: real data — don't touch
+      case 'ddeg':
+        log.ddegScripture = toggle(log.ddegScripture);
+      case 'prayerAlone':
+        log.prayerAloneDuration = toggle(log.prayerAloneDuration);
+      case 'evangelism':
+        log.evangelismContacts = toggle(log.evangelismContacts, '1');
+      case 'fasting':
+        log.fastingType = toggle(log.fastingType);
+      case 'giving':
+        if (log.giving.every((g) => g.isEmpty)) {
+          log.giving = [GivingEntry(type: '✓')];
+        } else if (log.giving.length == 1 && log.giving.first.type == '✓') {
+          log.giving = [GivingEntry()];
+        }
+        // else: real data — don't touch
+      case 'church':
+        log.churchType = toggle(log.churchType);
+      case 'discipleship':
+        log.discipleshipWho = toggle(log.discipleshipWho);
+      case 'proclamation':
+        log.proclamationCount = toggle(log.proclamationCount, '1');
+    }
+
+    await storage.saveLog(log);
+    _onDataChanged();
+  }
+
+  Future<void> _checkPendingReport() async {
+    final pending = await StorageService.instance.getPendingReport();
+    if (mounted) setState(() => _hasPendingReport = pending != null);
+  }
+
+  /// Retry sending any still-pending report channels (from a previous
+  /// offline/failed attempt). Delegates to [AutoSendRunner] so the exact
+  /// same logic also runs from the background guardian service — see
+  /// [BackgroundTimerService].
+  Future<void> _trySendPending() async {
+    await AutoSendRunner.trySendPending();
+    _checkPendingReport();
+  }
+
+  /// On the configured report day, if auto-send is enabled, auto-send the
+  /// report. Delegates to [AutoSendRunner]; anything that fails (offline,
+  /// Gmail token expired, etc.) is queued for retry rather than dropped —
+  /// the same queue [BackgroundTimerService]'s periodic tick also drains.
+  Future<void> _checkAutoSend() async {
+    await AutoSendRunner.checkAutoSend();
+    _checkPendingReport();
+  }
+
+  /// Check all configured goals for whether they're behind pace, and
+  /// update the in-app banner state. Mirrors _checkAutoSend's structure —
+  /// owned entirely by HomeShell, called from the same lifecycle points.
+  Future<void> _checkGoalPace() async {
+    final enabled = (await StorageService.instance.getSetting('goalPaceRemindersEnabled', fallback: 'true')) == 'true';
+    if (!enabled) return;
+    final goals = await StorageService.instance.getGoals();
+    final behind = <Goal>[];
+    for (final goal in goals) {
+      if (await GoalProgressService.instance.isBehindPace(goal)) behind.add(goal);
+    }
+    if (mounted) setState(() => _behindPaceGoals = behind);
+  }
+
+  /// Schedule the Saturday summary notification with current week stats.
+  Future<void> _scheduleSaturdaySummary() async {
+    final stats = await ReportService.instance.computeWeekStats();
+    if (!mounted) return;
+    final l = S.of(context);
+    await NotificationService.instance.scheduleSaturdaySummary(
+      18, 0,
+      title: l.saturdaySummaryTitle,
+      body: l.saturdaySummaryBody(
+        stats.daysLogged,
+        stats.totalBibleChapters,
+        stats.totalEvangelismContacts,
+      ),
+    );
+  }
+
+  /// Returns the Monday of the week containing [d].
+  DateTime _mondayOf(DateTime d) {
+    final mon = d.subtract(Duration(days: (d.weekday - 1) % 7));
+    return DateTime(mon.year, mon.month, mon.day);
+  }
+
+  List<DateTime> get _weekDates =>
+      List.generate(7, (i) => DateTime(_weekMonday.year, _weekMonday.month, _weekMonday.day + i));
+
+  bool get _isCurrentWeek => _mondayOf(DateTime.now()) == _weekMonday;
 
   String _key(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
@@ -45,11 +488,386 @@ class _HomeShellState extends State<HomeShell> {
 
   void _onDataChanged() {
     _loadWeekCompletion();
+    _updateHomeWidget();
+    try { _checkMilestones(); } catch (_) {}
     setState(() => _reportKey++);
+  }
+
+  /// Check for milestone achievements and show celebration.
+  Future<void> _checkMilestones() async {
+    final streak = await ReportService.instance.computeStreak();
+    final stats = await ReportService.instance.computeWeekStats();
+    final storage = StorageService.instance;
+    if (!mounted) return;
+    final l = S.of(context);
+
+    // Check streak milestones: 7, 30, 100
+    for (final threshold in [7, 30, 100]) {
+      if (streak >= threshold) {
+        final key = 'milestone_streak_$threshold';
+        final celebrated = await storage.getSetting(key, fallback: '');
+        // Only celebrate once per streak (reset if streak breaks)
+        if (celebrated != 'true') {
+          await storage.setSetting(key, 'true');
+          final title = threshold == 7 ? l.milestoneStreak7
+              : threshold == 30 ? l.milestoneStreak30
+              : l.milestoneStreak100;
+          final body = threshold == 7 ? l.milestoneStreak7Body
+              : threshold == 30 ? l.milestoneStreak30Body
+              : l.milestoneStreak100Body;
+          _showMilestoneCelebration(title, body, '\uD83D\uDD25');
+          NotificationService.instance.showMilestoneNotification(title: title, body: body);
+          return; // Only one milestone at a time
+        }
+      }
+    }
+
+    // Reset milestone flags if streak broke
+    if (streak < 7) await storage.setSetting('milestone_streak_7', '');
+    if (streak < 30) await storage.setSetting('milestone_streak_30', '');
+    if (streak < 100) await storage.setSetting('milestone_streak_100', '');
+
+    // Perfect week check
+    if (stats.daysLogged == 7) {
+      final weekKey = _key(_weekMonday);
+      final pfKey = 'milestone_perfect_$weekKey';
+      final celebrated = await storage.getSetting(pfKey, fallback: '');
+      if (celebrated != 'true') {
+        await storage.setSetting(pfKey, 'true');
+        _showMilestoneCelebration(l.milestonePerfectWeek, l.milestonePerfectWeekBody, '\u2B50');
+        NotificationService.instance.showMilestoneNotification(
+          title: l.milestonePerfectWeek, body: l.milestonePerfectWeekBody);
+        return;
+      }
+    }
+
+    // Bible marathon check (20+ chapters in a week)
+    if (stats.totalBibleChapters >= 20) {
+      final weekKey = _key(_weekMonday);
+      final bmKey = 'milestone_bible_$weekKey';
+      final celebrated = await storage.getSetting(bmKey, fallback: '');
+      if (celebrated != 'true') {
+        await storage.setSetting(bmKey, 'true');
+        _showMilestoneCelebration(l.milestoneBibleMarathon, l.milestoneBibleMarathonBody, '\uD83D\uDCD6');
+        NotificationService.instance.showMilestoneNotification(
+          title: l.milestoneBibleMarathon, body: l.milestoneBibleMarathonBody);
+      }
+    }
+  }
+
+  /// Show a celebration dialog with animation.
+  void _showMilestoneCelebration(String title, String body, String emoji) {
+    if (!mounted) return;
+    final accent = AppTheme.accentGold(context);
+    final l = S.of(context);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceColor(ctx),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 64))
+                .animate()
+                .scale(begin: const Offset(0.3, 0.3), end: const Offset(1.0, 1.0),
+                    duration: 600.ms, curve: Curves.elasticOut),
+            const SizedBox(height: 16),
+            Text(title,
+                style: AppTheme.display(22, color: accent),
+                textAlign: TextAlign.center)
+                .animate().fadeIn(delay: 300.ms),
+            const SizedBox(height: 12),
+            Text(body,
+                style: AppTheme.serif(14, color: AppTheme.textColor(ctx)),
+                textAlign: TextAlign.center)
+                .animate().fadeIn(delay: 500.ms),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _shareMilestone(title, body, emoji);
+                  },
+                  icon: Icon(Icons.share, color: accent, size: 18),
+                  label: Text(l.milestoneShare,
+                      style: AppTheme.serif(13, color: accent)),
+                ),
+                const SizedBox(width: 16),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('OK', style: TextStyle(color: AppTheme.mutedColor(ctx))),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Share a milestone achievement as text.
+  void _shareMilestone(String title, String body, String emoji) {
+    final text = '$emoji $title\n$body\n\n— Daily Account';
+    SharePlus.instance.share(ShareParams(text: text));
+  }
+
+  /// Push today's completion % , streak, and discipline flags to the Android home widget.
+  Future<void> _updateHomeWidget() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final todayKey = _key(DateTime.now());
+      final log = await StorageService.instance.getLog(todayKey);
+      final pct = log != null ? (log.completeness * 100).round() : 0;
+      final streak = await ReportService.instance.computeStreak();
+
+      await HomeWidget.saveWidgetData('completion', '$pct');
+      await HomeWidget.saveWidgetData('streak', '$streak days');
+
+      // Individual discipline flags (1 = done, 0 = not done)
+      final hasBible = log != null && (log.bibleReference.isNotEmpty || log.bibleChapters.isNotEmpty || log.bibleSessions.any((s) => s.isNotEmpty));
+      final hasLit = log != null && log.literature.any((l) => l.title.isNotEmpty);
+      final hasDdeg = log != null && (log.ddegScripture.isNotEmpty || log.ddegNotes.isNotEmpty);
+      final hasPrayer = log != null && (log.prayerAloneDuration.isNotEmpty || log.prayerOthersDuration.isNotEmpty);
+      final hasEvangelism = log != null && (log.evangelismContacts.isNotEmpty || log.evangelismSessions.isNotEmpty);
+      final hasFasting = log != null && (log.fastingType.isNotEmpty || log.fastingDuration.isNotEmpty);
+      final hasGiving = log != null && log.givingType.isNotEmpty;
+      final hasChurch = log != null && (log.churchType.isNotEmpty || log.churchSessions.isNotEmpty);
+      final hasDisciple = log != null && log.discipleshipWho.isNotEmpty;
+      final hasProclamation = log != null && (log.proclamationCount.isNotEmpty || log.proclamationSessions.isNotEmpty);
+
+      final doneFlags = [hasBible, hasLit, hasDdeg, hasPrayer, hasEvangelism,
+          hasFasting, hasGiving, hasChurch, hasDisciple, hasProclamation];
+      final doneCount = doneFlags.where((f) => f).length;
+
+      await HomeWidget.saveWidgetData('d_bible', hasBible ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_lit', hasLit ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_ddeg', hasDdeg ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_prayer', hasPrayer ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_evangelism', hasEvangelism ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_fasting', hasFasting ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_giving', hasGiving ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_church', hasChurch ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_disciple', hasDisciple ? '1' : '0');
+      await HomeWidget.saveWidgetData('d_proclamation', hasProclamation ? '1' : '0');
+      await HomeWidget.saveWidgetData('done_count', '$doneCount');
+
+      // Proclamation count (numeric for counter widget)
+      // Use the MAX of DB and widget values to prevent overwriting
+      // increments made from the widget that haven't synced yet — but
+      // only trust the widget's count if it was recorded today; a stale
+      // prior-day count must not be laundered into looking like today's.
+      // Reads the untitled (empty-topic) session's count, not the legacy
+      // scalar — the widget only ever increments the untitled session (see
+      // _incrementProclamationFromWidget / _syncWidgetChangesToDb), and the
+      // scalar is normally empty post-migration.
+      final dbUntitledIndex = log != null
+          ? ProclamationSession.findMatchingIndex(log.proclamationSessions, '')
+          : -1;
+      final dbProcCount = dbUntitledIndex != -1 ? log!.proclamationSessions[dbUntitledIndex].count : 0;
+      final widgetProcDateForMerge = await HomeWidget.getWidgetData<String>('proclamation_date') ?? '';
+      final todayKeyForMerge = _key(DateTime.now());
+      final widgetProcCount = widgetProcDateForMerge == todayKeyForMerge
+          ? (int.tryParse(await HomeWidget.getWidgetData<String>('proclamation_count') ?? '0') ?? 0)
+          : 0;
+      final maxProcCount = dbProcCount > widgetProcCount ? dbProcCount : widgetProcCount;
+      await HomeWidget.saveWidgetData('proclamation_count', '$maxProcCount');
+      await HomeWidget.saveWidgetData('proclamation_date', todayKeyForMerge);
+
+      // DDEG scripture (for scripture card DDEG override)
+      final ddegScripture = log?.ddegScripture ?? '';
+      await HomeWidget.saveWidgetData('ddeg_scripture', ddegScripture);
+
+      // Custom widget proclamation title (falls back to hardcoded string when empty)
+      final widgetTitle = await StorageService.instance.getSetting('widgetTitle');
+      if (widgetTitle.isNotEmpty) {
+        await HomeWidget.saveWidgetData('widget_title', widgetTitle);
+      }
+
+      // Active timer info
+      final ts = TimerService.instance;
+      final activeKey = ts.activeKey;
+      if (activeKey != null) {
+        final session = ts.getSession(activeKey);
+        final label = ts.timerLabelResolver?.call(activeKey) ?? 'Timer';
+        final elapsed = session != null
+            ? _formatDuration(session.elapsed)
+            : '';
+        final elapsedMs = session?.currentElapsed.inMilliseconds ?? 0;
+        await HomeWidget.saveWidgetData('timer_active', '1');
+        await HomeWidget.saveWidgetData('timer_paused', '0');
+        await HomeWidget.saveWidgetData('timer_label', label);
+        await HomeWidget.saveWidgetData('timer_elapsed', elapsed);
+        await HomeWidget.saveWidgetData('timer_elapsed_ms', '$elapsedMs');
+        await HomeWidget.saveWidgetData('timer_start_ms',
+            '${session?.startedAt?.millisecondsSinceEpoch ?? 0}');
+      } else {
+        // Check for paused timer
+        TimerKey? pausedKey;
+        for (final entry in ts.sessions.entries) {
+          if (entry.value.paused) {
+            pausedKey = entry.key;
+            break;
+          }
+        }
+        if (pausedKey != null) {
+          final session = ts.getSession(pausedKey);
+          final label = ts.timerLabelResolver?.call(pausedKey) ?? 'Timer';
+          final elapsedMs = session?.elapsed.inMilliseconds ?? 0;
+          await HomeWidget.saveWidgetData('timer_active', '0');
+          await HomeWidget.saveWidgetData('timer_paused', '1');
+          await HomeWidget.saveWidgetData('timer_label', label);
+          await HomeWidget.saveWidgetData('timer_elapsed_ms', '$elapsedMs');
+        } else {
+          await HomeWidget.saveWidgetData('timer_active', '0');
+          await HomeWidget.saveWidgetData('timer_paused', '0');
+        }
+      }
+
+      // Days logged this week (for motivational text)
+      final daysThisWeek = await _countDaysThisWeek();
+      await HomeWidget.saveWidgetData('days_this_week', '$daysThisWeek');
+
+      // Widget locale — use 'language' key (set by main.dart), falling back to 'appLocale'
+      var widgetLocale = await StorageService.instance.getSetting('language',
+          fallback: '');
+      if (widgetLocale.isEmpty) {
+        widgetLocale = await StorageService.instance.getSetting('appLocale',
+            fallback: 'en');
+      }
+      await HomeWidget.saveWidgetData('widget_locale', widgetLocale);
+
+      // Update ALL widget providers
+      await HomeWidget.updateWidget(androidName: 'ScriptureWidgetProvider');
+      await HomeWidget.updateWidget(androidName: 'DisciplineBarWidgetProvider');
+      await HomeWidget.updateWidget(androidName: 'FullAltarWidgetProvider');
+      await HomeWidget.updateWidget(androidName: 'ProclamationWidgetProvider');
+
+      // Streak-at-risk check (evening only, once per day)
+      final loggedToday = log != null && log.completeness > 0;
+      await NotificationService.instance.checkStreakRisk(
+        streak: streak,
+        loggedToday: loggedToday,
+      );
+    } catch (_) {
+      // Widget not available — ignore
+    }
+  }
+
+  /// Count how many days this week have at least one discipline logged.
+  Future<int> _countDaysThisWeek() async {
+    final storage = StorageService.instance;
+    int count = 0;
+    for (int i = 0; i < 7; i++) {
+      final day = _weekMonday.add(Duration(days: i));
+      if (day.isAfter(DateTime.now())) break;
+      final log = await storage.getLog(_key(day));
+      if (log != null && log.completeness > 0) count++;
+    }
+    return count;
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    final s = d.inSeconds.remainder(60);
+    if (h > 0) return '$h:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  void _goToPreviousWeek() {
+    setState(() {
+      _weekMonday = _weekMonday.subtract(const Duration(days: 7));
+      _selected = _weekMonday; // select Monday of the new week
+    });
+    _loadWeekCompletion();
+  }
+
+  void _goToNextWeek() {
+    final nextMonday = _weekMonday.add(const Duration(days: 7));
+    // Don't go beyond current week
+    if (nextMonday.isAfter(DateTime.now())) return;
+    setState(() {
+      _weekMonday = nextMonday;
+      _selected = _weekMonday;
+    });
+    _loadWeekCompletion();
+  }
+
+  void _goToToday() {
+    setState(() {
+      _weekMonday = _mondayOf(DateTime.now());
+      _selected = DateTime.now();
+    });
+    _loadWeekCompletion();
+  }
+
+  Future<void> _openCalendar() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selected,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: AppTheme.isDark(context)
+              ? const ColorScheme.dark(
+                  primary: AppTheme.gold,
+                  surface: AppTheme.bg2,
+                  onSurface: AppTheme.cream,
+                )
+              : const ColorScheme.light(
+                  primary: AppTheme.lightGold,
+                  surface: AppTheme.lightBg2,
+                  onSurface: AppTheme.lightText,
+                ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() {
+        _weekMonday = _mondayOf(picked);
+        _selected = picked;
+      });
+      _loadWeekCompletion();
+    }
+  }
+
+  String _timerLabel(TimerKey key) {
+    final l = S.of(context);
+    if (key.isBuiltIn) {
+      switch (key.builtIn!) {
+        case ActivityType.bibleReading: return l.sectionBible;
+        case ActivityType.literature: return l.sectionLiterature;
+        case ActivityType.ddeg: return l.ddegShort;
+        case ActivityType.prayerAlone: return l.sectionPrayerAlone;
+        case ActivityType.prayerOthers: return l.sectionPrayerOthers;
+        case ActivityType.evangelism: return l.sectionEvangelism;
+        case ActivityType.fasting: return l.sectionFasting;
+        case ActivityType.discipleship: return l.sectionDiscipleship;
+        case ActivityType.church: return l.sectionChurch;
+        case ActivityType.proclamation: return l.sectionProclamation;
+      }
+    }
+    // Custom activity — read name from storage cache
+    return key.customId ?? '';
+  }
+
+  String _timerIcon(TimerKey key) {
+    if (key.isBuiltIn) return key.builtIn!.icon;
+    return '\u2728';
   }
 
   @override
   Widget build(BuildContext context) {
+    // Provide localized activity names for stopwatch notifications
+    TimerService.instance.timerLabelResolver = _timerLabel;
+    TimerService.instance.timerIconResolver = _timerIcon;
+
     return Container(
       decoration: BoxDecoration(gradient: AppTheme.backgroundGradient(context)),
       child: Scaffold(
@@ -58,7 +876,9 @@ class _HomeShellState extends State<HomeShell> {
           child: Column(
             children: [
               _header(),
-              if (_tab == 0) _weekStrip(),
+              if (_hasPendingReport) _pendingReportBanner(),
+              if (_behindPaceGoals.isNotEmpty) _behindPaceGoalsBanner(),
+              if (_tab == 1) _weekStrip(),
               Expanded(child: _body()),
             ],
           ),
@@ -69,96 +889,528 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   Widget _header() {
+    final accent = AppTheme.accentGold(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Column(
+      child: Row(
         children: [
-          const Text('✝️', style: TextStyle(fontSize: 26)),
-          const SizedBox(height: 4),
-          Text(S.of(context).appTitle, style: AppTheme.display(22, color: AppTheme.gold)),
-          Text(S.of(context).tagline,
-              style: AppTheme.label(9, color: AppTheme.clay)),
+          Expanded(
+            child: Column(
+              children: [
+                Image.asset('assets/cmfilogo.png', width: 45, height: 45),
+                const SizedBox(height: 4),
+                Text(S.of(context).appTitle, style: AppTheme.display(22, color: accent)),
+                Text(S.of(context).tagline,
+                    style: AppTheme.label(9, color: AppTheme.faintColor(context))),
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Help & FAQ button — always visible, on every screen
+              Material(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  splashColor: accent.withValues(alpha: 0.2),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const HelpScreen()),
+                  ),
+                  child: Tooltip(
+                    message: S.of(context).helpButtonTooltip,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Icon(Icons.help_outline, color: accent, size: 20),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Prayer requests button — always visible
+              Material(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  splashColor: accent.withValues(alpha: 0.2),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PrayerRequestScreen()),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: accent.withValues(alpha: 0.3)),
+                    ),
+                    child: Icon(Icons.volunteer_activism, color: accent, size: 20),
+                  ),
+                ),
+              ),
+              // Quick Log button — only on Log tab
+              if (_tab == 1) ...[
+                const SizedBox(width: 8),
+                Material(
+                  key: HomeShell.quickLogButtonKey,
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    splashColor: accent.withValues(alpha: 0.2),
+                    onTap: _showQuickLog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: accent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.flash_on, color: accent, size: 16),
+                          const SizedBox(width: 4),
+                          Text(S.of(context).quickLogButton,
+                              style: AppTheme.label(9, color: accent)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _weekStrip() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 6, 20, 4),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.gold.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.18)),
+  /// Quick Log — checkbox-based fast entry for busy days.
+  void _showQuickLog() {
+    final l = S.of(context);
+    final accent = AppTheme.accentGold(context);
+    final disciplines = <String, (String, String, bool)>{
+      'bible': ('\uD83D\uDCD6', l.sectionBible, false),
+      'literature': ('\uD83D\uDCDA', l.sectionLiterature, false),
+      'ddeg': ('\uD83D\uDD25', l.sectionDDEG, false),
+      'prayerAlone': ('\uD83D\uDE4F', l.sectionPrayerAlone, false),
+      'prayerOthers': ('\uD83E\uDD1D', l.sectionPrayerOthers, false),
+      'evangelism': ('\uD83D\uDCE2', l.sectionEvangelism, false),
+      'fasting': ('\uD83C\uDF7D\uFE0F', l.sectionFasting, false),
+      'giving': ('\uD83D\uDCB0', l.sectionGiving, false),
+      'church': ('\u26EA', l.sectionChurch, false),
+      'discipleship': ('\uD83D\uDC65', l.sectionDiscipleship, false),
+      'proclamation': ('\uD83D\uDCE3', l.sectionProclamation, false),
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surfaceColor(context),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Row(
-        children: _weekDates.map((d) {
-          final key = _key(d);
-          final done = _weekCompletion[key] ?? false;
-          final isToday = key == _key(DateTime.now());
-          final isSel = key == _key(_selected);
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _selected = d),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 3),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: done
-                      ? AppTheme.gold.withOpacity(0.2)
-                      : isToday
-                          ? AppTheme.gold.withOpacity(0.08)
-                          : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSel ? AppTheme.gold : AppTheme.gold.withOpacity(0.12),
-                    width: isSel ? 1.6 : 1,
+      builder: (ctx) {
+        final checked = Map<String, bool>.fromEntries(
+            disciplines.keys.map((k) => MapEntry(k, false)));
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+                20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l.quickLogTitle, style: AppTheme.display(20, color: accent)),
+                  const SizedBox(height: 4),
+                  Text(l.quickLogSubtitle,
+                      style: AppTheme.serif(13, color: AppTheme.mutedColor(context))),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: disciplines.entries.map((e) {
+                          final key = e.key;
+                          final emoji = e.value.$1;
+                          final label = e.value.$2;
+                          final isChecked = checked[key] ?? false;
+                          return GestureDetector(
+                            onTap: () => setSheetState(() => checked[key] = !isChecked),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isChecked
+                                    ? AppTheme.green.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: isChecked
+                                      ? AppTheme.green.withValues(alpha: 0.4)
+                                      : accent.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(emoji, style: const TextStyle(fontSize: 18)),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(label,
+                                        style: AppTheme.serif(13,
+                                            color: AppTheme.textColor(context))),
+                                  ),
+                                  Icon(
+                                    isChecked
+                                        ? Icons.check_circle
+                                        : Icons.circle_outlined,
+                                    color: isChecked
+                                        ? AppTheme.green
+                                        : AppTheme.faintColor(context),
+                                    size: 22,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    Text(DateFormat('E').format(d).substring(0, 1),
-                        style: AppTheme.label(11,
-                            color: isToday ? AppTheme.gold : AppTheme.clay)),
-                    const SizedBox(height: 4),
-                    Text(done ? '✅' : (isToday ? '🕊️' : '○'),
-                        style: const TextStyle(fontSize: 13)),
-                  ],
-                ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        await _saveQuickLog(checked);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.goldGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('\u2705 ${l.quickLogSaved}',
+                            style: AppTheme.display(16, color: AppTheme.bg0)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveQuickLog(Map<String, bool> checked) async {
+    final key = _key(_selected);
+    final storage = StorageService.instance;
+    final existing = await storage.getLog(key);
+    final log = existing ?? DailyLog(dateKey: key);
+
+    // Only fill fields that are currently empty — don't overwrite existing data
+    if (checked['bible'] == true && log.bibleReference.isEmpty) {
+      log.bibleReference = '\u2713';
+    }
+    if (checked['literature'] == true && log.literature.every((l) => l.title.isEmpty)) {
+      log.literature = [LiteratureEntry(title: '\u2713')];
+    }
+    if (checked['ddeg'] == true && log.ddegScripture.isEmpty && log.ddegNotes.isEmpty) {
+      log.ddegScripture = '\u2713';
+    }
+    if (checked['prayerAlone'] == true && log.prayerAloneDuration.isEmpty) {
+      log.prayerAloneDuration = '\u2713';
+    }
+    if (checked['prayerOthers'] == true && log.prayerOthersDuration.isEmpty) {
+      log.prayerOthersDuration = '\u2713';
+    }
+    if (checked['evangelism'] == true && log.evangelismContacts.isEmpty) {
+      log.evangelismContacts = '1';
+    }
+    if (checked['fasting'] == true && log.fastingType.isEmpty) {
+      log.fastingType = '\u2713';
+    }
+    if (checked['giving'] == true && log.giving.every((g) => g.isEmpty)) {
+      log.giving = [GivingEntry(type: '\u2713')];
+    }
+    if (checked['church'] == true && log.churchType.isEmpty) {
+      log.churchType = '\u2713';
+    }
+    if (checked['discipleship'] == true && log.discipleshipWho.isEmpty) {
+      log.discipleshipWho = '\u2713';
+    }
+    if (checked['proclamation'] == true && log.proclamationCount.isEmpty) {
+      log.proclamationCount = '1';
+    }
+
+    await storage.saveLog(log);
+    _onDataChanged();
+  }
+
+  Widget _weekStrip() {
+    final accent = AppTheme.accentGold(context);
+    final fmtRange = DateFormat('MMM d');
+    final sunday = _weekDates.last;
+    final weekLabel = '${fmtRange.format(_weekMonday)} – ${fmtRange.format(sunday)}';
+
+    return Column(
+      children: [
+        // Week navigation row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+          child: Row(
+            children: [
+              // Previous week arrow
+              GestureDetector(
+                onTap: _goToPreviousWeek,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(Icons.chevron_left, color: accent, size: 24),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _openCalendar,
+                  child: Column(
+                    children: [
+                      Text(
+                        weekLabel,
+                        style: AppTheme.serif(13, color: AppTheme.textColor(context)),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (!_isCurrentWeek)
+                        GestureDetector(
+                          onTap: _goToToday,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              '↩ ${S.of(context).today}',
+                              style: AppTheme.label(10, color: accent),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              // Next week arrow (disabled if current week)
+              GestureDetector(
+                onTap: _isCurrentWeek ? null : _goToNextWeek,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.chevron_right,
+                    color: _isCurrentWeek ? AppTheme.faintColor(context) : accent,
+                    size: 24,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Day strip — responsive margins for small screens
+        Container(
+          margin: EdgeInsets.fromLTRB(
+            MediaQuery.of(context).size.width < 360 ? 8 : 20, 0,
+            MediaQuery.of(context).size.width < 360 ? 8 : 20, 4),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: accent.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            children: _weekDates.map((d) {
+              final key = _key(d);
+              final done = _weekCompletion[key] ?? false;
+              final isToday = key == _key(DateTime.now());
+              final isSel = key == _key(_selected);
+              final isFuture = d.isAfter(DateTime.now());
+              return Expanded(
+                child: GestureDetector(
+                  onTap: isFuture ? null : () => setState(() => _selected = d),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: done
+                          ? accent.withValues(alpha: 0.2)
+                          : isToday
+                              ? accent.withValues(alpha: 0.08)
+                              : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSel ? accent : accent.withValues(alpha: 0.12),
+                        width: isSel ? 1.6 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(DateFormat('E').format(d).substring(0, 1),
+                            style: AppTheme.label(11,
+                                color: isToday ? accent : AppTheme.faintColor(context))),
+                        const SizedBox(height: 2),
+                        Text('${d.day}',
+                            style: AppTheme.serif(11,
+                                color: isFuture
+                                    ? AppTheme.faintColor(context)
+                                    : AppTheme.textColor(context))),
+                        const SizedBox(height: 2),
+                        Text(
+                          done ? '\u2705' : (isToday ? '\u{1F54A}\uFE0F' : (isFuture ? '\u00b7' : '\u25cb')),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _pendingReportBanner() {
+    final l = S.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.rust.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.rust.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Text('\u23F3', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(l.pendingReportBanner,
+                style: AppTheme.serif(12, color: AppTheme.rust)),
+          ),
+          GestureDetector(
+            onTap: () async {
+              HapticFeedback.lightImpact();
+              await _trySendPending();
+              if (mounted && !_hasPendingReport) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l.pendingReportSent,
+                        style: AppTheme.serif(14, color: AppTheme.textColor(context))),
+                    backgroundColor: AppTheme.surfaceColor(context),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.rust.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(l.pendingReportRetry,
+                  style: AppTheme.label(10, color: AppTheme.rust)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _behindPaceGoalsBanner() {
+    final l = S.of(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.rust.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.rust.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Text('⏳', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(l.behindPaceBannerText(_behindPaceGoals.length),
+                style: AppTheme.serif(12, color: AppTheme.rust)),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _tab = 2), // navigate to the Report tab (case 2 in _body())
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.rust.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(l.viewReport, style: AppTheme.label(10, color: AppTheme.rust)),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _body() {
+    Widget child;
     switch (_tab) {
       case 0:
-        return LogScreen(
+        child = StopwatchScreen(
+          key: const ValueKey('stopwatch'),
+          onTimerStopped: _onDataChanged,
+        );
+      case 1:
+        child = LogScreen(
           key: ValueKey(_key(_selected)),
           date: _selected,
           onChanged: _onDataChanged,
         );
-      case 1:
-        return ReportScreen(key: ValueKey(_reportKey));
+      case 2:
+        child = ReportScreen(key: ValueKey(_reportKey));
       default:
-        return const SettingsScreen();
+        child = const SettingsScreen(key: ValueKey('settings'));
     }
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: child,
+      ),
+      child: child,
+    );
   }
 
   Widget _bottomNav() {
     final items = [
-      ('📖', S.of(context).tabLog, 0),
-      ('📨', S.of(context).tabReport, 1),
-      ('⚙️', S.of(context).tabSettings, 2),
+      (Icons.timer_outlined, Icons.timer, S.of(context).tabStopwatch, 0),
+      (Icons.menu_book_outlined, Icons.menu_book, S.of(context).tabLog, 1),
+      (Icons.insert_chart_outlined, Icons.insert_chart, S.of(context).tabReport, 2),
+      (Icons.settings_outlined, Icons.settings, S.of(context).tabSettings, 3),
     ];
+    final dark = AppTheme.isDark(context);
+    final accent = AppTheme.accentGold(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.bg1,
-        border: Border(top: BorderSide(color: AppTheme.gold.withOpacity(0.15))),
+        color: dark ? AppTheme.bg1 : AppTheme.lightBg1,
+        border: Border(top: BorderSide(color: accent.withValues(alpha: 0.15))),
       ),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: SafeArea(
@@ -166,24 +1418,40 @@ class _HomeShellState extends State<HomeShell> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: items.map((it) {
-            final active = _tab == it.$3;
-            return GestureDetector(
-              onTap: () => setState(() => _tab = it.$3),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(it.$1,
-                        style: TextStyle(
-                            fontSize: 20,
-                            color: active ? null : Colors.white.withOpacity(0.4))),
-                    const SizedBox(height: 2),
-                    Text(it.$2,
-                        style: AppTheme.label(10,
-                            color: active ? AppTheme.gold : AppTheme.clay)),
-                  ],
+            final active = _tab == it.$4;
+            return Semantics(
+              label: it.$3,
+              button: true,
+              selected: active,
+              child: InkResponse(
+                onTap: () {
+                  if (_tab != it.$4) {
+                    HapticFeedback.selectionClick();
+                    // When leaving settings, bump report key so report screen
+                    // refreshes with any changed settings (language, contacts).
+                    if (_tab == 3) _reportKey++;
+                  }
+                  setState(() => _tab = it.$4);
+                },
+                highlightShape: BoxShape.circle,
+                splashColor: accent.withValues(alpha: 0.15),
+                highlightColor: accent.withValues(alpha: 0.08),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        active ? it.$2 : it.$1,
+                        size: 22,
+                        color: active ? accent : AppTheme.faintColor(context),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(it.$3,
+                          style: AppTheme.label(10,
+                              color: active ? accent : AppTheme.faintColor(context))),
+                    ],
+                  ),
                 ),
               ),
             );
