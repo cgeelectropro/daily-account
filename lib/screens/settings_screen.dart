@@ -31,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _name = '', _email = '', _whatsapp = '';
   String _widgetTitle = '';
   TimeOfDay _dailyTime = const TimeOfDay(hour: 20, minute: 0);
-  TimeOfDay _sundayTime = const TimeOfDay(hour: 18, minute: 0);
+  TimeOfDay _reportDayTime = const TimeOfDay(hour: 18, minute: 0);
   TimeOfDay _autoSendTime = const TimeOfDay(hour: 19, minute: 0);
   bool _notificationsEnabled = true;
   bool _autoSendEnabled = false;
@@ -42,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _useBiometrics = false;
   bool _biometricsAvailable = false;
   int _dailyFollowUps = 3; // default aggressive: 3 follow-ups
-  int _sundayFollowUps = 2; // default aggressive: 2 follow-ups
+  int _reportDayFollowUps = 2; // default aggressive: 2 follow-ups
   ReportCadence _reportCadence = ReportCadence.weekly;
   int _reportWeeklyDay = DateTime.sunday; // 7
   String _reportMonthlyDay = 'last';
@@ -122,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ash = int.tryParse(await s.getSetting('autoSendHour', fallback: '19')) ?? 19;
     final asm_ = int.tryParse(await s.getSetting('autoSendMin', fallback: '0')) ?? 0;
     _dailyTime = TimeOfDay(hour: dh, minute: dm);
-    _sundayTime = TimeOfDay(hour: sh, minute: sm);
+    _reportDayTime = TimeOfDay(hour: sh, minute: sm);
     _autoSendTime = TimeOfDay(hour: ash, minute: asm_);
     _notificationsEnabled = (await s.getSetting('notificationsEnabled', fallback: 'true')) == 'true';
     _autoSendEnabled = (await s.getSetting('autoSendEnabled', fallback: 'false')) == 'true';
@@ -131,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _appLockEnabled = (await s.getSetting('appLockEnabled', fallback: 'false')) == 'true';
     _useBiometrics = (await s.getSetting('useBiometrics', fallback: 'false')) == 'true';
     _dailyFollowUps = int.tryParse(await s.getSetting('dailyFollowUps', fallback: '3')) ?? 3;
-    _sundayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
+    _reportDayFollowUps = int.tryParse(await s.getSetting('sundayFollowUps', fallback: '2')) ?? 2;
     _reportCadence = await ReportCadenceService.instance.getCadence();
     _reportWeeklyDay = await ReportCadenceService.instance.getWeeklyDay();
     _reportMonthlyDay = await ReportCadenceService.instance.getMonthlyDay();
@@ -260,10 +260,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       followUpCount: _dailyFollowUps,
     );
     await NotificationService.instance.scheduleReportReminder(
-      _sundayTime.hour, _sundayTime.minute,
+      _reportDayTime.hour, _reportDayTime.minute,
       title: _reportReminderTitle(l),
       body: l.notifReportBody,
-      followUpCount: _sundayFollowUps,
+      followUpCount: _reportDayFollowUps,
     );
     if (_autoSendEnabled) {
       await NotificationService.instance.scheduleAutoSendReminder(
@@ -279,8 +279,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final s = StorageService.instance;
     await s.setSetting('dailyHour', '${_dailyTime.hour}');
     await s.setSetting('dailyMin', '${_dailyTime.minute}');
-    await s.setSetting('sundayHour', '${_sundayTime.hour}');
-    await s.setSetting('sundayMin', '${_sundayTime.minute}');
+    await s.setSetting('sundayHour', '${_reportDayTime.hour}');
+    await s.setSetting('sundayMin', '${_reportDayTime.minute}');
 
     if (_notificationsEnabled) {
       await _scheduleAllNotifications();
@@ -637,9 +637,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ok = await CloudSyncService.instance.signIn();
     if (!mounted) return;
     if (ok) {
+      final gmailReady = await CloudSyncService.instance.hasGmailSendScope();
+      if (!mounted) return;
       setState(() {
         _cloudSignedIn = true;
         _cloudEmail = CloudSyncService.instance.currentUser?.email ?? '';
+        _gmailSendReady = gmailReady;
         _cloudBusy = false;
       });
     } else {
@@ -656,6 +659,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _cloudSignedIn = false;
       _cloudEmail = '';
       _cloudLastBackup = '';
+      _gmailSendReady = false;
     });
   }
 
@@ -851,11 +855,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _pickTime(bool daily) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: daily ? _dailyTime : _sundayTime,
+      initialTime: daily ? _dailyTime : _reportDayTime,
       builder: _timePickerBuilder,
     );
     if (picked != null) {
-      setState(() => daily ? _dailyTime = picked : _sundayTime = picked);
+      setState(() => daily ? _dailyTime = picked : _reportDayTime = picked);
       // Auto-save and schedule immediately so the user doesn't have to tap Save
       await _saveReminders(showToast: false);
     }
@@ -1130,18 +1134,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 12),
-            _cadencePicker(l),
-            const SizedBox(height: 14),
-            _timeRow(l.sundayReminder, _sundayTime, () => _pickTime(false)),
+            _timeRow(l.reportDayReminder, _reportDayTime, () => _pickTime(false)),
             const SizedBox(height: 8),
-            // Sunday follow-ups slider
+            // Report-day follow-ups slider
             _followUpSlider(
               label: l.sundayFollowUps,
-              value: _sundayFollowUps,
+              value: _reportDayFollowUps,
               max: 2,
-              displayText: l.sundayFollowUpCount(_sundayFollowUps),
+              displayText: l.sundayFollowUpCount(_reportDayFollowUps),
               onChanged: (v) async {
-                setState(() => _sundayFollowUps = v);
+                setState(() => _reportDayFollowUps = v);
                 await StorageService.instance.setSetting('sundayFollowUps', '$v');
                 await _saveReminders(showToast: false);
               },
@@ -1172,6 +1174,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             ...List.generate(11, (i) => _disciplineReminderRow(i, accent, textCol, mutedCol)),
           ],
+        ]),
+
+        // ── Report Cadence ──
+        SectionCard(icon: '🗓️', title: l.reportCadenceSection, children: [
+          _cadencePicker(l),
         ]),
 
         // ── Auto-Send ──

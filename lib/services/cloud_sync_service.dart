@@ -109,10 +109,18 @@ class CloudSyncService {
   /// Whether the current sign-in grant includes the gmail.send scope.
   /// Users who signed in before this scope was added will need to
   /// re-authenticate (call signIn() again) to grant it.
+  ///
+  /// Uses `requestScopes` rather than `canAccessScopes` — the latter is
+  /// unimplemented by the Android platform channel (`google_sign_in_android`
+  /// always throws `UnimplementedError` for it), so it can never report a
+  /// granted scope as ready even right after a successful sign-in.
+  /// `requestScopes` resolves immediately without prompting when the scope
+  /// is already held (as it is here, since gmail.send is requested at
+  /// construction time), and only shows UI if it's genuinely missing.
   Future<bool> hasGmailSendScope() async {
     if (_currentUser == null) return false;
     try {
-      return await _googleSignIn.canAccessScopes(
+      return await _googleSignIn.requestScopes(
         ['https://www.googleapis.com/auth/gmail.send'],
       );
     } catch (_) {

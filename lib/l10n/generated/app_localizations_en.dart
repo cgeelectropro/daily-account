@@ -48,6 +48,83 @@ class SEn extends S {
   }
 
   @override
+  String get helpButtonTooltip => 'Help';
+
+  @override
+  String get helpScreenTitle => 'Help & FAQ';
+
+  @override
+  String get helpScreenSubtitle =>
+      'Answers to common questions about using Daily Account';
+
+  @override
+  String get helpFaqDisciplinesTitle =>
+      'What are the disciplines I\'m tracking?';
+
+  @override
+  String get helpFaqDisciplinesBody =>
+      'Daily Account tracks 11 core CMFI disciplines: Bible reading, Christian literature, DDEG, Prayer Alone, Prayer with Others, Evangelism, Fasting, Giving, Church, Discipleship, and Proclamation. You can also add up to 4 custom activities of your own. The Log screen shows Bible, Literature, Prayer Alone, and Evangelism up front — tap \"More disciplines\" to reveal the rest.';
+
+  @override
+  String get helpFaqDdegTitle => 'What is DDEG?';
+
+  @override
+  String get helpFaqDdegBody =>
+      'DDEG stands for Daily Dynamic Encounter with God. It\'s a dedicated time set apart to meet with God — you record the scripture you meditated on, how long you spent, and what God spoke to you.';
+
+  @override
+  String get helpFaqQuickLogTitle => 'What does Quick Log do?';
+
+  @override
+  String get helpFaqQuickLogBody =>
+      'Quick Log is the flash button in the header on the Log tab. It lets you tap each discipline you practiced today as a simple checklist — ideal for a busy day when you don\'t have time to fill in full details. It never overwrites anything you\'ve already filled in.';
+
+  @override
+  String get helpFaqReportsTitle =>
+      'How do reports get sent to my disciple maker?';
+
+  @override
+  String get helpFaqReportsBody =>
+      'On the Report tab, tap Send to email, WhatsApp, or copy your account to the clipboard. If Auto-Send is turned on in Settings, the app automatically opens WhatsApp (or sends by email) at your scheduled time on your report day, so you never have to remember to do it yourself.';
+
+  @override
+  String get helpFaqCadenceTitle =>
+      'What\'s the difference between weekly and monthly reports?';
+
+  @override
+  String get helpFaqCadenceBody =>
+      'You choose a reporting cadence in Settings. Weekly reports are due on a chosen weekday (Sunday by default). Monthly reports are due on a chosen day of the month (the last day by default, adjusted automatically for shorter months). Your report day drives when reminders and auto-send fire.';
+
+  @override
+  String get helpFaqRemindersTitle => 'How do reminders work?';
+
+  @override
+  String get helpFaqRemindersBody =>
+      'A daily reminder nudges you to log your walk with God, with gentle follow-ups if you haven\'t logged yet. A separate reminder fires on your report day to prompt you to send your account. You can also set an individual reminder time for each discipline in Notification settings. All reminder times are fully customizable, and everything can be turned off.';
+
+  @override
+  String get helpFaqPrivacyTitle => 'Is my data private?';
+
+  @override
+  String get helpFaqPrivacyBody =>
+      'Yes. Everything you log is stored privately on your device. Nothing is uploaded anywhere unless you explicitly choose to back up to the cloud or send a report yourself.';
+
+  @override
+  String get helpFaqCoachMarksTitle =>
+      'I skipped a tutorial — can I see it again?';
+
+  @override
+  String get helpFaqCoachMarksBody =>
+      'Yes. Open Settings → Advanced → Tutorial, and tap \"Replay app tutorial.\" Every guided walkthrough will show again the next time you visit that screen.';
+
+  @override
+  String get helpFaqMoreTitle => 'Still have a question?';
+
+  @override
+  String get helpFaqMoreBody =>
+      'Check the \"How it works\" card at the bottom of Settings for a quick summary, or reach out to whoever introduced you to Daily Account.';
+
+  @override
   String get markComplete => 'Mark Day Complete';
 
   @override
@@ -328,8 +405,8 @@ class SEn extends S {
   String get soulsReached => 'Souls Reached';
 
   @override
-  String get sundayBanner =>
-      'It\'s Sunday — time to send your account to your disciple maker.';
+  String get reportDayBanner =>
+      'It\'s report day — time to send your account to your disciple maker.';
 
   @override
   String get previewLabel => 'PREVIEW';
@@ -413,7 +490,7 @@ class SEn extends S {
   String get dailyReminder => 'Daily log reminder';
 
   @override
-  String get sundayReminder => 'Sunday send reminder';
+  String get reportDayReminder => 'Report day reminder';
 
   @override
   String get saveReminders => 'Save & Schedule Reminders';
@@ -435,7 +512,7 @@ class SEn extends S {
 
   @override
   String get howItWorks =>
-      '1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one each Sunday\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device';
+      '1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one on your report day\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device';
 
   @override
   String get backupSection => 'Backup & Restore';
@@ -509,7 +586,7 @@ class SEn extends S {
 
   @override
   String get onboardingHowStep3 =>
-      'Send your weekly account to your disciple maker every Sunday';
+      'Send your weekly account to your disciple maker on your chosen report day';
 
   @override
   String get onboardingProfile => 'Your Profile';
@@ -540,7 +617,7 @@ class SEn extends S {
       'Have you recorded your walk with God today? Tap to log it.';
 
   @override
-  String get notifSundayTitle => 'Sunday — Send Your Account';
+  String get notifSundayTitle => 'Report Day — Send Your Account';
 
   @override
   String get notifSundayBody =>
@@ -562,6 +639,9 @@ class SEn extends S {
   @override
   String get notifReportBody =>
       'It\'s time to send your account to your disciple maker. Tap to review & send.';
+
+  @override
+  String get reportCadenceSection => 'Report Cadence';
 
   @override
   String get reportCadenceLabel => 'Reporting cadence';
@@ -757,14 +837,14 @@ class SEn extends S {
   String get goalPaceRemindersEnabled => 'Pace reminders';
 
   @override
-  String get autoSendEnabled => 'Auto-open report on Sunday';
+  String get autoSendEnabled => 'Auto-open report on report day';
 
   @override
   String get autoSendTime => 'Send reminder time';
 
   @override
   String get autoSendDescription =>
-      'On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.';
+      'On your report day at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.';
 
   @override
   String get autoSendChannelLabel => 'Send via';
@@ -1147,7 +1227,7 @@ class SEn extends S {
       'Full-screen alerts, sound, vibration, LED — like an alarm clock';
 
   @override
-  String get sundayFollowUps => 'Sunday follow-ups';
+  String get sundayFollowUps => 'Report day follow-ups';
 
   @override
   String sundayFollowUpCount(int count) {
@@ -1995,7 +2075,7 @@ class SEn extends S {
   String get notifNameDaily => 'Daily reminder';
 
   @override
-  String get notifNameSunday => 'Sunday send';
+  String get notifNameSunday => 'Report day send';
 
   @override
   String get notifNameAutoSend => 'Auto-send';
@@ -2010,10 +2090,10 @@ class SEn extends S {
   String get notifNameDailyFollowUp3 => 'Daily follow-up 3';
 
   @override
-  String get notifNameSundayFollowUp1 => 'Sunday follow-up 1';
+  String get notifNameSundayFollowUp1 => 'Report day follow-up 1';
 
   @override
-  String get notifNameSundayFollowUp2 => 'Sunday follow-up 2';
+  String get notifNameSundayFollowUp2 => 'Report day follow-up 2';
 
   @override
   String get notifNameMidWeekNudge => 'Mid-week nudge';

@@ -5,6 +5,8 @@ import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'auto_send_runner.dart';
+
 /// Notification channel shared between [NotificationService] and the
 /// background isolate so both write to the same Android channel.
 const kTimerChannelId = 'daily_account_stopwatch_v2';
@@ -282,6 +284,13 @@ void _onStart(ServiceInstance service) async {
   // Start in idle guardian mode.
   showGuardianNotification();
 
+  // Run once at service start — covers the case where the service (and
+  // therefore the app process) was launched fresh right around report
+  // time (e.g. after a reboot or the periodic tick below), without
+  // waiting for the first 15-minute interval.
+  AutoSendRunner.trySendPending();
+  AutoSendRunner.checkAutoSend();
+
   service.on('startTimer').listen((data) {
     timerActive = true;
     currentLabel = data?['label'] ?? 'Timer';
@@ -322,10 +331,17 @@ void _onStart(ServiceInstance service) async {
 
   // Periodic self-heal: nudge the guardian notification so it stays alive
   // in the eyes of the OS even across long idle stretches, without
-  // interrupting an active timer's own richer notification.
-  Timer.periodic(const Duration(minutes: 15), (_) {
+  // interrupting an active timer's own richer notification. Also drives
+  // auto-send: since Android has no reliable way to run app code at an
+  // exact instant while fully closed, this tick is what makes auto-send
+  // fire even if the user never opens the app on report day — every 15
+  // minutes it checks whether it's report day/time and, if so, sends (or
+  // retries a previously-queued) report via AutoSendRunner.
+  Timer.periodic(const Duration(minutes: 15), (_) async {
     if (!timerActive) {
       showGuardianNotification();
     }
+    await AutoSendRunner.trySendPending();
+    await AutoSendRunner.checkAutoSend();
   });
 }

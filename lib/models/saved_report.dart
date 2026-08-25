@@ -1,8 +1,8 @@
 /// A saved/archived weekly report with send history.
 class SavedReport {
   final int? id;
-  final String weekStart; // 'yyyy-MM-dd' of Monday
-  final String weekEnd;   // 'yyyy-MM-dd' of Sunday
+  final String weekStart; // 'yyyy-MM-dd' of the first day of the configured report week
+  final String weekEnd;   // 'yyyy-MM-dd' of the configured report day (last day of the week)
   final String fullReport;
   final String compactReport;
   final String generatedAt; // ISO-8601

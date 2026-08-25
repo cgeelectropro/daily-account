@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
+  firebase_core
   flutter_timezone
   local_auth_windows
   printing

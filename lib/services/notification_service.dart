@@ -69,15 +69,15 @@ Future<void> _backgroundSnooze() async {
 ///
 /// Notification IDs:
 ///   1  = Daily log reminder (primary)
-///   2  = Sunday send reminder (primary)
-///   3  = Sunday auto-send reminder
+///   2  = Report day send reminder (primary)
+///   3  = Report day auto-send reminder
 ///   11 = Daily follow-up #1 (30 min after primary)
 ///   12 = Daily follow-up #2 (60 min after primary)
 ///   13 = Daily follow-up #3 (90 min after primary)
-///   21 = Sunday follow-up #1
-///   22 = Sunday follow-up #2
-///   30 = Mid-week nudge (Wednesday)
-///   40 = Saturday summary
+///   21 = Report day follow-up #1
+///   22 = Report day follow-up #2
+///   30 = Mid-week nudge (weekly cadence only, 3 days before report day)
+///   40 = Week-so-far summary (weekly cadence only, evening before report day)
 ///   50 = Test notification
 ///   99 = Snooze notification
 ///  110–120 = Per-discipline reminders
@@ -189,7 +189,7 @@ class NotificationService {
   /// Per-discipline reminder IDs (110–120).
   static const _disciplineBaseId = 110;
 
-  /// Saturday summary notification ID.
+  /// Week-so-far summary notification ID.
   static const _saturdaySummaryId = 40;
 
   /// Streak-at-risk notification ID.
@@ -472,7 +472,7 @@ class NotificationService {
       );
     }
 
-    // Mid-week nudge (Wednesday at 18:00)
+    // Mid-week nudge (3 days before the report day, at 18:00; weekly cadence only)
     final midWeekTitle = await s.getSetting('notifMidWeekTitle', fallback: '');
     final midWeekBody = await s.getSetting('notifMidWeekBody', fallback: '');
     await scheduleMidWeekNudge(18, 0,
@@ -480,7 +480,7 @@ class NotificationService {
       body: midWeekBody.isNotEmpty ? midWeekBody : null,
     );
 
-    // Saturday summary (Saturday at 18:00) — use saved localized strings
+    // Week-so-far summary (evening before the report day, at 18:00; weekly cadence only)
     final satTitle = await s.getSetting('notifSatTitle', fallback: 'Your week so far');
     final satBody = await s.getSetting('notifSatBody', fallback: 'Check your progress and finish strong tomorrow!');
     await scheduleSaturdaySummary(18, 0,
@@ -921,34 +921,32 @@ class NotificationService {
   );
 
   // ═════════════════════════════════════════════════════════════
-  //  SATURDAY SUMMARY NOTIFICATION
+  //  WEEK-SO-FAR SUMMARY NOTIFICATION
   // ═════════════════════════════════════════════════════════════
 
-  /// Schedule a Saturday evening summary notification.
+  /// Schedule a "week so far" summary notification for the evening before
+  /// the user's configured weekly report day. Only meaningful for weekly
+  /// cadence — cancelled (not scheduled) under monthly cadence.
   Future<void> scheduleSaturdaySummary(int hour, int minute, {required String title, required String body}) async {
     await init();
     await _plugin.cancel(_saturdaySummaryId);
+    final cadence = await ReportCadenceService.instance.getCadence();
+    if (cadence != ReportCadence.weekly) return;
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final eveBeforeWeekday = ((endWeekday - 1 - 1) % 7) + 1; // 1 day before the report day, DateTime.weekday convention
     await _safeZonedSchedule(
       _saturdaySummaryId,
       title,
       body,
-      _nextInstanceOfSaturday(hour, minute),
+      _nextInstanceOfWeekday(eveBeforeWeekday, hour, minute),
       _alarmDetails,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );
   }
 
-  /// Cancel Saturday summary.
+  /// Cancel the week-so-far summary.
   Future<void> cancelSaturdaySummary() async {
     await _plugin.cancel(_saturdaySummaryId);
-  }
-
-  tz.TZDateTime _nextInstanceOfSaturday(int hour, int minute) {
-    var scheduled = _nextInstanceOfTime(hour, minute);
-    while (scheduled.weekday != DateTime.saturday) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
-    return scheduled;
   }
 
   // ═════════════════════════════════════════════════════════════
@@ -1075,15 +1073,21 @@ class NotificationService {
 
   static const _midWeekId = 30;
 
-  /// Schedule a Wednesday mid-week check-in notification.
+  /// Schedule a mid-week check-in notification, 3 days before the user's
+  /// configured weekly report day. Only meaningful for weekly cadence —
+  /// cancelled (not scheduled) under monthly cadence.
   Future<void> scheduleMidWeekNudge(int hour, int minute, {String? title, String? body}) async {
     await init();
     await _plugin.cancel(_midWeekId);
+    final cadence = await ReportCadenceService.instance.getCadence();
+    if (cadence != ReportCadence.weekly) return;
+    final endWeekday = await ReportCadenceService.instance.getWeeklyDay();
+    final midWeekday = ((endWeekday - 3 - 1) % 7) + 1; // 3 days before the report day, DateTime.weekday convention
     await _safeZonedSchedule(
       _midWeekId,
       title ?? 'Mid-Week Check-in',
       body ?? 'How\'s your week going? Check your progress!',
-      _nextInstanceOfWeekday(DateTime.wednesday, hour, minute),
+      _nextInstanceOfWeekday(midWeekday, hour, minute),
       _alarmDetails,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
     );

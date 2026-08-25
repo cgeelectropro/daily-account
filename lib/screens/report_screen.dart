@@ -339,7 +339,7 @@ class _ReportScreenState extends State<ReportScreen> {
       compactReport: _compactReport,
       sentVia: channel,
     );
-    // Cancel Sunday follow-up reminders — report has been sent
+    // Cancel report-day follow-up reminders — report has been sent
     NotificationService.instance.cancelReportFollowUps();
   }
 
@@ -468,7 +468,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 const Text('\u{1F54A}\uFE0F', style: TextStyle(fontSize: 22)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(l.sundayBanner,
+                  child: Text(l.reportDayBanner,
                       style: AppTheme.serif(13, color: AppTheme.goldSoft)),
                 ),
               ],
@@ -869,11 +869,21 @@ class _ReportScreenState extends State<ReportScreen> {
             children: [
               Text(icon, style: const TextStyle(fontSize: 14)),
               const SizedBox(width: 4),
-              Text(label.toUpperCase(), style: AppTheme.label(9, color: AppTheme.mutedColor(context))),
+              Flexible(
+                child: Text(
+                  label.toUpperCase(),
+                  style: AppTheme.label(9, color: AppTheme.mutedColor(context)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
-          Text(value, style: AppTheme.serif(13, color: AppTheme.textColor(context))),
+          Text(
+            value,
+            style: AppTheme.serif(13, color: AppTheme.textColor(context)),
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

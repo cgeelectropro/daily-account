@@ -169,6 +169,132 @@ abstract class S {
   /// **'{current} of {total}'**
   String coachMarkStepCount(int current, int total);
 
+  /// No description provided for @helpButtonTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Help'**
+  String get helpButtonTooltip;
+
+  /// No description provided for @helpScreenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & FAQ'**
+  String get helpScreenTitle;
+
+  /// No description provided for @helpScreenSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Answers to common questions about using Daily Account'**
+  String get helpScreenSubtitle;
+
+  /// No description provided for @helpFaqDisciplinesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What are the disciplines I\'m tracking?'**
+  String get helpFaqDisciplinesTitle;
+
+  /// No description provided for @helpFaqDisciplinesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Account tracks 11 core CMFI disciplines: Bible reading, Christian literature, DDEG, Prayer Alone, Prayer with Others, Evangelism, Fasting, Giving, Church, Discipleship, and Proclamation. You can also add up to 4 custom activities of your own. The Log screen shows Bible, Literature, Prayer Alone, and Evangelism up front — tap \"More disciplines\" to reveal the rest.'**
+  String get helpFaqDisciplinesBody;
+
+  /// No description provided for @helpFaqDdegTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What is DDEG?'**
+  String get helpFaqDdegTitle;
+
+  /// No description provided for @helpFaqDdegBody.
+  ///
+  /// In en, this message translates to:
+  /// **'DDEG stands for Daily Dynamic Encounter with God. It\'s a dedicated time set apart to meet with God — you record the scripture you meditated on, how long you spent, and what God spoke to you.'**
+  String get helpFaqDdegBody;
+
+  /// No description provided for @helpFaqQuickLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What does Quick Log do?'**
+  String get helpFaqQuickLogTitle;
+
+  /// No description provided for @helpFaqQuickLogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Log is the flash button in the header on the Log tab. It lets you tap each discipline you practiced today as a simple checklist — ideal for a busy day when you don\'t have time to fill in full details. It never overwrites anything you\'ve already filled in.'**
+  String get helpFaqQuickLogBody;
+
+  /// No description provided for @helpFaqReportsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How do reports get sent to my disciple maker?'**
+  String get helpFaqReportsTitle;
+
+  /// No description provided for @helpFaqReportsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'On the Report tab, tap Send to email, WhatsApp, or copy your account to the clipboard. If Auto-Send is turned on in Settings, the app automatically opens WhatsApp (or sends by email) at your scheduled time on your report day, so you never have to remember to do it yourself.'**
+  String get helpFaqReportsBody;
+
+  /// No description provided for @helpFaqCadenceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s the difference between weekly and monthly reports?'**
+  String get helpFaqCadenceTitle;
+
+  /// No description provided for @helpFaqCadenceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You choose a reporting cadence in Settings. Weekly reports are due on a chosen weekday (Sunday by default). Monthly reports are due on a chosen day of the month (the last day by default, adjusted automatically for shorter months). Your report day drives when reminders and auto-send fire.'**
+  String get helpFaqCadenceBody;
+
+  /// No description provided for @helpFaqRemindersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'How do reminders work?'**
+  String get helpFaqRemindersTitle;
+
+  /// No description provided for @helpFaqRemindersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A daily reminder nudges you to log your walk with God, with gentle follow-ups if you haven\'t logged yet. A separate reminder fires on your report day to prompt you to send your account. You can also set an individual reminder time for each discipline in Notification settings. All reminder times are fully customizable, and everything can be turned off.'**
+  String get helpFaqRemindersBody;
+
+  /// No description provided for @helpFaqPrivacyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Is my data private?'**
+  String get helpFaqPrivacyTitle;
+
+  /// No description provided for @helpFaqPrivacyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Everything you log is stored privately on your device. Nothing is uploaded anywhere unless you explicitly choose to back up to the cloud or send a report yourself.'**
+  String get helpFaqPrivacyBody;
+
+  /// No description provided for @helpFaqCoachMarksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'I skipped a tutorial — can I see it again?'**
+  String get helpFaqCoachMarksTitle;
+
+  /// No description provided for @helpFaqCoachMarksBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Open Settings → Advanced → Tutorial, and tap \"Replay app tutorial.\" Every guided walkthrough will show again the next time you visit that screen.'**
+  String get helpFaqCoachMarksBody;
+
+  /// No description provided for @helpFaqMoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Still have a question?'**
+  String get helpFaqMoreTitle;
+
+  /// No description provided for @helpFaqMoreBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the \"How it works\" card at the bottom of Settings for a quick summary, or reach out to whoever introduced you to Daily Account.'**
+  String get helpFaqMoreBody;
+
   /// No description provided for @markComplete.
   ///
   /// In en, this message translates to:
@@ -709,11 +835,11 @@ abstract class S {
   /// **'Souls Reached'**
   String get soulsReached;
 
-  /// No description provided for @sundayBanner.
+  /// No description provided for @reportDayBanner.
   ///
   /// In en, this message translates to:
-  /// **'It\'s Sunday — time to send your account to your disciple maker.'**
-  String get sundayBanner;
+  /// **'It\'s report day — time to send your account to your disciple maker.'**
+  String get reportDayBanner;
 
   /// No description provided for @previewLabel.
   ///
@@ -871,11 +997,11 @@ abstract class S {
   /// **'Daily log reminder'**
   String get dailyReminder;
 
-  /// No description provided for @sundayReminder.
+  /// No description provided for @reportDayReminder.
   ///
   /// In en, this message translates to:
-  /// **'Sunday send reminder'**
-  String get sundayReminder;
+  /// **'Report day reminder'**
+  String get reportDayReminder;
 
   /// No description provided for @saveReminders.
   ///
@@ -916,7 +1042,7 @@ abstract class S {
   /// No description provided for @howItWorks.
   ///
   /// In en, this message translates to:
-  /// **'1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one each Sunday\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device'**
+  /// **'1. Log your walk with God each day\n2. Mark each day complete ✅\n3. Get a gentle reminder daily, and a special one on your report day\n4. Tap Send to email or WhatsApp the full week to your disciple maker\n5. Everything is stored privately on your device'**
   String get howItWorks;
 
   /// No description provided for @backupSection.
@@ -1036,7 +1162,7 @@ abstract class S {
   /// No description provided for @onboardingHowStep3.
   ///
   /// In en, this message translates to:
-  /// **'Send your weekly account to your disciple maker every Sunday'**
+  /// **'Send your weekly account to your disciple maker on your chosen report day'**
   String get onboardingHowStep3;
 
   /// No description provided for @onboardingProfile.
@@ -1096,7 +1222,7 @@ abstract class S {
   /// No description provided for @notifSundayTitle.
   ///
   /// In en, this message translates to:
-  /// **'Sunday — Send Your Account'**
+  /// **'Report Day — Send Your Account'**
   String get notifSundayTitle;
 
   /// No description provided for @notifSundayBody.
@@ -1128,6 +1254,12 @@ abstract class S {
   /// In en, this message translates to:
   /// **'It\'s time to send your account to your disciple maker. Tap to review & send.'**
   String get notifReportBody;
+
+  /// No description provided for @reportCadenceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Report Cadence'**
+  String get reportCadenceSection;
 
   /// No description provided for @reportCadenceLabel.
   ///
@@ -1420,7 +1552,7 @@ abstract class S {
   /// No description provided for @autoSendEnabled.
   ///
   /// In en, this message translates to:
-  /// **'Auto-open report on Sunday'**
+  /// **'Auto-open report on report day'**
   String get autoSendEnabled;
 
   /// No description provided for @autoSendTime.
@@ -1432,7 +1564,7 @@ abstract class S {
   /// No description provided for @autoSendDescription.
   ///
   /// In en, this message translates to:
-  /// **'On Sunday at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.'**
+  /// **'On your report day at the scheduled time, the app will automatically open WhatsApp to send your weekly report to your disciple maker.'**
   String get autoSendDescription;
 
   /// No description provided for @autoSendChannelLabel.
@@ -2122,7 +2254,7 @@ abstract class S {
   /// No description provided for @sundayFollowUps.
   ///
   /// In en, this message translates to:
-  /// **'Sunday follow-ups'**
+  /// **'Report day follow-ups'**
   String get sundayFollowUps;
 
   /// No description provided for @sundayFollowUpCount.
@@ -3622,7 +3754,7 @@ abstract class S {
   /// No description provided for @notifNameSunday.
   ///
   /// In en, this message translates to:
-  /// **'Sunday send'**
+  /// **'Report day send'**
   String get notifNameSunday;
 
   /// No description provided for @notifNameAutoSend.
@@ -3652,13 +3784,13 @@ abstract class S {
   /// No description provided for @notifNameSundayFollowUp1.
   ///
   /// In en, this message translates to:
-  /// **'Sunday follow-up 1'**
+  /// **'Report day follow-up 1'**
   String get notifNameSundayFollowUp1;
 
   /// No description provided for @notifNameSundayFollowUp2.
   ///
   /// In en, this message translates to:
-  /// **'Sunday follow-up 2'**
+  /// **'Report day follow-up 2'**
   String get notifNameSundayFollowUp2;
 
   /// No description provided for @notifNameMidWeekNudge.

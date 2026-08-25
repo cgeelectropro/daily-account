@@ -48,6 +48,84 @@ class SFr extends S {
   }
 
   @override
+  String get helpButtonTooltip => 'Aide';
+
+  @override
+  String get helpScreenTitle => 'Aide et FAQ';
+
+  @override
+  String get helpScreenSubtitle =>
+      'Réponses aux questions fréquentes sur l\'utilisation de Daily Account';
+
+  @override
+  String get helpFaqDisciplinesTitle =>
+      'Quelles disciplines est-ce que je suis ?';
+
+  @override
+  String get helpFaqDisciplinesBody =>
+      'Daily Account suit 11 disciplines essentielles du CMFI : lecture biblique, littérature chrétienne, DDEG, prière seul(e), prière avec d\'autres, évangélisation, jeûne, don, église, discipulat et proclamation. Vous pouvez aussi ajouter jusqu\'à 4 activités personnalisées. L\'écran Journal affiche d\'abord Bible, Littérature, Prière seul(e) et Évangélisation — appuyez sur « Plus de disciplines » pour voir le reste.';
+
+  @override
+  String get helpFaqDdegTitle => 'Qu\'est-ce que le DDEG ?';
+
+  @override
+  String get helpFaqDdegBody =>
+      'DDEG signifie Rencontre Dynamique Quotidienne avec Dieu (Daily Dynamic Encounter with God). C\'est un temps mis à part pour rencontrer Dieu — vous notez l\'écriture méditée, le temps passé et ce que Dieu vous a dit.';
+
+  @override
+  String get helpFaqQuickLogTitle =>
+      'À quoi sert le Journal Rapide (Quick Log) ?';
+
+  @override
+  String get helpFaqQuickLogBody =>
+      'Le Journal Rapide est le bouton éclair dans l\'en-tête de l\'onglet Journal. Il vous permet de cocher chaque discipline pratiquée aujourd\'hui, comme une simple liste — idéal les jours chargés où vous n\'avez pas le temps de tout détailler. Il n\'écrase jamais ce que vous avez déjà rempli.';
+
+  @override
+  String get helpFaqReportsTitle =>
+      'Comment mon compte rendu est-il envoyé à mon faiseur de disciples ?';
+
+  @override
+  String get helpFaqReportsBody =>
+      'Dans l\'onglet Rapport, appuyez sur Envoyer pour l\'envoyer par email, WhatsApp, ou le copier dans le presse-papiers. Si l\'envoi automatique est activé dans les Paramètres, l\'application ouvre automatiquement WhatsApp (ou envoie par email) à l\'heure programmée le jour de votre compte rendu, pour que vous n\'ayez jamais à y penser.';
+
+  @override
+  String get helpFaqCadenceTitle =>
+      'Quelle est la différence entre un compte rendu hebdomadaire et mensuel ?';
+
+  @override
+  String get helpFaqCadenceBody =>
+      'Vous choisissez une fréquence de compte rendu dans les Paramètres. Le compte rendu hebdomadaire est dû un jour de la semaine choisi (dimanche par défaut). Le compte rendu mensuel est dû un jour du mois choisi (le dernier jour par défaut, ajusté automatiquement pour les mois plus courts). Votre jour de compte rendu détermine quand les rappels et l\'envoi automatique se déclenchent.';
+
+  @override
+  String get helpFaqRemindersTitle => 'Comment fonctionnent les rappels ?';
+
+  @override
+  String get helpFaqRemindersBody =>
+      'Un rappel quotidien vous invite à enregistrer votre marche avec Dieu, avec des rappels de suivi doux si vous n\'avez pas encore enregistré. Un rappel distinct se déclenche le jour de votre compte rendu pour vous inviter à l\'envoyer. Vous pouvez aussi définir une heure de rappel individuelle pour chaque discipline dans les paramètres de notifications. Tous les horaires de rappel sont entièrement personnalisables, et tout peut être désactivé.';
+
+  @override
+  String get helpFaqPrivacyTitle => 'Mes données sont-elles privées ?';
+
+  @override
+  String get helpFaqPrivacyBody =>
+      'Oui. Tout ce que vous enregistrez est stocké en privé sur votre appareil. Rien n\'est envoyé où que ce soit, sauf si vous choisissez explicitement de sauvegarder dans le cloud ou d\'envoyer un compte rendu vous-même.';
+
+  @override
+  String get helpFaqCoachMarksTitle =>
+      'J\'ai passé un tutoriel — puis-je le revoir ?';
+
+  @override
+  String get helpFaqCoachMarksBody =>
+      'Oui. Ouvrez Paramètres → Avancé → Tutoriel, puis appuyez sur « Revoir le tutoriel de l\'application ». Chaque guide interactif réapparaîtra lors de votre prochaine visite sur cet écran.';
+
+  @override
+  String get helpFaqMoreTitle => 'Vous avez encore une question ?';
+
+  @override
+  String get helpFaqMoreBody =>
+      'Consultez la carte « Comment ça marche » en bas des Paramètres pour un résumé rapide, ou contactez la personne qui vous a présenté Daily Account.';
+
+  @override
   String get markComplete => 'Marquer le Jour Complet';
 
   @override
@@ -334,8 +412,8 @@ class SFr extends S {
   String get soulsReached => 'Âmes Atteintes';
 
   @override
-  String get sundayBanner =>
-      'C’est dimanche — il est temps d’envoyer ton compte à ton faiseur de disciples.';
+  String get reportDayBanner =>
+      'C’est le jour du compte rendu — il est temps d’envoyer ton compte à ton faiseur de disciples.';
 
   @override
   String get previewLabel => 'APERÇU';
@@ -419,7 +497,7 @@ class SFr extends S {
   String get dailyReminder => 'Rappel quotidien';
 
   @override
-  String get sundayReminder => 'Rappel du dimanche';
+  String get reportDayReminder => 'Rappel du jour du compte rendu';
 
   @override
   String get saveReminders => 'Sauvegarder et Programmer les Rappels';
@@ -441,7 +519,7 @@ class SFr extends S {
 
   @override
   String get howItWorks =>
-      '1. Enregistre ta marche avec Dieu chaque jour\n2. Marque chaque jour comme complet ✅\n3. Reçois un rappel quotidien, et un spécial chaque dimanche\n4. Appuie sur Envoyer pour transmettre la semaine complète à ton faiseur de disciples par email ou WhatsApp\n5. Tout est stocké en privé sur ton appareil';
+      '1. Enregistre ta marche avec Dieu chaque jour\n2. Marque chaque jour comme complet ✅\n3. Reçois un rappel quotidien, et un spécial le jour de ton compte rendu\n4. Appuie sur Envoyer pour transmettre la semaine complète à ton faiseur de disciples par email ou WhatsApp\n5. Tout est stocké en privé sur ton appareil';
 
   @override
   String get backupSection => 'Sauvegarde et Restauration';
@@ -511,7 +589,7 @@ class SFr extends S {
 
   @override
   String get onboardingHowStep3 =>
-      'Envoie ton compte hebdomadaire à ton faiseur de disciples chaque dimanche';
+      'Envoie ton compte hebdomadaire à ton faiseur de disciples le jour que tu as choisi';
 
   @override
   String get onboardingProfile => 'Ton Profil';
@@ -542,7 +620,7 @@ class SFr extends S {
       'As-tu enregistré ta marche avec Dieu aujourd’hui ? Appuie pour le faire.';
 
   @override
-  String get notifSundayTitle => 'Dimanche — Envoie Ton Compte';
+  String get notifSundayTitle => 'Jour du Compte Rendu — Envoie Ton Compte';
 
   @override
   String get notifSundayBody =>
@@ -565,6 +643,9 @@ class SFr extends S {
   @override
   String get notifReportBody =>
       'Il est temps d’envoyer votre compte à votre formateur. Appuyez pour vérifier et envoyer.';
+
+  @override
+  String get reportCadenceSection => 'Fréquence des comptes rendus';
 
   @override
   String get reportCadenceLabel => 'Fréquence des comptes';
@@ -760,14 +841,15 @@ class SFr extends S {
   String get goalPaceRemindersEnabled => 'Rappels de rythme';
 
   @override
-  String get autoSendEnabled => 'Rappel d’envoi le dimanche';
+  String get autoSendEnabled =>
+      'Ouverture auto du compte le jour du compte rendu';
 
   @override
   String get autoSendTime => 'Heure du rappel';
 
   @override
   String get autoSendDescription =>
-      'Le dimanche à l’heure programmée, l’application ouvrira automatiquement WhatsApp pour envoyer ton compte à ton faiseur de disciples.';
+      'Le jour de ton compte rendu, à l’heure programmée, l’application ouvrira automatiquement WhatsApp pour envoyer ton compte à ton faiseur de disciples.';
 
   @override
   String get autoSendChannelLabel => 'Envoyer via';
@@ -1152,7 +1234,7 @@ class SFr extends S {
       'Alertes plein écran, son, vibration, LED — comme un réveil';
 
   @override
-  String get sundayFollowUps => 'Suivis du dimanche';
+  String get sundayFollowUps => 'Suivis du jour du compte rendu';
 
   @override
   String sundayFollowUpCount(int count) {
@@ -2020,7 +2102,7 @@ class SFr extends S {
   String get notifNameDaily => 'Rappel quotidien';
 
   @override
-  String get notifNameSunday => 'Envoi du dimanche';
+  String get notifNameSunday => 'Envoi du jour du compte rendu';
 
   @override
   String get notifNameAutoSend => 'Envoi automatique';
@@ -2035,10 +2117,10 @@ class SFr extends S {
   String get notifNameDailyFollowUp3 => 'Suivi quotidien 3';
 
   @override
-  String get notifNameSundayFollowUp1 => 'Suivi du dimanche 1';
+  String get notifNameSundayFollowUp1 => 'Suivi du jour du compte rendu 1';
 
   @override
-  String get notifNameSundayFollowUp2 => 'Suivi du dimanche 2';
+  String get notifNameSundayFollowUp2 => 'Suivi du jour du compte rendu 2';
 
   @override
   String get notifNameMidWeekNudge => 'Rappel de mi-semaine';
